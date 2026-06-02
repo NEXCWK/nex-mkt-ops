@@ -5,12 +5,13 @@ import { createServerClient } from '@/lib/supabase/server'
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
+    const { id } = await params
     const { churn_sinalizado, churn_data } = await req.json()
 
     if (churn_sinalizado && churn_data) {
@@ -27,7 +28,7 @@ export async function PATCH(
     const { error } = await supabase
       .from('espacos')
       .update({ churn_sinalizado, churn_data: churn_sinalizado ? churn_data : null })
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (error) throw error
     return NextResponse.json({ success: true })

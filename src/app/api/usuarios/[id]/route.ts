@@ -5,16 +5,17 @@ import { createServerClient } from '@/lib/supabase/server'
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
     if (!session || session.user.perfil !== 'admin') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
     }
+    const { id } = await params
     const body = await req.json()
     const supabase = createServerClient()
-    const { error } = await supabase.from('usuarios').update(body).eq('id', params.id)
+    const { error } = await supabase.from('usuarios').update(body).eq('id', id)
     if (error) throw error
     return NextResponse.json({ success: true })
   } catch (e: any) {
