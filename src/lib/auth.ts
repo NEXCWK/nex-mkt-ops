@@ -18,6 +18,10 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user }) {
+      if (!user.email?.endsWith('@nexcoworking.com.br')) {
+        return '/login?error=domain'
+      }
+
       const supabase = createServerClient()
       const { data } = await supabase
         .from('usuarios')

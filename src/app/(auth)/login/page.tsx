@@ -28,15 +28,23 @@ function LoginContent() {
             Use sua conta Google do Nex Coworking para acessar.
           </p>
 
-          {error === 'unauthorized' && (
+          {error === 'domain' && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-700">
-                Sua conta não tem acesso ao sistema. Contate o administrador.
+                Acesso permitido somente para contas <strong>@nexcoworking.com.br</strong>.
               </p>
             </div>
           )}
 
-          {error && error !== 'unauthorized' && (
+          {error === 'unauthorized' && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-700">
+                Sua conta não está autorizada. Contate o administrador.
+              </p>
+            </div>
+          )}
+
+          {error && error !== 'unauthorized' && error !== 'domain' && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-700">Erro ao fazer login. Tente novamente.</p>
             </div>
