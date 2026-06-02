@@ -11,7 +11,7 @@ const buttonVariants = cva(
         default: 'bg-nex-black text-white hover:bg-nex-gray-800',
         primary: 'bg-nex-yellow text-nex-black font-semibold hover:bg-yellow-400',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-        outline: 'border border-nex-gray-200 bg-white hover:bg-nex-gray-50 text-nex-black',
+        outline: 'border border-nex-black bg-white hover:bg-nex-gray-100 text-nex-black',
         secondary: 'bg-nex-gray-100 text-nex-black hover:bg-nex-gray-200',
         ghost: 'hover:bg-nex-gray-100 text-nex-black',
         link: 'text-nex-black underline-offset-4 hover:underline',
