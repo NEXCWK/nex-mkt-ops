@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import Image from 'next/image'
 import {
   LayoutDashboard,
   FileText,
@@ -41,10 +42,14 @@ export function Sidebar() {
   return (
     <aside className="w-64 min-h-screen bg-nex-black text-white flex flex-col">
       {/* Logo */}
-      <div className="px-6 py-6 border-b border-nex-gray-700">
-        <span className="text-xl font-heading font-bold tracking-tight">
-          NEX <span className="text-nex-yellow">OPS</span>
-        </span>
+      <div className="px-6 py-5 border-b border-nex-gray-700">
+        <Image
+          src="/nex-logo-white.png"
+          alt="Nex"
+          width={80}
+          height={24}
+          priority
+        />
       </div>
 
       {/* Nav */}

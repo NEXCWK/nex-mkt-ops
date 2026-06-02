@@ -3,6 +3,7 @@ import { signIn } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Suspense } from 'react'
+import Image from 'next/image'
 
 function LoginContent() {
   const searchParams = useSearchParams()
@@ -12,11 +13,16 @@ function LoginContent() {
     <div className="min-h-screen bg-white flex items-center justify-center">
       <div className="w-full max-w-md px-8">
         {/* Logo */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-heading font-bold text-nex-black tracking-tight">
-            NEX <span className="text-nex-yellow">OPS</span>
-          </h1>
-          <p className="mt-3 text-nex-gray-500 text-sm">
+        <div className="flex flex-col items-center mb-12">
+          <Image
+            src="/nex-logo.png"
+            alt="Nex"
+            width={180}
+            height={54}
+            priority
+            className="mb-3"
+          />
+          <p className="text-nex-gray-500 text-sm">
             Sistema de gestão operacional
           </p>
         </div>
