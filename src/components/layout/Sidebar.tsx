@@ -6,7 +6,6 @@ import Image from 'next/image'
 import {
   LayoutDashboard,
   FileText,
-  Presentation,
   Mail,
   Building2,
   Users,
@@ -22,7 +21,6 @@ import { signOut } from 'next-auth/react'
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['operador', 'gestor', 'admin'] },
   { href: '/contratos/novo', label: 'Novo Contrato', icon: FileText, roles: ['operador', 'gestor', 'admin'] },
-  { href: '/propostas/nova', label: 'Nova Proposta', icon: Presentation, roles: ['operador', 'gestor', 'admin'] },
   { href: '/emails/novo', label: 'Novo E-mail', icon: Mail, roles: ['operador', 'gestor', 'admin'] },
   { href: '/espacos', label: 'Painel de Espaços', icon: Building2, roles: ['operador', 'gestor', 'admin'] },
   { href: '/parceiros', label: 'Parceiros', icon: Handshake, roles: ['gestor', 'admin'] },
