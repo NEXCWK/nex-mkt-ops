@@ -129,17 +129,26 @@ export const STATUS_ESPACO_LABELS: Record<StatusEspaco, string> = {
 }
 
 export const TIPOS_CONTRATO = [
-  { value: 'escritorio_privativo', label: 'Contrato — Escritório Privativo' },
-  { value: 'nex_house', label: 'Contrato — Nex House' },
-  { value: 'escritorio_virtual', label: 'Contrato — Escritório Virtual' },
-  { value: 'evento', label: 'Termo de Compromisso para Eventos' },
-  { value: 'diaria_reuniao', label: 'Termo de Compromisso para Diária de Reunião' },
-  { value: 'diaria_trabalho', label: 'Termo de Compromisso para Diárias de Trabalho' },
+  // Escritório Privativo
+  { value: 'escritorio_privativo_nex_house',      label: 'Escritório Privativo — Nex House' },
+  { value: 'escritorio_privativo_francisco_rocha', label: 'Escritório Privativo — Francisco Rocha' },
+  // Nex House
+  { value: 'nex_house_atrium',  label: 'Nex House — Atrium' },
+  { value: 'nex_house_gallery', label: 'Nex House — Gallery' },
+  // Termos de Compromisso
+  { value: 'termo_eventos',            label: 'Termo de Compromisso — Eventos (Externo)' },
+  { value: 'termo_eventos_residentes', label: 'Termo de Compromisso — Eventos (Residentes)' },
+  { value: 'termo_diaria_reuniao',     label: 'Termo de Compromisso — Diária e Reunião' },
+  // Escritório Virtual
+  { value: 'escritorio_virtual_fiscal',         label: 'Escritório Virtual — Endereço Fiscal' },
+  { value: 'escritorio_virtual_fiscal_oab',     label: 'Escritório Virtual — Endereço Fiscal OAB' },
+  { value: 'escritorio_virtual_comercial',      label: 'Escritório Virtual — Endereço Comercial' },
+  { value: 'escritorio_virtual_comercial_oab',  label: 'Escritório Virtual — Endereço Comercial OAB' },
 ]
 
 export const TIPOS_ADITIVO = [
-  { value: 'pf_pj', label: 'Aditivo PF para PJ' },
-  { value: 'troca_endereco', label: 'Aditivo Troca de Endereço' },
+  { value: 'aditivo_ev_pf_para_pj', label: 'Aditivo EV — Troca de Polo PF → PJ' },
+  { value: 'aditivo_ev_pj_para_pj', label: 'Aditivo EV — Troca de Polo PJ → PJ' },
 ]
 
 export const TIPOS_PROPOSTA = [

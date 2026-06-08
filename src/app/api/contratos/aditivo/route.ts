@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const { data: template } = await supabase
       .from('templates_documentos')
       .select('*')
-      .eq('tipo', `aditivo_${tipo}`)
+      .eq('tipo', tipo)
       .order('versao', { ascending: false })
       .limit(1)
       .maybeSingle()
