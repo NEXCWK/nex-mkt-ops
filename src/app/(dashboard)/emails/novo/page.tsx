@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
 import { MODELOS_EMAIL, COPIAS_FIXAS, COPIAS_POR_UNIDADE, type Unidade } from '@/types'
@@ -216,14 +216,18 @@ export default function NovoEmailPage() {
                   <SelectValue placeholder="Selecione o modelo..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" disabled>Bastões</SelectItem>
-                  {MODELOS_EMAIL.filter(m => m.tipo === 'bastao').map(m => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                  ))}
-                  <SelectItem value="" disabled>E-mails EV</SelectItem>
-                  {MODELOS_EMAIL.filter(m => m.tipo === 'ev').map(m => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                  ))}
+                  <SelectGroup>
+                    <SelectLabel>Bastões</SelectLabel>
+                    {MODELOS_EMAIL.filter(m => m.tipo === 'bastao').map(m => (
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel>E-mails EV</SelectLabel>
+                    {MODELOS_EMAIL.filter(m => m.tipo === 'ev').map(m => (
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
