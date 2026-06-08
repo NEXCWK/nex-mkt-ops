@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { formatDateTime } from '@/lib/utils'
 import { SeedTemplatesButton } from '@/components/admin/SeedTemplatesButton'
+import { SeedParceirosButton } from '@/components/admin/SeedParceirosButton'
 
 async function getTemplates() {
   const supabase = createServerClient()
@@ -35,8 +36,17 @@ export default async function TemplatesPage() {
 
       {isAdmin && (
         <div className="mb-6 p-4 bg-nex-gray-50 border rounded-lg">
-          <p className="text-sm font-semibold text-nex-gray-700 mb-3">Administração — Importar Templates</p>
-          <SeedTemplatesButton />
+          <p className="text-sm font-semibold text-nex-gray-700 mb-3">Administração</p>
+          <div className="flex flex-wrap gap-4">
+            <div>
+              <p className="text-xs text-nex-gray-500 mb-1.5">Templates de Contratos</p>
+              <SeedTemplatesButton />
+            </div>
+            <div>
+              <p className="text-xs text-nex-gray-500 mb-1.5">Parceiros Padrão</p>
+              <SeedParceirosButton />
+            </div>
+          </div>
         </div>
       )}
 
