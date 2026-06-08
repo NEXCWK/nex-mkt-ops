@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +10,9 @@ import {
   type EmailTemplate, type CampoMarcador,
 } from './templates-data'
 import { cn } from '@/lib/utils'
-import { Copy, Check, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react'
+import { Copy, Check, AlertTriangle, ChevronDown, ChevronRight, ImageOff } from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -68,6 +70,13 @@ export default function NovoEmailPage() {
   const [templateId, setTemplateId] = useState<string>('')
   const [campos, setCampos] = useState<Record<string, string>>({})
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const [assinaturaUrl, setAssinaturaUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/usuario/perfil')
+      .then(r => r.json())
+      .then(d => setAssinaturaUrl(d.assinatura_url ?? null))
+  }, [])
 
   const template = EMAIL_TEMPLATES.find(t => t.id === templateId) ?? null
   const globais = getCamposGlobais()
@@ -244,10 +253,35 @@ export default function NovoEmailPage() {
                     }
                   </button>
                 </div>
-                <div className="px-4 py-4 max-h-[70vh] overflow-y-auto">
+                <div className="px-4 py-4 max-h-[70vh] overflow-y-auto space-y-4">
                   <pre className="text-sm text-nex-gray-800 font-bold whitespace-pre-wrap leading-relaxed">
                     {corpoGerado.replace(/\{\{(\w+)\}\}/g, (m) => m)}
                   </pre>
+                  {/* Assinatura visual */}
+                  {template.marcadores.includes('assinatura') && (
+                    assinaturaUrl ? (
+                      <div className="pt-2 border-t border-nex-gray-100">
+                        <Image
+                          src={assinaturaUrl}
+                          alt="Assinatura"
+                          width={320}
+                          height={100}
+                          style={{ maxHeight: 100, width: 'auto', objectFit: 'contain' }}
+                          unoptimized
+                        />
+                      </div>
+                    ) : (
+                      <div className="pt-2 border-t border-nex-gray-100 flex items-center gap-2 text-nex-gray-300">
+                        <ImageOff className="w-3.5 h-3.5" />
+                        <span className="text-xs font-bold">
+                          Sem assinatura configurada —{' '}
+                          <Link href="/perfil" className="underline hover:text-nex-gray-600 transition-colors">
+                            adicionar em Perfil
+                          </Link>
+                        </span>
+                      </div>
+                    )
+                  )}
                 </div>
                 <div className="px-4 py-3 border-t border-nex-gray-100 flex justify-end">
                   <Button onClick={copyCorpo.copy} size="sm" variant="outline" className="gap-1.5">

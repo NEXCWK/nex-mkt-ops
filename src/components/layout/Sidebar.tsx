@@ -13,6 +13,7 @@ import {
   Settings,
   LogOut,
   Handshake,
+  UserCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from 'next-auth/react'
@@ -84,13 +85,22 @@ export function Sidebar() {
             <p className="text-[10px] text-nex-gray-400 capitalize font-bold">{perfil}</p>
           </div>
         </div>
-        <button
-          onClick={() => signOut({ callbackUrl: '/login' })}
-          className="flex items-center gap-1.5 text-xs text-nex-gray-400 hover:text-nex-gray-700 transition-colors w-full font-bold"
-        >
-          <LogOut className="h-3 w-3" />
-          Sair
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/perfil"
+            className="flex items-center gap-1.5 text-xs text-nex-gray-400 hover:text-nex-gray-700 transition-colors font-bold"
+          >
+            <UserCircle className="h-3 w-3" />
+            Perfil
+          </Link>
+          <button
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            className="flex items-center gap-1.5 text-xs text-nex-gray-400 hover:text-nex-gray-700 transition-colors font-bold"
+          >
+            <LogOut className="h-3 w-3" />
+            Sair
+          </button>
+        </div>
       </div>
     </aside>
   )
