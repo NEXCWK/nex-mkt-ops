@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { formatDateTime } from '@/lib/utils'
+import { SeedTemplatesButton } from '@/components/admin/SeedTemplatesButton'
 
 async function getTemplates() {
   const supabase = createServerClient()
@@ -23,6 +24,7 @@ export default async function TemplatesPage() {
   }
 
   const { docs, emails } = await getTemplates()
+  const isAdmin = session.user.perfil === 'admin'
 
   return (
     <div>
@@ -30,6 +32,13 @@ export default async function TemplatesPage() {
         title="Gestão de Templates"
         description="Gerencie os modelos de documentos e e-mails do sistema."
       />
+
+      {isAdmin && (
+        <div className="mb-6 p-4 bg-nex-gray-50 border rounded-lg">
+          <p className="text-sm font-semibold text-nex-gray-700 mb-3">Administração — Importar Templates</p>
+          <SeedTemplatesButton />
+        </div>
+      )}
 
       <Tabs defaultValue="documentos">
         <TabsList className="mb-6">
