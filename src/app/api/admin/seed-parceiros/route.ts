@@ -3,7 +3,21 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
 
-const PARCEIROS = [
+type ParceiroSeed = {
+  nome: string
+  sistema: string | null
+  login_usuario: string | null
+  senha: string | null
+  valor_diaria: string | null
+  valor_hora: string | null
+  contato_email: string | null
+  contato_telefone: string | null
+  mesas: string | null
+  observacoes: string | null
+  status: string
+}
+
+const PARCEIROS: ParceiroSeed[] = [
   {
     nome: 'Station We',
     sistema: 'https://admin.stationwe.com.br/login',
