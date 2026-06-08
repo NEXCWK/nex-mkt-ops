@@ -10,7 +10,7 @@ import {
   type EmailTemplate, type CampoMarcador,
 } from './templates-data'
 import { cn } from '@/lib/utils'
-import { Copy, Check, AlertTriangle, ChevronDown, ChevronRight, ImageOff } from 'lucide-react'
+import { Copy, Check, AlertTriangle, ImageOff, Mail } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -64,12 +64,27 @@ function CampoInput({ campo, value, onChange }: {
   )
 }
 
+function renderBody(text: string) {
+  if (!text) return null
+  const parts = text.split(/(\{\{[^}]+\}\})/g)
+  return parts.map((part, i) => {
+    if (/^\{\{[^}]+\}\}$/.test(part)) {
+      return (
+        <span key={i} className="bg-amber-100 text-amber-700 font-extrabold rounded px-0.5">
+          {part}
+        </span>
+      )
+    }
+    return <span key={i}>{part}</span>
+  })
+}
+
 // ── main component ────────────────────────────────────────────────────────────
 
 export default function NovoEmailPage() {
+  const [grupoAtivo, setGrupoAtivo] = useState<string>(GRUPOS[0])
   const [templateId, setTemplateId] = useState<string>('')
   const [campos, setCampos] = useState<Record<string, string>>({})
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [assinaturaUrl, setAssinaturaUrl] = useState<string | null>(null)
 
   useEffect(() => {
@@ -99,85 +114,84 @@ export default function NovoEmailPage() {
   const copyAssunto = useCopy(assuntoGerado)
   const copyCorpo = useCopy(corpoGerado)
 
-  const templatesPorGrupo = GRUPOS.map(g => ({
-    grupo: g,
-    templates: EMAIL_TEMPLATES.filter(t => t.grupo === g),
-  }))
+  const templatesDoGrupo = EMAIL_TEMPLATES.filter(t => t.grupo === grupoAtivo)
+  const pendentes = template ? template.marcadores.filter(m => !campos[m]) : []
 
   return (
     <div>
-      <PageHeader title="Novo E-mail" description="Selecione um template, preencha os campos e copie o e-mail gerado." />
+      <PageHeader
+        title="Novo E-mail"
+        description="Selecione um template, preencha os campos e copie o e-mail gerado."
+      />
 
-      <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-6 items-start">
+      {/* ── Template Selector ── */}
+      <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden mb-5">
+        {/* Group tabs */}
+        <div className="flex border-b border-nex-gray-100 overflow-x-auto">
+          {GRUPOS.map(g => (
+            <button
+              key={g}
+              onClick={() => { setGrupoAtivo(g); setTemplateId('') }}
+              className={cn(
+                'px-5 py-3 text-xs font-black uppercase tracking-widest whitespace-nowrap transition-colors flex-shrink-0',
+                grupoAtivo === g
+                  ? 'text-nex-black border-b-2 border-nex-black -mb-px bg-white'
+                  : 'text-nex-gray-400 hover:text-nex-gray-700 hover:bg-nex-gray-50'
+              )}
+            >
+              {g}
+            </button>
+          ))}
+        </div>
+        {/* Template pills */}
+        <div className="flex flex-wrap gap-2 p-3">
+          {templatesDoGrupo.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTemplateId(t.id)}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-sm font-bold transition-colors',
+                templateId === t.id
+                  ? 'bg-nex-black text-white'
+                  : 'bg-nex-gray-50 text-nex-gray-600 hover:bg-nex-gray-100 hover:text-nex-black border border-nex-gray-200'
+              )}
+            >
+              {t.titulo}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        {/* ── PAINEL ESQUERDO — Seletor + Formulário ── */}
-        <div className="space-y-4">
-
-          {/* Seletor de template */}
-          <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-nex-gray-100">
-              <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Template</p>
-            </div>
-            <div className="divide-y divide-nex-gray-100">
-              {templatesPorGrupo.map(({ grupo, templates }) => {
-                const open = !collapsed[grupo]
-                return (
-                  <div key={grupo}>
-                    <button
-                      onClick={() => setCollapsed(c => ({ ...c, [grupo]: !c[grupo] }))}
-                      className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-nex-gray-50 transition-colors"
-                    >
-                      <span className="text-xs font-black uppercase tracking-widest text-nex-gray-500">{grupo}</span>
-                      {open ? <ChevronDown className="w-3.5 h-3.5 text-nex-gray-400" /> : <ChevronRight className="w-3.5 h-3.5 text-nex-gray-400" />}
-                    </button>
-                    {open && (
-                      <div className="pb-1">
-                        {templates.map(t => (
-                          <button
-                            key={t.id}
-                            onClick={() => setTemplateId(t.id)}
-                            className={cn(
-                              'w-full text-left px-4 py-2 text-sm transition-colors',
-                              templateId === t.id
-                                ? 'bg-nex-gray-100 text-nex-black font-extrabold'
-                                : 'text-nex-gray-600 font-bold hover:bg-nex-gray-50 hover:text-nex-black'
-                            )}
-                          >
-                            {t.titulo}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+      {/* ── Context bar (trigger + nota) ── */}
+      {template && (
+        <div className="flex gap-3 mb-5 flex-wrap">
+          <div className="flex-1 min-w-0 px-4 py-2.5 bg-nex-gray-50 border border-nex-gray-200 rounded-lg">
+            <p className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400 mb-0.5">Quando usar</p>
+            <p className="text-xs font-bold text-nex-gray-600">{template.trigger}</p>
           </div>
-
-          {/* Trigger info */}
-          {template && (
-            <div className="px-4 py-2.5 bg-nex-gray-50 border border-nex-gray-200 rounded-lg">
-              <p className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400 mb-0.5">Quando usar</p>
-              <p className="text-xs font-bold text-nex-gray-600">{template.trigger}</p>
-            </div>
-          )}
-
-          {/* Nota interna */}
-          {template?.notaInterna && (
-            <div className="flex gap-2.5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg">
+          {template.notaInterna && (
+            <div className="flex gap-2.5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg min-w-0 flex-1">
               <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-[11px] font-black uppercase tracking-widest text-amber-600 mb-1">Nota Interna</p>
                 <p className="text-xs font-bold text-amber-800 leading-relaxed">{template.notaInterna}</p>
               </div>
             </div>
           )}
+        </div>
+      )}
 
-          {/* Campos globais */}
-          {template && (
+      {/* ── Main: Fields + Preview ── */}
+      {template ? (
+        <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-5 items-start">
+
+          {/* FIELDS */}
+          <div className="space-y-4">
+
+            {/* Global fields */}
             <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-nex-gray-100">
-                <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Seus Dados (globais)</p>
+                <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Seus Dados</p>
               </div>
               <div className="p-4 space-y-3">
                 {globais.map(campo => (
@@ -190,88 +204,105 @@ export default function NovoEmailPage() {
                 ))}
               </div>
             </div>
-          )}
 
-          {/* Campos contextuais */}
-          {template && contextuais.length > 0 && (
-            <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-nex-gray-100">
-                <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Dados do E-mail</p>
-              </div>
-              <div className="p-4 space-y-3">
-                {contextuais.map(campo => (
-                  <div key={campo.nome} className="space-y-1">
-                    <label className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400">
-                      {campo.label}
-                    </label>
-                    <CampoInput campo={campo} value={campos[campo.nome] ?? ''} onChange={v => setVal(campo.nome, v)} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── PAINEL DIREITO — Preview ── */}
-        <div className="sticky top-6 space-y-3">
-          {!template ? (
-            <div className="bg-white border border-nex-gray-200 rounded-xl flex items-center justify-center py-24">
-              <p className="text-sm font-bold text-nex-gray-300">Selecione um template para ver o preview</p>
-            </div>
-          ) : (
-            <>
-              {/* Assunto */}
-              {template.assunto && (
-                <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-nex-gray-100">
-                    <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Assunto</p>
-                    <button
-                      onClick={copyAssunto.copy}
-                      className="flex items-center gap-1 text-[11px] font-extrabold text-nex-gray-400 hover:text-nex-black transition-colors"
-                    >
-                      {copyAssunto.copied
-                        ? <><Check className="w-3 h-3 text-green-500" /> Copiado</>
-                        : <><Copy className="w-3 h-3" /> Copiar</>
-                      }
-                    </button>
-                  </div>
-                  <p className="px-4 py-3 text-sm font-bold text-nex-black">{assuntoGerado || <span className="text-nex-gray-300">Preencha os campos...</span>}</p>
-                </div>
-              )}
-
-              {/* Corpo */}
+            {/* Contextual fields */}
+            {contextuais.length > 0 && (
               <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-nex-gray-100">
-                  <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Corpo do E-mail</p>
+                <div className="px-4 py-3 border-b border-nex-gray-100">
+                  <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Dados do E-mail</p>
+                </div>
+                <div className="p-4 space-y-3">
+                  {contextuais.map(campo => (
+                    <div key={campo.nome} className="space-y-1">
+                      <label className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400">
+                        {campo.label}
+                      </label>
+                      <CampoInput campo={campo} value={campos[campo.nome] ?? ''} onChange={v => setVal(campo.nome, v)} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pending markers */}
+            {pendentes.length > 0 && (
+              <div className="px-4 py-3 bg-nex-gray-50 border border-nex-gray-200 rounded-lg">
+                <p className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400 mb-1.5">Campos pendentes</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {pendentes.map(m => (
+                    <span key={m} className="text-[11px] font-bold bg-white border border-nex-gray-200 rounded px-1.5 py-0.5 text-nex-gray-500">
+                      {'{{'}{m}{'}}'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* PREVIEW */}
+          <div className="sticky top-6">
+            <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
+
+              {/* Preview header */}
+              <div className="px-5 py-3 border-b border-nex-gray-100 bg-nex-gray-50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-3.5 h-3.5 text-nex-gray-400" />
+                  <span className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Preview</span>
+                </div>
+                <Button onClick={copyCorpo.copy} size="sm" variant="outline" className="gap-1.5 h-7 text-xs">
+                  {copyCorpo.copied
+                    ? <><Check className="w-3 h-3 text-green-500" /> Copiado!</>
+                    : <><Copy className="w-3 h-3" /> Copiar e-mail</>
+                  }
+                </Button>
+              </div>
+
+              {/* Subject row */}
+              {template.assunto && (
+                <div className="px-5 py-3 border-b border-nex-gray-100 flex items-center gap-3 group">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400 w-14 flex-shrink-0">Assunto</span>
+                  <span className="flex-1 text-sm font-bold text-nex-black min-w-0 truncate">
+                    {assuntoGerado
+                      ? renderBody(assuntoGerado)
+                      : <span className="text-nex-gray-300">Preencha os campos...</span>
+                    }
+                  </span>
                   <button
-                    onClick={copyCorpo.copy}
-                    className="flex items-center gap-1 text-[11px] font-extrabold text-nex-gray-400 hover:text-nex-black transition-colors"
+                    onClick={copyAssunto.copy}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[11px] font-bold text-nex-gray-400 hover:text-nex-black flex-shrink-0"
                   >
-                    {copyCorpo.copied
-                      ? <><Check className="w-3 h-3 text-green-500" /> Copiado</>
-                      : <><Copy className="w-3 h-3" /> Copiar</>
+                    {copyAssunto.copied
+                      ? <Check className="w-3 h-3 text-green-500" />
+                      : <Copy className="w-3 h-3" />
                     }
                   </button>
                 </div>
-                <div className="px-4 py-4 max-h-[70vh] overflow-y-auto space-y-4">
-                  <pre className="text-sm text-nex-gray-800 font-bold whitespace-pre-wrap leading-relaxed">
-                    {corpoGerado.replace(/\{\{(\w+)\}\}/g, (m) => m)}
-                  </pre>
-                  {/* Assinatura visual */}
-                  {template.marcadores.includes('assinatura') && (
-                    assinaturaUrl ? (
-                      <div className="pt-2 border-t border-nex-gray-100">
-                        <Image
-                          src={assinaturaUrl}
-                          alt="Assinatura"
-                          width={320}
-                          height={100}
-                          style={{ maxHeight: 100, width: 'auto', objectFit: 'contain' }}
-                          unoptimized
-                        />
-                      </div>
+              )}
+
+              {/* Body */}
+              <div className="px-6 py-5 max-h-[60vh] overflow-y-auto">
+                {corpoGerado ? (
+                  <div className="text-sm text-nex-gray-800 font-bold whitespace-pre-wrap leading-relaxed">
+                    {renderBody(corpoGerado)}
+                  </div>
+                ) : (
+                  <p className="text-sm text-nex-gray-300 font-bold">O corpo do e-mail aparecerá aqui...</p>
+                )}
+
+                {/* Signature */}
+                {template.marcadores.includes('assinatura') && (
+                  <div className="mt-5 pt-4 border-t border-nex-gray-100">
+                    {assinaturaUrl ? (
+                      <Image
+                        src={assinaturaUrl}
+                        alt="Assinatura"
+                        width={320}
+                        height={100}
+                        style={{ maxHeight: 100, width: 'auto', objectFit: 'contain' }}
+                        unoptimized
+                      />
                     ) : (
-                      <div className="pt-2 border-t border-nex-gray-100 flex items-center gap-2 text-nex-gray-300">
+                      <div className="flex items-center gap-2 text-nex-gray-300">
                         <ImageOff className="w-3.5 h-3.5" />
                         <span className="text-xs font-bold">
                           Sem assinatura configurada —{' '}
@@ -280,38 +311,18 @@ export default function NovoEmailPage() {
                           </Link>
                         </span>
                       </div>
-                    )
-                  )}
-                </div>
-                <div className="px-4 py-3 border-t border-nex-gray-100 flex justify-end">
-                  <Button onClick={copyCorpo.copy} size="sm" variant="outline" className="gap-1.5">
-                    {copyCorpo.copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copyCorpo.copied ? 'Copiado!' : 'Copiar E-mail'}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Marcadores não preenchidos */}
-              {(() => {
-                const pendentes = (template.marcadores).filter(m => !campos[m])
-                if (pendentes.length === 0) return null
-                return (
-                  <div className="px-4 py-2.5 bg-nex-gray-50 border border-nex-gray-200 rounded-lg">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400 mb-1">Campos pendentes</p>
-                    <div className="flex flex-wrap gap-1">
-                      {pendentes.map(m => (
-                        <span key={m} className="text-[11px] font-bold bg-white border border-nex-gray-200 rounded px-1.5 py-0.5 text-nex-gray-500">
-                          {'{{'}{m}{'}}'}
-                        </span>
-                      ))}
-                    </div>
+                    )}
                   </div>
-                )
-              })()}
-            </>
-          )}
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-white border border-nex-gray-200 rounded-xl flex items-center justify-center py-20">
+          <p className="text-sm font-bold text-nex-gray-300">Selecione um template acima para começar</p>
+        </div>
+      )}
     </div>
   )
 }
