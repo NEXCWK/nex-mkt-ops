@@ -4,35 +4,30 @@ import { createServerClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { formatCurrency } from '@/lib/utils'
-import { Building2, FileText, Mail, TrendingUp } from 'lucide-react'
+import { FileText, Mail } from 'lucide-react'
 
 async function getDashboardData() {
   const supabase = createServerClient()
 
-  const [espacos, documentos, emails] = await Promise.all([
-    supabase.from('espacos').select('*'),
+  const now = new Date()
+  const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+
+  const [totalContratos, contratosMes, totalEmails, emailsMes, docsRecentes, emailsRecentes] = await Promise.all([
+    supabase.from('documentos_gerados').select('id', { count: 'exact', head: true }),
+    supabase.from('documentos_gerados').select('id', { count: 'exact', head: true }).gte('created_at', inicioMes),
+    supabase.from('emails_enviados').select('id', { count: 'exact', head: true }),
+    supabase.from('emails_enviados').select('id', { count: 'exact', head: true }).gte('sent_at', inicioMes),
     supabase.from('documentos_gerados').select('*').order('created_at', { ascending: false }).limit(5),
     supabase.from('emails_enviados').select('*').order('sent_at', { ascending: false }).limit(5),
   ])
 
-  const total = espacos.data?.length ?? 0
-  const ocupados = espacos.data?.filter(e => e.status === 'ocupado').length ?? 0
-  const disponiveis = espacos.data?.filter(e => e.status === 'disponivel').length ?? 0
-  const churnSinalizado = espacos.data?.filter(e => e.churn_sinalizado).length ?? 0
-  const receitaMensal = espacos.data
-    ?.filter(e => e.status === 'ocupado')
-    .reduce((sum, e) => sum + (e.preco ?? 0), 0) ?? 0
-
   return {
-    total,
-    ocupados,
-    disponiveis,
-    churnSinalizado,
-    receitaMensal,
-    documentosRecentes: documentos.data ?? [],
-    emailsRecentes: emails.data ?? [],
-    taxaOcupacao: total > 0 ? Math.round((ocupados / total) * 100) : 0,
+    totalContratos: totalContratos.count ?? 0,
+    contratosMes: contratosMes.count ?? 0,
+    totalEmails: totalEmails.count ?? 0,
+    emailsMes: emailsMes.count ?? 0,
+    docsRecentes: docsRecentes.data ?? [],
+    emailsRecentes: emailsRecentes.data ?? [],
   }
 }
 
@@ -40,75 +35,75 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
   const data = await getDashboardData()
 
+  const mesAtual = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
+
   return (
     <div>
       <PageHeader
         title="Dashboard"
-        description={`Bom dia, ${session?.user?.nome ?? session?.user?.name}. Visão geral da operação.`}
+        description={`Olá, ${session?.user?.nome ?? session?.user?.name}. Visão geral da operação.`}
       />
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-nex-gray-500">Receita Mensal</CardTitle>
-            <TrendingUp className="h-4 w-4 text-nex-gray-400" />
+            <CardTitle className="text-sm font-medium text-nex-gray-500">Contratos Gerados</CardTitle>
+            <FileText className="h-4 w-4 text-nex-gray-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(data.receitaMensal)}</div>
-            <p className="text-xs text-nex-gray-500 mt-1">Espaços ocupados</p>
+            <div className="text-2xl font-bold">{data.totalContratos}</div>
+            <p className="text-xs text-nex-gray-500 mt-1">Total acumulado</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-nex-gray-500">Ocupação</CardTitle>
-            <Building2 className="h-4 w-4 text-nex-gray-400" />
+            <CardTitle className="text-sm font-medium text-nex-gray-500">Contratos este mês</CardTitle>
+            <FileText className="h-4 w-4 text-nex-yellow" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.taxaOcupacao}%</div>
-            <p className="text-xs text-nex-gray-500 mt-1">{data.ocupados}/{data.total} espaços</p>
+            <div className="text-2xl font-bold">{data.contratosMes}</div>
+            <p className="text-xs text-nex-gray-500 mt-1 capitalize">{mesAtual}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-nex-gray-500">Disponíveis</CardTitle>
-            <Building2 className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-sm font-medium text-nex-gray-500">E-mails Gerados</CardTitle>
+            <Mail className="h-4 w-4 text-nex-gray-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{data.disponiveis}</div>
-            <p className="text-xs text-nex-gray-500 mt-1">Espaços livres agora</p>
+            <div className="text-2xl font-bold">{data.totalEmails}</div>
+            <p className="text-xs text-nex-gray-500 mt-1">Total acumulado</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-nex-gray-500">Churn Sinalizado</CardTitle>
-            <Building2 className="h-4 w-4 text-red-400" />
+            <CardTitle className="text-sm font-medium text-nex-gray-500">E-mails este mês</CardTitle>
+            <Mail className="h-4 w-4 text-nex-yellow" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">{data.churnSinalizado}</div>
-            <p className="text-xs text-nex-gray-500 mt-1">Saídas previstas</p>
+            <div className="text-2xl font-bold">{data.emailsMes}</div>
+            <p className="text-xs text-nex-gray-500 mt-1 capitalize">{mesAtual}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <FileText className="h-4 w-4" />
-              Documentos Recentes
+              Contratos Recentes
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {data.documentosRecentes.length === 0 ? (
-              <p className="text-sm text-nex-gray-400">Nenhum documento gerado ainda.</p>
+            {data.docsRecentes.length === 0 ? (
+              <p className="text-sm text-nex-gray-400">Nenhum contrato gerado ainda.</p>
             ) : (
               <div className="space-y-3">
-                {data.documentosRecentes.map((doc: any) => (
+                {data.docsRecentes.map((doc: any) => (
                   <div key={doc.id} className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium">{doc.tipo}</p>
@@ -133,7 +128,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             {data.emailsRecentes.length === 0 ? (
-              <p className="text-sm text-nex-gray-400">Nenhum e-mail enviado ainda.</p>
+              <p className="text-sm text-nex-gray-400">Nenhum e-mail gerado ainda.</p>
             ) : (
               <div className="space-y-3">
                 {data.emailsRecentes.map((email: any) => (
