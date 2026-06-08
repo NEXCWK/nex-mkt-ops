@@ -10,20 +10,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Nex Design System
         nex: {
           yellow: '#FFD400',
-          black: '#000000',
+          black: '#0A0A0A',
           white: '#FFFFFF',
           gray: {
-            50: '#F9F9F9',
-            100: '#F3F3F3',
-            200: '#E8E8E8',
-            300: '#D1D1D1',
-            400: '#A0A0A0',
-            500: '#717171',
-            600: '#4B4B4B',
-            700: '#333333',
+            50:  '#F8F8F8',
+            100: '#F1F1F1',
+            200: '#E4E4E4',
+            300: '#C8C8C8',
+            400: '#9A9A9A',
+            500: '#6B6B6B',
+            600: '#4A4A4A',
+            700: '#2E2E2E',
             800: '#1A1A1A',
           },
         },
@@ -58,8 +57,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        heading: ['Proxima Nova', 'Arial', 'sans-serif'],
-        body: ['Arial', 'sans-serif'],
+        heading: ['"Proxima Nova"', 'Arial', 'sans-serif'],
+        body:    ['"Proxima Nova"', 'Arial', 'sans-serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -69,16 +68,16 @@ const config: Config = {
       keyframes: {
         'accordion-down': {
           from: { height: '0' },
-          to: { height: 'var(--radix-accordion-content-height)' },
+          to:   { height: 'var(--radix-accordion-content-height)' },
         },
         'accordion-up': {
           from: { height: 'var(--radix-accordion-content-height)' },
-          to: { height: '0' },
+          to:   { height: '0' },
         },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
-        'accordion-up': 'accordion-up 0.2s ease-out',
+        'accordion-up':   'accordion-up 0.2s ease-out',
       },
     },
   },

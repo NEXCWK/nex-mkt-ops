@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Proxima Nova ─────────────────────────────────── */
 @font-face {
   font-family: 'Proxima Nova';
   src: url('/fonts/ProximaNova-Bold.otf') format('opentype');
@@ -9,15 +10,13 @@
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
   font-family: 'Proxima Nova';
-  src: url('/fonts/ProximaNova-BoldItalic.otf') format('opentype');
+  src: url('/fonts/ProximaNova-BoldIt.otf') format('opentype');
   font-weight: 700;
   font-style: italic;
   font-display: swap;
 }
-
 @font-face {
   font-family: 'Proxima Nova';
   src: url('/fonts/ProximaNova-Extrabold.otf') format('opentype');
@@ -25,7 +24,6 @@
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
   font-family: 'Proxima Nova';
   src: url('/fonts/ProximaNova-Black.otf') format('opentype');
@@ -33,28 +31,43 @@
   font-style: normal;
   font-display: swap;
 }
+@font-face {
+  font-family: 'Proxima Nova';
+  src: url('/fonts/ProximaNova-LightItalic.otf') format('opentype');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Proxima Nova';
+  src: url('/fonts/ProximaNova-RegItalic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
 
+/* ── Design tokens ────────────────────────────────── */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 0%;
+    --background: 0 0% 97%;
+    --foreground: 0 0% 6%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
+    --card-foreground: 0 0% 6%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
-    --primary: 0 0% 0%;
+    --popover-foreground: 0 0% 6%;
+    --primary: 0 0% 6%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 95%;
-    --secondary-foreground: 0 0% 0%;
-    --muted: 0 0% 95%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 49 100% 50%;
-    --accent-foreground: 0 0% 0%;
-    --destructive: 0 84% 60%;
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 6%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 42%;
+    --accent: 0 0% 94%;
+    --accent-foreground: 0 0% 6%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 49 100% 50%;
+    --border: 0 0% 89%;
+    --input: 0 0% 89%;
+    --ring: 0 0% 6%;
     --radius: 0.5rem;
   }
 }
@@ -64,27 +77,20 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-body;
+    @apply bg-[#F6F6F6] text-nex-black font-body antialiased;
+    font-weight: 700;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
+    @apply font-heading font-extrabold tracking-tight;
+  }
+  input, textarea, select, button {
+    font-family: 'Proxima Nova', Arial, sans-serif;
+    font-weight: 700;
   }
 }
 
-@layer components {
-  .nex-badge-yellow {
-    @apply bg-nex-yellow text-nex-black text-xs font-semibold px-2 py-0.5 rounded-sm;
-  }
-  .nex-badge-available {
-    @apply bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-sm;
-  }
-  .nex-badge-occupied {
-    @apply bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded-sm;
-  }
-  .nex-badge-churn {
-    @apply bg-red-100 text-red-700 text-xs font-semibold px-2 py-0.5 rounded-sm;
-  }
-  .nex-cta {
-    @apply bg-nex-yellow text-nex-black font-semibold hover:bg-yellow-400 transition-colors;
-  }
-}
+/* ── Scrollbar refinada ───────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D0D0D0; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #A0A0A0; }
