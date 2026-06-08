@@ -130,7 +130,8 @@ export async function POST(req: NextRequest) {
   for (const p of PARCEIROS) {
     const { error } = await supabase
       .from('parceiros')
-      .upsert(p, { onConflict: 'nome' })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .upsert(p as any, { onConflict: 'nome' })
 
     results.push({ nome: p.nome, status: error ? 'error' : 'ok', detail: error?.message })
   }
