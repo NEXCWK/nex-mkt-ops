@@ -22,9 +22,16 @@ const TEMPLATES = [
 ]
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session || session.user.perfil !== 'admin') {
-    return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
+  const bearerToken = req.headers.get('authorization')?.replace('Bearer ', '')
+  const seedSecret = process.env.SEED_SECRET
+
+  if (seedSecret && bearerToken === seedSecret) {
+    // authorized via SEED_SECRET env var
+  } else {
+    const session = await getServerSession(authOptions)
+    if (!session || session.user.perfil !== 'admin') {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
+    }
   }
 
   const supabase = createServerClient()
