@@ -1,14 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ── Proxima Nova ─────────────────────────────────── */
+/* O kit da marca não inclui o peso Regular upright.
+   O Bold (700) cobre a faixa 400–700: é o peso-base de
+   todo o sistema; 800/900 ficam para destaques. */
 @font-face {
   font-family: 'Proxima Nova';
   src: url('/fonts/ProximaNova-Bold.otf') format('opentype');
-  font-weight: 700;
+  font-weight: 400 700;
   font-style: normal;
   font-display: swap;
 }
@@ -85,11 +86,7 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading font-bold tracking-tight;
   }
-  input, textarea, select {
-    font-family: inherit;
-    font-weight: inherit;
-  }
-  button {
+  input, textarea, select, button {
     font-family: 'Proxima Nova', Arial, sans-serif;
   }
 }

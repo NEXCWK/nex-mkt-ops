@@ -25,7 +25,7 @@ function SenhaField({ value }: { value: string | null }) {
   const [visible, setVisible] = useState(false)
   if (!value) return <span className="text-nex-gray-300">—</span>
   return (
-    <span className="flex items-center gap-1.5 font-mono text-xs">
+    <span className="flex items-center gap-1.5 text-xs tracking-wider">
       {visible ? value : '••••••••••'}
       <button onClick={() => setVisible(v => !v)} className="text-nex-gray-400 hover:text-nex-gray-700 transition-colors">
         {visible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}

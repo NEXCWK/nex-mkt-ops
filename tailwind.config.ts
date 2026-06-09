@@ -58,7 +58,7 @@ const config: Config = {
       },
       fontFamily: {
         heading: ['"Proxima Nova"', 'Arial', 'sans-serif'],
-        body:    ['Inter', 'system-ui', '-apple-system', 'Arial', 'sans-serif'],
+        body:    ['"Proxima Nova"', 'Arial', 'sans-serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',

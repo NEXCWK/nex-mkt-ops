@@ -45,48 +45,48 @@ export default async function DashboardPage() {
         description={`Olá, ${session?.user?.nome ?? session?.user?.name}. Visão geral da operação.`}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-nex-gray-500">Contratos Gerados</CardTitle>
-            <FileText className="h-4 w-4 text-nex-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.totalContratos}</div>
-            <p className="text-xs text-nex-gray-500 mt-1">Total acumulado</p>
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="h-4 w-4 text-nex-gray-400" />
+              <p className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Contratos Gerados</p>
+            </div>
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="text-3xl font-black leading-none">{data.totalContratos}</p>
+                <p className="text-xs text-nex-gray-400 mt-1.5">Total acumulado</p>
+              </div>
+              <div className="text-right pb-0.5">
+                <p className="inline-flex items-center gap-1.5 text-sm font-extrabold text-nex-black">
+                  <span className="w-1.5 h-1.5 rounded-full bg-nex-yellow" />
+                  +{data.contratosMes}
+                </p>
+                <p className="text-[11px] text-nex-gray-400 capitalize">{mesAtual}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-nex-gray-500">Contratos este mês</CardTitle>
-            <FileText className="h-4 w-4 text-nex-yellow" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.contratosMes}</div>
-            <p className="text-xs text-nex-gray-500 mt-1 capitalize">{mesAtual}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-nex-gray-500">E-mails Gerados</CardTitle>
-            <Mail className="h-4 w-4 text-nex-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.totalEmails}</div>
-            <p className="text-xs text-nex-gray-500 mt-1">Total acumulado</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-nex-gray-500">E-mails este mês</CardTitle>
-            <Mail className="h-4 w-4 text-nex-yellow" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.emailsMes}</div>
-            <p className="text-xs text-nex-gray-500 mt-1 capitalize">{mesAtual}</p>
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Mail className="h-4 w-4 text-nex-gray-400" />
+              <p className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">E-mails Gerados</p>
+            </div>
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="text-3xl font-black leading-none">{data.totalEmails}</p>
+                <p className="text-xs text-nex-gray-400 mt-1.5">Total acumulado</p>
+              </div>
+              <div className="text-right pb-0.5">
+                <p className="inline-flex items-center gap-1.5 text-sm font-extrabold text-nex-black">
+                  <span className="w-1.5 h-1.5 rounded-full bg-nex-yellow" />
+                  +{data.emailsMes}
+                </p>
+                <p className="text-[11px] text-nex-gray-400 capitalize">{mesAtual}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
