@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { formatDateTime } from '@/lib/utils'
 import { LogEmailDialog } from '@/components/log/LogEmailDialog'
+import { Mail } from 'lucide-react'
 
 async function getLogs() {
   const supabase = createServerClient()
@@ -32,46 +33,51 @@ export default async function LogEmailsPage() {
         description="Registro imutável de todos os e-mails enviados pelo sistema."
       />
 
-      <div className="bg-white border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-nex-gray-50 border-b">
-            <tr>
-              <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Destinatário</th>
-              <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Cliente</th>
-              <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Template</th>
-              <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Unidade</th>
-              <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Operador</th>
-              <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Enviado em</th>
-              <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Ver</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-nex-gray-100">
-            {logs.length === 0 && (
+      <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-nex-gray-50 border-b border-nex-gray-100">
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-nex-gray-400">
-                  Nenhum e-mail registrado.
-                </td>
+                <th className="text-left px-4 py-3 text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Destinatário</th>
+                <th className="text-left px-4 py-3 text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Cliente</th>
+                <th className="text-left px-4 py-3 text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Template</th>
+                <th className="text-left px-4 py-3 text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Unidade</th>
+                <th className="text-left px-4 py-3 text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Operador</th>
+                <th className="text-left px-4 py-3 text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Enviado em</th>
+                <th className="text-left px-4 py-3 text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Ver</th>
               </tr>
-            )}
-            {logs.map((log: any) => (
-              <tr key={log.id} className="hover:bg-nex-gray-50">
-                <td className="px-4 py-3 font-medium">{log.destinatario}</td>
-                <td className="px-4 py-3">{log.clientes?.nome ?? '—'}</td>
-                <td className="px-4 py-3">{log.templates_email?.nome ?? '—'}</td>
-                <td className="px-4 py-3">
-                  <Badge variant="secondary">
-                    {log.unidade === 'nex_house' ? 'NH' : log.unidade === 'francisco_rocha' ? 'FCO' : '—'}
-                  </Badge>
-                </td>
-                <td className="px-4 py-3 text-nex-gray-500">{log.operador_email}</td>
-                <td className="px-4 py-3 text-nex-gray-500">{formatDateTime(log.sent_at)}</td>
-                <td className="px-4 py-3">
-                  <LogEmailDialog log={log} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-nex-gray-100">
+              {logs.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-14">
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <Mail className="w-6 h-6 text-nex-gray-300" />
+                      <p className="text-sm text-nex-gray-400">Nenhum e-mail registrado.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {logs.map((log: any) => (
+                <tr key={log.id} className="hover:bg-nex-gray-50 transition-colors">
+                  <td className="px-4 py-3 font-medium">{log.destinatario}</td>
+                  <td className="px-4 py-3">{log.clientes?.nome ?? '—'}</td>
+                  <td className="px-4 py-3">{log.templates_email?.nome ?? '—'}</td>
+                  <td className="px-4 py-3">
+                    <Badge variant="secondary">
+                      {log.unidade === 'nex_house' ? 'NH' : log.unidade === 'francisco_rocha' ? 'FCO' : '—'}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 text-nex-gray-500">{log.operador_email}</td>
+                  <td className="px-4 py-3 text-nex-gray-500 whitespace-nowrap">{formatDateTime(log.sent_at)}</td>
+                  <td className="px-4 py-3">
+                    <LogEmailDialog log={log} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

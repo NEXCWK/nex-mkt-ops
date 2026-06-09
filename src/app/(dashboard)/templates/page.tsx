@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { formatDateTime } from '@/lib/utils'
 import { SeedTemplatesButton } from '@/components/admin/SeedTemplatesButton'
 import { SeedParceirosButton } from '@/components/admin/SeedParceirosButton'
+import { FileText, Mail } from 'lucide-react'
 
 async function getTemplates() {
   const supabase = createServerClient()
@@ -17,6 +18,8 @@ async function getTemplates() {
   ])
   return { docs: docs.data ?? [], emails: emails.data ?? [] }
 }
+
+const TH_CLASS = 'text-left px-4 py-3 text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400'
 
 export default async function TemplatesPage() {
   const session = await getServerSession(authOptions)
@@ -35,9 +38,11 @@ export default async function TemplatesPage() {
       />
 
       {isAdmin && (
-        <div className="mb-6 p-4 bg-nex-gray-50 border rounded-lg">
-          <p className="text-sm font-semibold text-nex-gray-700 mb-3">Administração</p>
-          <div className="flex flex-wrap gap-4">
+        <div className="mb-6 bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-nex-gray-100">
+            <p className="text-xs font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Administração</p>
+          </div>
+          <div className="flex flex-wrap gap-6 p-4">
             <div>
               <p className="text-xs text-nex-gray-500 mb-1.5">Templates de Contratos</p>
               <SeedTemplatesButton />
@@ -57,64 +62,82 @@ export default async function TemplatesPage() {
         </TabsList>
 
         <TabsContent value="documentos">
-          <div className="bg-white border rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-nex-gray-50 border-b">
-                <tr>
-                  <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Nome</th>
-                  <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Tipo</th>
-                  <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Unidade</th>
-                  <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Versão</th>
-                  <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Criado por</th>
-                  <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Data</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-nex-gray-100">
-                {docs.length === 0 && (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-nex-gray-400">Nenhum template de documento cadastrado.</td></tr>
-                )}
-                {docs.map((t: any) => (
-                  <tr key={t.id} className="hover:bg-nex-gray-50">
-                    <td className="px-4 py-3 font-medium">{t.nome}</td>
-                    <td className="px-4 py-3"><Badge variant="secondary">{t.tipo}</Badge></td>
-                    <td className="px-4 py-3">{t.unidade ?? '—'}</td>
-                    <td className="px-4 py-3"><Badge variant="yellow">v{t.versao}</Badge></td>
-                    <td className="px-4 py-3 text-nex-gray-500">{t.criado_por ?? '—'}</td>
-                    <td className="px-4 py-3 text-nex-gray-500">{formatDateTime(t.created_at)}</td>
+          <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-nex-gray-50 border-b border-nex-gray-100">
+                  <tr>
+                    <th className={TH_CLASS}>Nome</th>
+                    <th className={TH_CLASS}>Tipo</th>
+                    <th className={TH_CLASS}>Unidade</th>
+                    <th className={TH_CLASS}>Versão</th>
+                    <th className={TH_CLASS}>Criado por</th>
+                    <th className={TH_CLASS}>Data</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-nex-gray-100">
+                  {docs.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-14">
+                        <div className="flex flex-col items-center gap-2 text-center">
+                          <FileText className="w-6 h-6 text-nex-gray-300" />
+                          <p className="text-sm text-nex-gray-400">Nenhum template de documento cadastrado.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {docs.map((t: any) => (
+                    <tr key={t.id} className="hover:bg-nex-gray-50 transition-colors">
+                      <td className="px-4 py-3 font-medium">{t.nome}</td>
+                      <td className="px-4 py-3"><Badge variant="secondary">{t.tipo?.replace(/_/g, ' ')}</Badge></td>
+                      <td className="px-4 py-3">{t.unidade ?? '—'}</td>
+                      <td className="px-4 py-3"><Badge variant="yellow">v{t.versao}</Badge></td>
+                      <td className="px-4 py-3 text-nex-gray-500">{t.criado_por ?? '—'}</td>
+                      <td className="px-4 py-3 text-nex-gray-500 whitespace-nowrap">{formatDateTime(t.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="emails">
-          <div className="bg-white border rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-nex-gray-50 border-b">
-                <tr>
-                  <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Nome</th>
-                  <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Tipo</th>
-                  <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Versão</th>
-                  <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Criado por</th>
-                  <th className="text-left px-4 py-3 font-semibold text-nex-gray-600">Data</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-nex-gray-100">
-                {emails.length === 0 && (
-                  <tr><td colSpan={5} className="px-4 py-8 text-center text-nex-gray-400">Nenhum template de e-mail cadastrado.</td></tr>
-                )}
-                {emails.map((t: any) => (
-                  <tr key={t.id} className="hover:bg-nex-gray-50">
-                    <td className="px-4 py-3 font-medium">{t.nome}</td>
-                    <td className="px-4 py-3"><Badge variant="secondary">{t.tipo}</Badge></td>
-                    <td className="px-4 py-3"><Badge variant="yellow">v{t.versao}</Badge></td>
-                    <td className="px-4 py-3 text-nex-gray-500">{t.criado_por ?? '—'}</td>
-                    <td className="px-4 py-3 text-nex-gray-500">{formatDateTime(t.created_at)}</td>
+          <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-nex-gray-50 border-b border-nex-gray-100">
+                  <tr>
+                    <th className={TH_CLASS}>Nome</th>
+                    <th className={TH_CLASS}>Tipo</th>
+                    <th className={TH_CLASS}>Versão</th>
+                    <th className={TH_CLASS}>Criado por</th>
+                    <th className={TH_CLASS}>Data</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-nex-gray-100">
+                  {emails.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-14">
+                        <div className="flex flex-col items-center gap-2 text-center">
+                          <Mail className="w-6 h-6 text-nex-gray-300" />
+                          <p className="text-sm text-nex-gray-400">Nenhum template de e-mail cadastrado.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {emails.map((t: any) => (
+                    <tr key={t.id} className="hover:bg-nex-gray-50 transition-colors">
+                      <td className="px-4 py-3 font-medium">{t.nome}</td>
+                      <td className="px-4 py-3"><Badge variant="secondary">{t.tipo?.replace(/_/g, ' ')}</Badge></td>
+                      <td className="px-4 py-3"><Badge variant="yellow">v{t.versao}</Badge></td>
+                      <td className="px-4 py-3 text-nex-gray-500">{t.criado_por ?? '—'}</td>
+                      <td className="px-4 py-3 text-nex-gray-500 whitespace-nowrap">{formatDateTime(t.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </TabsContent>
       </Tabs>

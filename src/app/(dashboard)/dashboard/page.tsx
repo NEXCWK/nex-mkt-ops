@@ -1,10 +1,11 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
+import Link from 'next/link'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Mail } from 'lucide-react'
+import { FileText, Mail, ArrowRight } from 'lucide-react'
 
 async function getDashboardData() {
   const supabase = createServerClient()
@@ -92,24 +93,35 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <FileText className="h-4 w-4" />
               Contratos Recentes
             </CardTitle>
+            <Link
+              href="/historico"
+              className="flex items-center gap-1 text-xs text-nex-gray-400 hover:text-nex-black transition-colors"
+            >
+              Ver todos <ArrowRight className="h-3 w-3" />
+            </Link>
           </CardHeader>
           <CardContent>
             {data.docsRecentes.length === 0 ? (
-              <p className="text-sm text-nex-gray-400">Nenhum contrato gerado ainda.</p>
+              <div className="py-4 text-center">
+                <p className="text-sm text-nex-gray-400 mb-1">Nenhum contrato gerado ainda.</p>
+                <Link href="/contratos/novo" className="text-xs text-nex-gray-500 underline underline-offset-2 hover:text-nex-black transition-colors">
+                  Gerar o primeiro contrato
+                </Link>
+              </div>
             ) : (
               <div className="space-y-3">
                 {data.docsRecentes.map((doc: any) => (
-                  <div key={doc.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">{doc.tipo}</p>
-                      <p className="text-xs text-nex-gray-500">{doc.operador_email}</p>
+                  <div key={doc.id} className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium capitalize truncate">{doc.tipo?.replace(/_/g, ' ')}</p>
+                      <p className="text-xs text-nex-gray-500 truncate">{doc.operador_email}</p>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-xs flex-shrink-0">
                       {new Date(doc.created_at).toLocaleDateString('pt-BR')}
                     </Badge>
                   </div>
@@ -120,24 +132,35 @@ export default async function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Mail className="h-4 w-4" />
               E-mails Recentes
             </CardTitle>
+            <Link
+              href="/log-emails"
+              className="flex items-center gap-1 text-xs text-nex-gray-400 hover:text-nex-black transition-colors"
+            >
+              Ver todos <ArrowRight className="h-3 w-3" />
+            </Link>
           </CardHeader>
           <CardContent>
             {data.emailsRecentes.length === 0 ? (
-              <p className="text-sm text-nex-gray-400">Nenhum e-mail gerado ainda.</p>
+              <div className="py-4 text-center">
+                <p className="text-sm text-nex-gray-400 mb-1">Nenhum e-mail gerado ainda.</p>
+                <Link href="/emails/novo" className="text-xs text-nex-gray-500 underline underline-offset-2 hover:text-nex-black transition-colors">
+                  Criar o primeiro e-mail
+                </Link>
+              </div>
             ) : (
               <div className="space-y-3">
                 {data.emailsRecentes.map((email: any) => (
-                  <div key={email.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium truncate max-w-[200px]">{email.destinatario}</p>
-                      <p className="text-xs text-nex-gray-500">{email.operador_email}</p>
+                  <div key={email.id} className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{email.destinatario}</p>
+                      <p className="text-xs text-nex-gray-500 truncate">{email.operador_email}</p>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-xs flex-shrink-0">
                       {new Date(email.sent_at).toLocaleDateString('pt-BR')}
                     </Badge>
                   </div>
