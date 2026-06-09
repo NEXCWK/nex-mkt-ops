@@ -1,16 +1,15 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/hooks/use-toast'
-import { TIPOS_CONTRATO, TIPOS_ADITIVO } from '@/types'
-import { FileText, Download, Plus, ExternalLink, Info } from 'lucide-react'
+import { TIPOS_ADITIVO } from '@/types'
+import { FileText, Download, Plus, ExternalLink, Info, Check, Circle } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 // ─────────────────────────────────────────────────────────
 // Tipos
@@ -24,6 +23,47 @@ type Campo = {
   placeholder?: string
   ajuda?: string
 }
+
+// ─────────────────────────────────────────────────────────
+// Seletor visual de tipo de documento
+// ─────────────────────────────────────────────────────────
+const CATEGORIAS_CONTRATO = [
+  {
+    id: 'escritorio_privativo',
+    label: 'Escritório Privativo',
+    tipos: [
+      { value: 'escritorio_privativo_nex_house',       label: 'Nex House' },
+      { value: 'escritorio_privativo_francisco_rocha', label: 'Francisco Rocha' },
+    ],
+  },
+  {
+    id: 'nex_house',
+    label: 'Nex House',
+    tipos: [
+      { value: 'nex_house_atrium',  label: 'Atrium' },
+      { value: 'nex_house_gallery', label: 'Gallery' },
+    ],
+  },
+  {
+    id: 'termos',
+    label: 'Termos',
+    tipos: [
+      { value: 'termo_eventos',            label: 'Eventos — Externo' },
+      { value: 'termo_eventos_residentes', label: 'Eventos — Residentes' },
+      { value: 'termo_diaria_reuniao',     label: 'Diária e Reunião' },
+    ],
+  },
+  {
+    id: 'escritorio_virtual',
+    label: 'Escritório Virtual',
+    tipos: [
+      { value: 'escritorio_virtual_fiscal',         label: 'Endereço Fiscal' },
+      { value: 'escritorio_virtual_fiscal_oab',     label: 'Endereço Fiscal OAB' },
+      { value: 'escritorio_virtual_comercial',      label: 'Endereço Comercial' },
+      { value: 'escritorio_virtual_comercial_oab',  label: 'Endereço Comercial OAB' },
+    ],
+  },
+]
 
 // ─────────────────────────────────────────────────────────
 // Constantes EV
@@ -40,8 +80,10 @@ const EV_VALORES_COMERCIAL: Record<string, string> = {
   'Anual à vista': 'R$ 799,00',
   'Anual parcelado': 'R$ 1.038,00',
 }
+const EV_MESES: Record<string, number> = {
+  'Mensal': 1, 'Semestral': 6, 'Anual à vista': 12, 'Anual parcelado': 12,
+}
 
-// TODO: atualizar telefone e email das unidades
 const EV_UNIDADES_COMERCIAL: Record<string, Record<string, string>> = {
   francisco_rocha: {
     unidade_endereco: 'Rua Francisco Rocha, 198 – Batel, Curitiba/PR',
@@ -71,8 +113,16 @@ function formatarDataBR(iso: string): string {
   return `${d}/${m}/${y}`
 }
 
+function adicionarMeses(isoDate: string, meses: number): string {
+  if (!isoDate) return ''
+  const d = new Date(isoDate)
+  d.setMonth(d.getMonth() + meses)
+  d.setDate(d.getDate() - 1)
+  return d.toISOString().split('T')[0]
+}
+
 // ─────────────────────────────────────────────────────────
-// Campos por tipo — Escritório Privativo (NH e FCO, mesmos campos)
+// Definição de campos
 // ─────────────────────────────────────────────────────────
 const CAMPOS_EP: Campo[] = [
   { nome: 'nome_cliente',         label: 'Nome / Razão Social',        tipo: 'text',   obrigatorio: true },
@@ -85,7 +135,8 @@ const CAMPOS_EP: Campo[] = [
   { nome: 'vigencia_label',       label: 'Vigência',                   tipo: 'select', obrigatorio: true,
     opcoes: ['6 meses', '12 meses', '18 meses', '24 meses'] },
   { nome: 'data_inicio',          label: 'Data de Início',             tipo: 'date',   obrigatorio: true },
-  { nome: 'data_fim',             label: 'Data de Término',            tipo: 'date',   obrigatorio: false },
+  { nome: 'data_fim',             label: 'Data de Término',            tipo: 'date',   obrigatorio: false,
+    ajuda: 'Calculada automaticamente pela vigência + data de início' },
   { nome: 'valor_tabela',         label: 'Valor de Tabela (R$)',       tipo: 'text',   obrigatorio: true },
   { nome: 'valor_mensal',         label: 'Valor Mensal (R$)',          tipo: 'text',   obrigatorio: true },
   { nome: 'valor_mensal_2',       label: 'Valor Mensal 2ª fase (R$)',  tipo: 'text',   obrigatorio: false,
@@ -98,9 +149,6 @@ const CAMPOS_EP: Campo[] = [
   { nome: 'qtd_armario',          label: 'Qtd. Armários',              tipo: 'number', obrigatorio: false },
 ]
 
-// ─────────────────────────────────────────────────────────
-// Campos — Nex House Atrium / Gallery (mesmos campos)
-// ─────────────────────────────────────────────────────────
 const CAMPOS_NEX_HOUSE: Campo[] = [
   { nome: 'nome_cliente',             label: 'Nome / Razão Social',       tipo: 'text',   obrigatorio: true },
   { nome: 'cpf_cnpj',                 label: 'CPF / CNPJ',                tipo: 'text',   obrigatorio: true },
@@ -119,9 +167,6 @@ const CAMPOS_NEX_HOUSE: Campo[] = [
   { nome: 'desconto_mensalidades',    label: 'Desconto nas Mensalidades', tipo: 'text',   obrigatorio: false, placeholder: 'texto livre' },
 ]
 
-// ─────────────────────────────────────────────────────────
-// Campos — Termo Eventos Externo
-// ─────────────────────────────────────────────────────────
 const CAMPOS_TERMO_EVENTOS: Campo[] = [
   { nome: 'nome_evento',          label: 'Nome do Evento',                tipo: 'text',     obrigatorio: true },
   { nome: 'nome_responsavel',     label: 'Nome do Responsável',           tipo: 'text',     obrigatorio: true },
@@ -135,9 +180,6 @@ const CAMPOS_TERMO_EVENTOS: Campo[] = [
   { nome: 'data_assinatura',      label: 'Data de Assinatura',            tipo: 'date',     obrigatorio: true },
 ]
 
-// ─────────────────────────────────────────────────────────
-// Campos — Termo Eventos Residentes
-// ─────────────────────────────────────────────────────────
 const CAMPOS_TERMO_EVENTOS_RESIDENTES: Campo[] = [
   { nome: 'nome_evento',             label: 'Nome do Evento',                tipo: 'text',     obrigatorio: true },
   { nome: 'nome_responsavel',        label: 'Nome do Responsável',           tipo: 'text',     obrigatorio: true },
@@ -147,14 +189,13 @@ const CAMPOS_TERMO_EVENTOS_RESIDENTES: Campo[] = [
   { nome: 'data_evento',             label: 'Data do Evento (preâmbulo)',     tipo: 'date',     obrigatorio: true,
     ajuda: 'Usado no texto corrido. Ex: "durante o dia 17 de junho de 2026"' },
   { nome: 'data_evento_exibicao',    label: 'Data do Evento (exibição)',      tipo: 'text',     obrigatorio: true,
-    placeholder: 'ex: 17/06/2026', ajuda: 'Preenchido automaticamente ao informar a data acima' },
+    placeholder: 'ex: 17/06/2026', ajuda: 'Preenchida automaticamente ao informar a data acima' },
   { nome: 'perfil_evento',           label: 'Perfil do Evento',              tipo: 'text',     obrigatorio: true, placeholder: 'ex: Palestra, Workshop' },
   { nome: 'horario_evento',          label: 'Horário',                       tipo: 'text',     obrigatorio: true, placeholder: 'ex: 18:30 às 21:30hs' },
   { nome: 'num_participantes',       label: 'Número de Participantes',       tipo: 'number',   obrigatorio: true },
   { nome: 'formato_evento',          label: 'Formato',                       tipo: 'text',     obrigatorio: true, placeholder: 'ex: Plenária, U-shape' },
   { nome: 'ambientes_adicionais',    label: 'Ambientes Adicionais',          tipo: 'text',     obrigatorio: false },
-  { nome: 'obs_evento',              label: 'Observações',                   tipo: 'textarea', obrigatorio: false,
-    placeholder: 'Campo livre para observações gerais do evento' },
+  { nome: 'obs_evento',              label: 'Observações',                   tipo: 'textarea', obrigatorio: false },
   { nome: 'descricao_pagamento',     label: 'Condição de Pagamento',         tipo: 'textarea', obrigatorio: true,
     placeholder: 'Ex: Parcelado em 2x conforme abaixo.' },
   { nome: 'valor_parcela_1',         label: 'Valor da 1ª Parcela (R$)',      tipo: 'text',     obrigatorio: false },
@@ -165,9 +206,6 @@ const CAMPOS_TERMO_EVENTOS_RESIDENTES: Campo[] = [
   { nome: 'data_assinatura',         label: 'Data de Assinatura',            tipo: 'date',     obrigatorio: true },
 ]
 
-// ─────────────────────────────────────────────────────────
-// Campos — Termo Diária e Reunião
-// ─────────────────────────────────────────────────────────
 const CAMPOS_DIARIA_REUNIAO: Campo[] = [
   { nome: 'nome_evento',          label: 'Nome / Identificador do Encontro', tipo: 'text',     obrigatorio: true },
   { nome: 'nome_responsavel',     label: 'Nome do Responsável',              tipo: 'text',     obrigatorio: true },
@@ -175,7 +213,7 @@ const CAMPOS_DIARIA_REUNIAO: Campo[] = [
   { nome: 'rg_responsavel',       label: 'RG do Responsável',                tipo: 'text',     obrigatorio: true },
   { nome: 'data_evento',          label: 'Data do Encontro (preâmbulo)',      tipo: 'date',     obrigatorio: true },
   { nome: 'data_evento_exibicao', label: 'Data do Encontro (exibição)',       tipo: 'text',     obrigatorio: true,
-    placeholder: 'ex: 17/06/2026', ajuda: 'Preenchido automaticamente' },
+    placeholder: 'ex: 17/06/2026', ajuda: 'Preenchida automaticamente' },
   { nome: 'perfil_evento',        label: 'Perfil',                           tipo: 'text',     obrigatorio: true, placeholder: 'ex: Reunião, Treinamento' },
   { nome: 'espaco',               label: 'Espaço Utilizado',                 tipo: 'text',     obrigatorio: true, placeholder: 'ex: Sala R3' },
   { nome: 'horario_evento',       label: 'Horário',                          tipo: 'text',     obrigatorio: true, placeholder: 'ex: 09:00 às 18:00hs' },
@@ -186,9 +224,6 @@ const CAMPOS_DIARIA_REUNIAO: Campo[] = [
   { nome: 'data_assinatura',      label: 'Data de Assinatura',               tipo: 'date',     obrigatorio: true },
 ]
 
-// ─────────────────────────────────────────────────────────
-// Campos — EV base (Fiscal e Comercial)
-// ─────────────────────────────────────────────────────────
 const CAMPOS_EV_BASE: Campo[] = [
   { nome: 'nome_cliente',         label: 'Nome / Razão Social',         tipo: 'text',     obrigatorio: true },
   { nome: 'cpf_cnpj',             label: 'CPF / CNPJ',                  tipo: 'text',     obrigatorio: true },
@@ -199,7 +234,8 @@ const CAMPOS_EV_BASE: Campo[] = [
     opcoes: ['Mensal', 'Semestral', 'Anual à vista', 'Anual parcelado'] },
   { nome: 'domicilio_fiscal',     label: 'Domicílio Fiscal Contratado', tipo: 'text',     obrigatorio: true },
   { nome: 'data_inicio',          label: 'Data de Início',              tipo: 'date',     obrigatorio: true },
-  { nome: 'data_fim',             label: 'Data de Término',             tipo: 'date',     obrigatorio: true },
+  { nome: 'data_fim',             label: 'Data de Término',             tipo: 'date',     obrigatorio: true,
+    ajuda: 'Calculada automaticamente pela modalidade + data de início' },
   { nome: 'valor_base',           label: 'Valor Base (R$)',             tipo: 'text',     obrigatorio: true,
     ajuda: 'Preenchido automaticamente pela modalidade selecionada' },
   { nome: 'valor_adesao',         label: 'Valor de Adesão',             tipo: 'text',     obrigatorio: true,
@@ -218,26 +254,20 @@ const CAMPOS_EV_UNIDADE: Campo[] = [
   { nome: 'unidade_email',     label: 'E-mail da Unidade',    tipo: 'text',   obrigatorio: true },
 ]
 
-// ─────────────────────────────────────────────────────────
-// Mapa de campos por tipo de documento
-// ─────────────────────────────────────────────────────────
 const CAMPOS_POR_TIPO: Record<string, Campo[]> = {
-  escritorio_privativo_nex_house:      CAMPOS_EP,
+  escritorio_privativo_nex_house:       CAMPOS_EP,
   escritorio_privativo_francisco_rocha: CAMPOS_EP,
-  nex_house_atrium:                    CAMPOS_NEX_HOUSE,
-  nex_house_gallery:                   CAMPOS_NEX_HOUSE,
-  termo_eventos:                       CAMPOS_TERMO_EVENTOS,
-  termo_eventos_residentes:            CAMPOS_TERMO_EVENTOS_RESIDENTES,
-  termo_diaria_reuniao:                CAMPOS_DIARIA_REUNIAO,
-  escritorio_virtual_fiscal:           CAMPOS_EV_BASE,
-  escritorio_virtual_fiscal_oab:       CAMPOS_EV_BASE,
-  escritorio_virtual_comercial:        [...CAMPOS_EV_BASE, ...CAMPOS_EV_UNIDADE],
-  escritorio_virtual_comercial_oab:    [...CAMPOS_EV_BASE, ...CAMPOS_EV_UNIDADE],
+  nex_house_atrium:                     CAMPOS_NEX_HOUSE,
+  nex_house_gallery:                    CAMPOS_NEX_HOUSE,
+  termo_eventos:                        CAMPOS_TERMO_EVENTOS,
+  termo_eventos_residentes:             CAMPOS_TERMO_EVENTOS_RESIDENTES,
+  termo_diaria_reuniao:                 CAMPOS_DIARIA_REUNIAO,
+  escritorio_virtual_fiscal:            CAMPOS_EV_BASE,
+  escritorio_virtual_fiscal_oab:        CAMPOS_EV_BASE,
+  escritorio_virtual_comercial:         [...CAMPOS_EV_BASE, ...CAMPOS_EV_UNIDADE],
+  escritorio_virtual_comercial_oab:     [...CAMPOS_EV_BASE, ...CAMPOS_EV_UNIDADE],
 }
 
-// ─────────────────────────────────────────────────────────
-// Campos dos Aditivos EV
-// ─────────────────────────────────────────────────────────
 const CAMPOS_ADITIVO: Record<string, Campo[]> = {
   aditivo_ev_pf_para_pj: [
     { nome: 'data_contrato_originario',  label: 'Data do Contrato Original',       tipo: 'date',     obrigatorio: true },
@@ -247,37 +277,38 @@ const CAMPOS_ADITIVO: Record<string, Campo[]> = {
     { nome: 'data_assinatura',           label: 'Data de Assinatura do Aditivo',   tipo: 'date',     obrigatorio: true },
   ],
   aditivo_ev_pj_para_pj: [
-    { nome: 'data_contrato_originario',       label: 'Data do Contrato Original',          tipo: 'date',   obrigatorio: true },
-    { nome: 'endereco_coworker',              label: 'Endereço da PJ Cedente',              tipo: 'text',   obrigatorio: true },
-    { nome: 'complemento_coworker',           label: 'Complemento',                         tipo: 'text',   obrigatorio: false },
-    { nome: 'cep_coworker',                   label: 'CEP da PJ Cedente',                   tipo: 'text',   obrigatorio: true },
-    { nome: 'nome_responsavel',               label: 'Nome do Sócio / Representante Legal', tipo: 'text',   obrigatorio: true },
-    { nome: 'data_nascimento_responsavel',    label: 'Data de Nascimento do Responsável',   tipo: 'date',   obrigatorio: true },
-    { nome: 'rg_responsavel',                 label: 'RG do Responsável',                   tipo: 'text',   obrigatorio: true },
-    { nome: 'cpf_responsavel',                label: 'CPF do Responsável',                  tipo: 'text',   obrigatorio: true },
-    { nome: 'email_cliente',                  label: 'E-mail do Responsável',               tipo: 'text',   obrigatorio: true },
-    { nome: 'cel_coworker',                   label: 'Celular da PJ Cedente',               tipo: 'text',   obrigatorio: true },
-    { nome: 'nome_interveniente',             label: 'Razão Social da Nova PJ',             tipo: 'text',   obrigatorio: true },
-    { nome: 'fantasia_interveniente',         label: 'Nome Fantasia da Nova PJ',            tipo: 'text',   obrigatorio: false },
-    { nome: 'endereco_interveniente',         label: 'Endereço da Nova PJ',                 tipo: 'text',   obrigatorio: true },
-    { nome: 'complemento_interveniente',      label: 'Complemento da Nova PJ',              tipo: 'text',   obrigatorio: false },
-    { nome: 'cel_interveniente',              label: 'Celular da Nova PJ',                  tipo: 'text',   obrigatorio: true },
-    { nome: 'data_assinatura',                label: 'Data de Assinatura do Aditivo',       tipo: 'date',   obrigatorio: true },
+    { nome: 'data_contrato_originario',    label: 'Data do Contrato Original',          tipo: 'date',   obrigatorio: true },
+    { nome: 'endereco_coworker',           label: 'Endereço da PJ Cedente',             tipo: 'text',   obrigatorio: true },
+    { nome: 'complemento_coworker',        label: 'Complemento',                        tipo: 'text',   obrigatorio: false },
+    { nome: 'cep_coworker',                label: 'CEP da PJ Cedente',                  tipo: 'text',   obrigatorio: true },
+    { nome: 'nome_responsavel',            label: 'Nome do Sócio / Representante Legal',tipo: 'text',   obrigatorio: true },
+    { nome: 'data_nascimento_responsavel', label: 'Data de Nascimento do Responsável',  tipo: 'date',   obrigatorio: true },
+    { nome: 'rg_responsavel',              label: 'RG do Responsável',                  tipo: 'text',   obrigatorio: true },
+    { nome: 'cpf_responsavel',             label: 'CPF do Responsável',                 tipo: 'text',   obrigatorio: true },
+    { nome: 'email_cliente',               label: 'E-mail do Responsável',              tipo: 'text',   obrigatorio: true },
+    { nome: 'cel_coworker',                label: 'Celular da PJ Cedente',              tipo: 'text',   obrigatorio: true },
+    { nome: 'nome_interveniente',          label: 'Razão Social da Nova PJ',            tipo: 'text',   obrigatorio: true },
+    { nome: 'fantasia_interveniente',      label: 'Nome Fantasia da Nova PJ',           tipo: 'text',   obrigatorio: false },
+    { nome: 'endereco_interveniente',      label: 'Endereço da Nova PJ',               tipo: 'text',   obrigatorio: true },
+    { nome: 'complemento_interveniente',   label: 'Complemento da Nova PJ',            tipo: 'text',   obrigatorio: false },
+    { nome: 'cel_interveniente',           label: 'Celular da Nova PJ',                tipo: 'text',   obrigatorio: true },
+    { nome: 'data_assinatura',             label: 'Data de Assinatura do Aditivo',      tipo: 'date',   obrigatorio: true },
   ],
 }
 
-// ─────────────────────────────────────────────────────────
-// Labels do seletor de unidade EV Comercial
-// ─────────────────────────────────────────────────────────
 const UNIDADE_EV_LABEL: Record<string, string> = {
   francisco_rocha: 'Francisco Rocha',
   nex_house: 'Nex House',
 }
 
+const CAMPOS_AUTO = ['valor_base', 'data_fim', 'data_evento_exibicao', 'domicilio_fiscal',
+  'unidade_endereco', 'unidade_cep', 'unidade_telefone', 'unidade_email']
+
 // ─────────────────────────────────────────────────────────
 // Componente principal
 // ─────────────────────────────────────────────────────────
 export default function NovoContratoPage() {
+  const [categoriaAtiva, setCategoriaAtiva] = useState('')
   const [tipoDoc, setTipoDoc] = useState('')
   const [formValues, setFormValues] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
@@ -294,7 +325,20 @@ export default function NovoContratoPage() {
   const isOAB = tipoDoc.includes('_oab')
   const isComercial = tipoDoc.includes('_comercial')
   const isFiscal = tipoDoc.includes('_fiscal')
+  const isEP = tipoDoc.startsWith('escritorio_privativo')
   const hasDataEvento = ['termo_eventos_residentes', 'termo_diaria_reuniao'].includes(tipoDoc)
+
+  // Métricas de progresso
+  const camposObrigatorios = campos.filter(c => c.obrigatorio && c.nome !== 'unidade_selector')
+  const preenchidos = camposObrigatorios.filter(c => !!formValues[c.nome])
+  const progresso = camposObrigatorios.length > 0
+    ? Math.round((preenchidos.length / camposObrigatorios.length) * 100)
+    : 0
+
+  // Nome do tipo selecionado
+  const tipoLabel = CATEGORIAS_CONTRATO
+    .flatMap(c => c.tipos)
+    .find(t => t.value === tipoDoc)?.label ?? ''
 
   // Reset ao trocar tipo
   useEffect(() => {
@@ -306,7 +350,7 @@ export default function NovoContratoPage() {
     setAditivoGerado(null)
   }, [tipoDoc])
 
-  // Auto-fill: valor_base EV a partir da modalidade
+  // Auto-fill: valor_base EV
   useEffect(() => {
     if (!isEV || !formValues.modalidade_pagamento) return
     const tabela = isComercial ? EV_VALORES_COMERCIAL : EV_VALORES_FISCAL
@@ -315,6 +359,23 @@ export default function NovoContratoPage() {
     setFormValues(prev => ({ ...prev, valor_base: valor }))
   }, [formValues.modalidade_pagamento, tipoDoc])
 
+  // Auto-fill: data_fim EV (modalidade + data_inicio)
+  useEffect(() => {
+    if (!isEV || !formValues.modalidade_pagamento || !formValues.data_inicio) return
+    const meses = EV_MESES[formValues.modalidade_pagamento]
+    if (!meses) return
+    setFormValues(prev => ({ ...prev, data_fim: adicionarMeses(formValues.data_inicio, meses) }))
+  }, [formValues.modalidade_pagamento, formValues.data_inicio, tipoDoc])
+
+  // Auto-fill: data_fim EP (vigencia_label + data_inicio)
+  useEffect(() => {
+    if (!isEP || !formValues.vigencia_label || !formValues.data_inicio) return
+    const [n] = formValues.vigencia_label.split(' ')
+    const meses = parseInt(n)
+    if (isNaN(meses)) return
+    setFormValues(prev => ({ ...prev, data_fim: adicionarMeses(formValues.data_inicio, meses) }))
+  }, [formValues.vigencia_label, formValues.data_inicio, tipoDoc])
+
   // Auto-fill: unidade EV Comercial
   useEffect(() => {
     if (!isComercial || !formValues.unidade_selector) return
@@ -322,7 +383,7 @@ export default function NovoContratoPage() {
     if (unit) setFormValues(prev => ({ ...prev, ...unit }))
   }, [formValues.unidade_selector, tipoDoc])
 
-  // Auto-fill: domicilio_fiscal para EV Fiscal (unidade sempre FCO)
+  // Auto-fill: domicilio_fiscal EV Fiscal
   useEffect(() => {
     if (!isEV || isComercial) return
     setFormValues(prev => ({ ...prev, domicilio_fiscal: EV_FISCAL_DOMICILIO }))
@@ -342,7 +403,6 @@ export default function NovoContratoPage() {
     setAditivoValues(prev => ({ ...prev, [nome]: valor }))
   }
 
-  // Monta campos finais incluindo campos ocultos/auto
   function buildCamposFinais(): Record<string, string> {
     const final: Record<string, string> = { ...formValues }
     if (isEV) {
@@ -353,9 +413,9 @@ export default function NovoContratoPage() {
   }
 
   async function handleGerar() {
-    const obrigatoriosFaltando = campos.filter(c => c.obrigatorio && !formValues[c.nome] && c.nome !== 'unidade_selector')
-    if (obrigatoriosFaltando.length > 0) {
-      toast({ title: 'Campos obrigatórios', description: `Preencha: ${obrigatoriosFaltando.map(c => c.label).join(', ')}`, variant: 'destructive' })
+    const faltando = campos.filter(c => c.obrigatorio && !formValues[c.nome] && c.nome !== 'unidade_selector')
+    if (faltando.length > 0) {
+      toast({ title: 'Campos obrigatórios', description: `Preencha: ${faltando.map(c => c.label).join(', ')}`, variant: 'destructive' })
       return
     }
     setLoading(true)
@@ -370,22 +430,18 @@ export default function NovoContratoPage() {
       setGerado(data)
       toast({ title: 'Documento gerado!', description: 'Download iniciado automaticamente.' })
       if (data.docUrl) {
-        const a = document.createElement('a')
-        a.href = data.docUrl
-        a.download = `${tipoDoc}_${Date.now()}.docx`
-        a.click()
+        const a = document.createElement('a'); a.href = data.docUrl
+        a.download = `${tipoDoc}_${Date.now()}.docx`; a.click()
       }
     } catch (e: any) {
       toast({ title: 'Erro', description: e.message, variant: 'destructive' })
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   async function handleGerarAditivo() {
-    const obrigatoriosFaltando = camposAditivo.filter(c => c.obrigatorio && !aditivoValues[c.nome])
-    if (obrigatoriosFaltando.length > 0) {
-      toast({ title: 'Campos obrigatórios', description: `Preencha: ${obrigatoriosFaltando.map(c => c.label).join(', ')}`, variant: 'destructive' })
+    const faltando = camposAditivo.filter(c => c.obrigatorio && !aditivoValues[c.nome])
+    if (faltando.length > 0) {
+      toast({ title: 'Campos obrigatórios', description: `Preencha: ${faltando.map(c => c.label).join(', ')}`, variant: 'destructive' })
       return
     }
     setLoading(true)
@@ -393,50 +449,40 @@ export default function NovoContratoPage() {
       const res = await fetch('/api/contratos/aditivo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: tipoAditivo,
-          camposContrato: buildCamposFinais(),
-          camposAditivo: aditivoValues,
-          documentoOrigemId: gerado?.documentoId,
-        }),
+        body: JSON.stringify({ tipo: tipoAditivo, camposContrato: buildCamposFinais(), camposAditivo: aditivoValues, documentoOrigemId: gerado?.documentoId }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setAditivoGerado(data)
       toast({ title: 'Aditivo gerado!', description: 'Download iniciado.' })
       if (data.docUrl) {
-        const a = document.createElement('a')
-        a.href = data.docUrl
-        a.download = `${tipoAditivo}_${Date.now()}.docx`
-        a.click()
+        const a = document.createElement('a'); a.href = data.docUrl
+        a.download = `${tipoAditivo}_${Date.now()}.docx`; a.click()
       }
     } catch (e: any) {
       toast({ title: 'Erro', description: e.message, variant: 'destructive' })
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
-  function renderCampo(campo: Campo, values: Record<string, string>, onChange: (nome: string, val: string) => void) {
-    const isAutoFilled = ['valor_base', 'data_evento_exibicao', 'unidade_endereco', 'unidade_cep', 'unidade_telefone', 'unidade_email'].includes(campo.nome)
-
+  function renderCampo(campo: Campo, values: Record<string, string>, onChange: (n: string, v: string) => void) {
+    const isAuto = CAMPOS_AUTO.includes(campo.nome)
+    const isFilled = !!values[campo.nome]
     return (
       <div key={campo.nome} className="space-y-1.5">
         <div className="flex items-center gap-2">
-          <Label>
+          <label className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400">
             {campo.label}
-            {campo.obrigatorio && <span className="text-red-500 ml-1">*</span>}
-          </Label>
-          {isAutoFilled && (
-            <span className="text-xs text-nex-gray-400 bg-nex-gray-100 px-1.5 py-0.5 rounded">auto</span>
+            {campo.obrigatorio && <span className="text-red-400 ml-1">*</span>}
+          </label>
+          {isAuto && (
+            <span className="text-[10px] font-black uppercase tracking-widest bg-nex-gray-100 text-nex-gray-400 px-1.5 py-0.5 rounded">auto</span>
           )}
         </div>
         {campo.ajuda && (
-          <p className="text-xs text-nex-gray-400 flex items-center gap-1">
-            <Info className="h-3 w-3" />{campo.ajuda}
+          <p className="text-[11px] text-nex-gray-400 flex items-center gap-1">
+            <Info className="h-3 w-3 flex-shrink-0" />{campo.ajuda}
           </p>
         )}
-
         {campo.tipo === 'select' ? (
           campo.nome === 'unidade_selector' ? (
             <Select value={values[campo.nome] ?? ''} onValueChange={v => onChange(campo.nome, v)}>
@@ -451,9 +497,7 @@ export default function NovoContratoPage() {
             <Select value={values[campo.nome] ?? ''} onValueChange={v => onChange(campo.nome, v)}>
               <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
-                {campo.opcoes?.map(op => (
-                  <SelectItem key={op} value={op}>{op}</SelectItem>
-                ))}
+                {campo.opcoes?.map(op => <SelectItem key={op} value={op}>{op}</SelectItem>)}
               </SelectContent>
             </Select>
           )
@@ -462,7 +506,7 @@ export default function NovoContratoPage() {
             value={values[campo.nome] ?? ''}
             onChange={e => onChange(campo.nome, e.target.value)}
             placeholder={campo.placeholder}
-            className="min-h-[100px]"
+            className="min-h-[80px] text-sm font-bold"
           />
         ) : (
           <Input
@@ -470,8 +514,8 @@ export default function NovoContratoPage() {
             value={values[campo.nome] ?? ''}
             onChange={e => onChange(campo.nome, e.target.value)}
             placeholder={campo.placeholder}
-            readOnly={isAutoFilled && !!values[campo.nome]}
-            className={isAutoFilled && values[campo.nome] ? 'bg-nex-gray-50 text-nex-gray-600' : ''}
+            readOnly={isAuto && isFilled}
+            className={cn('text-sm font-bold', isAuto && isFilled ? 'bg-nex-gray-50 text-nex-gray-500' : '')}
           />
         )}
       </div>
@@ -479,152 +523,214 @@ export default function NovoContratoPage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <PageHeader title="Novo Contrato" description="Gere contratos e termos padronizados com preenchimento automático." />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Tipo de Documento</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-
-          {/* Seletor de tipo */}
-          <div className="space-y-2">
-            <Label>Selecione o tipo *</Label>
-            <Select value={tipoDoc} onValueChange={setTipoDoc}>
-              <SelectTrigger>
-                <SelectValue placeholder="Escolha o tipo de documento..." />
-              </SelectTrigger>
-              <SelectContent>
-                <div className="px-2 py-1 text-xs font-semibold text-nex-gray-400 uppercase tracking-wide">Escritório Privativo</div>
-                {TIPOS_CONTRATO.filter(t => t.value.startsWith('escritorio_privativo')).map(t => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
-                <div className="px-2 py-1 text-xs font-semibold text-nex-gray-400 uppercase tracking-wide mt-1">Nex House</div>
-                {TIPOS_CONTRATO.filter(t => t.value.startsWith('nex_house')).map(t => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
-                <div className="px-2 py-1 text-xs font-semibold text-nex-gray-400 uppercase tracking-wide mt-1">Termos de Compromisso</div>
-                {TIPOS_CONTRATO.filter(t => t.value.startsWith('termo')).map(t => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
-                <div className="px-2 py-1 text-xs font-semibold text-nex-gray-400 uppercase tracking-wide mt-1">Escritório Virtual</div>
-                {TIPOS_CONTRATO.filter(t => t.value.startsWith('escritorio_virtual')).map(t => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Formulário dinâmico */}
-          {tipoDoc && campos.length > 0 && (
-            <div className="space-y-4 pt-2 border-t">
-              <p className="text-sm font-semibold text-nex-gray-600 uppercase tracking-wide">Dados do documento</p>
-
-              {/* OAB info banner */}
-              {isOAB && (
-                <div className="flex items-start gap-2 p-3 bg-nex-yellow/10 border border-nex-yellow rounded-md">
-                  <Info className="h-4 w-4 text-nex-gray-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-nex-gray-600">
-                    Contrato OAB — desconto de 20% aplicado automaticamente sobre o valor de tabela vigente.
-                  </p>
-                </div>
+      {/* ── Seletor visual de categoria ── */}
+      <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden mb-5">
+        <div className="flex border-b border-nex-gray-100 overflow-x-auto">
+          {CATEGORIAS_CONTRATO.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => { setCategoriaAtiva(cat.id); setTipoDoc('') }}
+              className={cn(
+                'px-5 py-3 text-xs font-black uppercase tracking-widest whitespace-nowrap transition-colors flex-shrink-0',
+                categoriaAtiva === cat.id
+                  ? 'text-nex-black border-b-2 border-nex-black -mb-px bg-white'
+                  : 'text-nex-gray-400 hover:text-nex-gray-700 hover:bg-nex-gray-50'
               )}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+        {categoriaAtiva && (
+          <div className="flex flex-wrap gap-2 p-3">
+            {CATEGORIAS_CONTRATO.find(c => c.id === categoriaAtiva)?.tipos.map(t => (
+              <button
+                key={t.value}
+                onClick={() => setTipoDoc(t.value)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-sm font-bold transition-colors',
+                  tipoDoc === t.value
+                    ? 'bg-nex-black text-white'
+                    : 'bg-nex-gray-50 text-nex-gray-600 hover:bg-nex-gray-100 hover:text-nex-black border border-nex-gray-200'
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {!categoriaAtiva && (
+          <p className="px-4 py-3 text-xs font-bold text-nex-gray-300">Selecione uma categoria acima para começar</p>
+        )}
+      </div>
 
+      {tipoDoc && campos.length > 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
+
+          {/* ── Formulário ── */}
+          <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
+            {isOAB && (
+              <div className="flex items-start gap-2 px-5 py-3 bg-amber-50 border-b border-amber-200">
+                <Info className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs font-bold text-amber-800">
+                  Contrato OAB — desconto de 20% aplicado automaticamente sobre o valor de tabela vigente.
+                </p>
+              </div>
+            )}
+            <div className="p-5 space-y-4">
               {campos.map(campo => renderCampo(campo, formValues, setField))}
-
-              <Button variant="primary" className="w-full mt-4" onClick={handleGerar} disabled={loading}>
+            </div>
+            <div className="px-5 py-4 border-t border-nex-gray-100">
+              <Button className="w-full gap-2" onClick={handleGerar} disabled={loading}>
                 <FileText className="h-4 w-4" />
                 {loading ? 'Gerando...' : 'Gerar Documento'}
               </Button>
             </div>
-          )}
+          </div>
 
-          {/* Resultado */}
-          {gerado && (
-            <div className="pt-4 border-t space-y-3">
-              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
-                <div className="h-2 w-2 rounded-full bg-green-500" />
-                <p className="text-sm text-green-700 font-medium">Documento gerado com sucesso!</p>
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                {gerado.docUrl && (
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={gerado.docUrl} download>
-                      <Download className="h-4 w-4" />Baixar .docx
-                    </a>
-                  </Button>
-                )}
-                {gerado.driveUrl && (
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={gerado.driveUrl} target="_blank" rel="noreferrer">
-                      <ExternalLink className="h-4 w-4" />Ver no Drive
-                    </a>
-                  </Button>
-                )}
-              </div>
+          {/* ── Painel lateral: progresso + checklist ── */}
+          <div className="sticky top-6 space-y-4">
 
-              {/* Botão aditivo só para EV */}
-              {isEV && !mostraAditivo && (
-                <Button variant="secondary" onClick={() => setMostraAditivo(true)} className="w-full">
-                  <Plus className="h-4 w-4" />Gerar Aditivo
-                </Button>
-              )}
+            {/* Progresso */}
+            <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-nex-gray-100">
+                <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Progresso</p>
+              </div>
+              <div className="p-4">
+                <div className="flex items-end justify-between mb-2">
+                  <span className="text-2xl font-black text-nex-black">{progresso}%</span>
+                  <span className="text-xs font-bold text-nex-gray-400">
+                    {preenchidos.length}/{camposObrigatorios.length} obrigatórios
+                  </span>
+                </div>
+                <div className="h-1.5 bg-nex-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      'h-full rounded-full transition-all duration-300',
+                      progresso === 100 ? 'bg-green-500' : 'bg-nex-black'
+                    )}
+                    style={{ width: `${progresso}%` }}
+                  />
+                </div>
+                {progresso === 100 && (
+                  <p className="text-xs font-extrabold text-green-600 mt-2 flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" /> Pronto para gerar!
+                  </p>
+                )}
+              </div>
             </div>
-          )}
 
-          {/* Seção de aditivo */}
-          {mostraAditivo && (
-            <div className="pt-4 border-t space-y-4">
-              <p className="text-sm font-semibold text-nex-gray-600 uppercase tracking-wide">Aditivo Contratual</p>
-              <div className="space-y-2">
-                <Label>Tipo de Aditivo *</Label>
-                <Select value={tipoAditivo} onValueChange={v => { setTipoAditivo(v); setAditivoValues({}) }}>
-                  <SelectTrigger><SelectValue placeholder="Escolha o tipo de aditivo..." /></SelectTrigger>
-                  <SelectContent>
-                    {TIPOS_ADITIVO.map(t => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Checklist */}
+            <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-nex-gray-100">
+                <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Campos obrigatórios</p>
               </div>
+              <div className="p-3 space-y-1.5 max-h-[50vh] overflow-y-auto">
+                {camposObrigatorios.map(campo => {
+                  const ok = !!formValues[campo.nome]
+                  return (
+                    <div key={campo.nome} className="flex items-center gap-2">
+                      {ok
+                        ? <Check className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                        : <Circle className="w-3.5 h-3.5 text-nex-gray-300 flex-shrink-0" />
+                      }
+                      <span className={cn(
+                        'text-xs font-bold truncate',
+                        ok ? 'text-nex-gray-400 line-through' : 'text-nex-gray-700'
+                      )}>
+                        {campo.label}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
 
-              {tipoAditivo && (
-                <>
-                  <div className="p-3 bg-nex-gray-50 rounded-md text-sm text-nex-gray-600">
-                    Os dados do contrato original ({formValues.nome_cliente}) serão incorporados automaticamente.
-                  </div>
-                  {camposAditivo.map(campo => renderCampo(campo, aditivoValues, setAditivoField))}
-                  <Button variant="primary" className="w-full" onClick={handleGerarAditivo} disabled={loading}>
-                    <FileText className="h-4 w-4" />
-                    {loading ? 'Gerando...' : 'Gerar Aditivo'}
-                  </Button>
-                </>
-              )}
-
-              {aditivoGerado && (
-                <div className="flex gap-2 pt-2 flex-wrap">
-                  {aditivoGerado.docUrl && (
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={aditivoGerado.docUrl} download>
-                        <Download className="h-4 w-4" />Baixar Aditivo
-                      </a>
-                    </Button>
+            {/* Resultado */}
+            {gerado && (
+              <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-green-100 bg-green-50 flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  <p className="text-xs font-black uppercase tracking-widest text-green-700">Gerado com sucesso</p>
+                </div>
+                <div className="p-3 space-y-2">
+                  {gerado.docUrl && (
+                    <a href={gerado.docUrl} download className="flex items-center gap-2 text-xs font-bold text-nex-black hover:text-nex-gray-600 transition-colors">
+                      <Download className="w-3.5 h-3.5" /> Baixar .docx
+                    </a>
                   )}
-                  {aditivoGerado.driveUrl && (
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={aditivoGerado.driveUrl} target="_blank" rel="noreferrer">
-                        <ExternalLink className="h-4 w-4" />Ver no Drive
-                      </a>
-                    </Button>
+                  {gerado.driveUrl && (
+                    <a href={gerado.driveUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-xs font-bold text-nex-black hover:text-nex-gray-600 transition-colors">
+                      <ExternalLink className="w-3.5 h-3.5" /> Ver no Drive
+                    </a>
+                  )}
+                  {isEV && !mostraAditivo && (
+                    <button
+                      onClick={() => setMostraAditivo(true)}
+                      className="flex items-center gap-2 text-xs font-bold text-nex-gray-500 hover:text-nex-black transition-colors mt-1 pt-2 border-t border-nex-gray-100 w-full"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Gerar Aditivo
+                    </button>
                   )}
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : tipoDoc ? (
+        <div className="bg-white border border-nex-gray-200 rounded-xl flex items-center justify-center py-16">
+          <p className="text-sm font-bold text-nex-gray-300">Nenhum campo configurado para este tipo.</p>
+        </div>
+      ) : null}
 
-        </CardContent>
-      </Card>
+      {/* ── Aditivo ── */}
+      {mostraAditivo && (
+        <div className="mt-5 bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-nex-gray-100">
+            <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Aditivo Contratual</p>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400">Tipo de Aditivo *</label>
+              <Select value={tipoAditivo} onValueChange={v => { setTipoAditivo(v); setAditivoValues({}) }}>
+                <SelectTrigger><SelectValue placeholder="Escolha o tipo de aditivo..." /></SelectTrigger>
+                <SelectContent>
+                  {TIPOS_ADITIVO.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {tipoAditivo && (
+              <>
+                <div className="px-3 py-2 bg-nex-gray-50 rounded-lg text-xs font-bold text-nex-gray-600">
+                  Os dados do contrato de <span className="text-nex-black">{formValues.nome_cliente}</span> serão incorporados automaticamente.
+                </div>
+                {camposAditivo.map(campo => renderCampo(campo, aditivoValues, setAditivoField))}
+                <Button className="w-full gap-2" onClick={handleGerarAditivo} disabled={loading}>
+                  <FileText className="h-4 w-4" />
+                  {loading ? 'Gerando...' : 'Gerar Aditivo'}
+                </Button>
+              </>
+            )}
+            {aditivoGerado && (
+              <div className="flex gap-3 pt-2 border-t border-nex-gray-100">
+                {aditivoGerado.docUrl && (
+                  <a href={aditivoGerado.docUrl} download className="flex items-center gap-1.5 text-xs font-bold text-nex-black hover:text-nex-gray-600">
+                    <Download className="w-3.5 h-3.5" /> Baixar Aditivo
+                  </a>
+                )}
+                {aditivoGerado.driveUrl && (
+                  <a href={aditivoGerado.driveUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs font-bold text-nex-black hover:text-nex-gray-600">
+                    <ExternalLink className="w-3.5 h-3.5" /> Ver no Drive
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

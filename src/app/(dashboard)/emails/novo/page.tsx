@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
-  EMAIL_TEMPLATES, GRUPOS,
+  EMAIL_TEMPLATES, GRUPOS, MARCADORES_DEF,
   substituir, getCamposGlobais, getCamposContextuais,
   type CampoMarcador,
 } from './templates-data'
@@ -195,6 +196,7 @@ function RenderBody({ text }: { text: string }) {
 // ── main component ────────────────────────────────────────────────────────────
 
 export default function NovoEmailPage() {
+  const { data: session } = useSession()
   const [grupoAtivo, setGrupoAtivo] = useState<string>(GRUPOS[0])
   const [templateId, setTemplateId] = useState<string>('')
   const [campos, setCampos] = useState<Record<string, string>>({})
@@ -205,6 +207,13 @@ export default function NovoEmailPage() {
       .then(r => r.json())
       .then(d => setAssinaturaUrl(d.assinatura_url ?? null))
   }, [])
+
+  // Pré-preenche nome do atendente com o usuário logado
+  useEffect(() => {
+    if (session?.user?.name) {
+      setCampos(prev => prev.nome_atendente ? prev : { ...prev, nome_atendente: session.user.name! })
+    }
+  }, [session?.user?.name])
 
   const template = EMAIL_TEMPLATES.find(t => t.id === templateId) ?? null
   const globais = getCamposGlobais()
@@ -336,11 +345,13 @@ export default function NovoEmailPage() {
 
             {pendentes.length > 0 && (
               <div className="px-4 py-3 bg-nex-gray-50 border border-nex-gray-200 rounded-lg">
-                <p className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400 mb-1.5">Campos pendentes</p>
+                <p className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400 mb-1.5">
+                  Faltam {pendentes.length} campo{pendentes.length > 1 ? 's' : ''}
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {pendentes.map(m => (
                     <span key={m} className="text-[11px] font-bold bg-white border border-nex-gray-200 rounded px-1.5 py-0.5 text-nex-gray-500">
-                      {'{{'}{m}{'}}'}
+                      {MARCADORES_DEF[m]?.label ?? m}
                     </span>
                   ))}
                 </div>
