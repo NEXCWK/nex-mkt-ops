@@ -19,14 +19,14 @@ import { cn } from '@/lib/utils'
 import { signOut } from 'next-auth/react'
 
 const navItems = [
-  { href: '/dashboard',    label: 'Dashboard',     icon: LayoutDashboard, roles: ['operador', 'gestor', 'admin'] },
+  { href: '/dashboard',    label: 'Dashboard',      icon: LayoutDashboard, roles: ['operador', 'gestor', 'admin'] },
   { href: '/contratos/novo', label: 'Novo Contrato', icon: FileText,        roles: ['operador', 'gestor', 'admin'] },
-  { href: '/emails/novo',  label: 'Novo E-mail',   icon: Mail,            roles: ['operador', 'gestor', 'admin'] },
-  { href: '/parceiros',    label: 'Parceiros',      icon: Handshake,       roles: ['gestor', 'admin'] },
-  { href: '/historico',    label: 'Histórico',      icon: History,         roles: ['operador', 'gestor', 'admin'] },
-  { href: '/log-emails',   label: 'Log de E-mails', icon: ClipboardList,   roles: ['gestor', 'admin'] },
-  { href: '/templates',    label: 'Templates',      icon: Settings,        roles: ['gestor', 'admin'] },
-  { href: '/usuarios',     label: 'Usuários',       icon: Users,           roles: ['admin'] },
+  { href: '/emails/novo',  label: 'Novo E-mail',    icon: Mail,            roles: ['operador', 'gestor', 'admin'] },
+  { href: '/parceiros',    label: 'Parceiros',       icon: Handshake,       roles: ['gestor', 'admin'] },
+  { href: '/historico',    label: 'Histórico',       icon: History,         roles: ['operador', 'gestor', 'admin'] },
+  { href: '/log-emails',   label: 'Log de E-mails',  icon: ClipboardList,   roles: ['gestor', 'admin'] },
+  { href: '/templates',    label: 'Templates',       icon: Settings,        roles: ['gestor', 'admin'] },
+  { href: '/usuarios',     label: 'Usuários',        icon: Users,           roles: ['admin'] },
 ]
 
 export function Sidebar() {
@@ -60,10 +60,10 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors',
+                'flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-heading transition-colors',
                 isActive
-                  ? 'bg-nex-gray-100 text-nex-black font-extrabold'
-                  : 'text-nex-gray-500 hover:bg-nex-gray-50 hover:text-nex-gray-800 font-bold'
+                  ? 'bg-nex-gray-100 text-nex-black font-semibold'
+                  : 'text-nex-gray-500 hover:bg-nex-gray-50 hover:text-nex-gray-800 font-normal'
               )}
             >
               <Icon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'text-nex-black' : 'text-nex-gray-400')} />
@@ -77,25 +77,25 @@ export function Sidebar() {
       {/* User */}
       <div className="px-4 py-4 border-t border-nex-gray-100">
         <div className="flex items-center gap-2.5 mb-3">
-          <div className="w-7 h-7 rounded-full bg-nex-gray-100 border border-nex-gray-200 flex items-center justify-center text-nex-black text-xs font-black">
+          <div className="w-7 h-7 rounded-full bg-nex-gray-100 border border-nex-gray-200 flex items-center justify-center text-nex-black text-xs font-heading font-semibold">
             {session?.user?.name?.[0]?.toUpperCase() ?? 'U'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-extrabold text-nex-gray-800 truncate">{session?.user?.name}</p>
-            <p className="text-[10px] text-nex-gray-400 capitalize font-bold">{perfil}</p>
+            <p className="text-xs font-heading font-semibold text-nex-gray-800 truncate">{session?.user?.name}</p>
+            <p className="text-[10px] text-nex-gray-400 capitalize">{perfil}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <Link
             href="/perfil"
-            className="flex items-center gap-1.5 text-xs text-nex-gray-400 hover:text-nex-gray-700 transition-colors font-bold"
+            className="flex items-center gap-1.5 text-xs text-nex-gray-400 hover:text-nex-gray-700 transition-colors"
           >
             <UserCircle className="h-3 w-3" />
             Perfil
           </Link>
           <button
             onClick={() => signOut({ callbackUrl: '/login' })}
-            className="flex items-center gap-1.5 text-xs text-nex-gray-400 hover:text-nex-gray-700 transition-colors font-bold"
+            className="flex items-center gap-1.5 text-xs text-nex-gray-400 hover:text-nex-gray-700 transition-colors"
           >
             <LogOut className="h-3 w-3" />
             Sair

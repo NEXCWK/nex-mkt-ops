@@ -470,12 +470,12 @@ export default function NovoContratoPage() {
     return (
       <div key={campo.nome} className="space-y-1.5">
         <div className="flex items-center gap-2">
-          <label className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400">
+          <label className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">
             {campo.label}
             {campo.obrigatorio && <span className="text-red-400 ml-1">*</span>}
           </label>
           {isAuto && (
-            <span className="text-[10px] font-black uppercase tracking-widest bg-nex-gray-100 text-nex-gray-400 px-1.5 py-0.5 rounded">auto</span>
+            <span className="text-[10px] font-heading font-medium uppercase tracking-widest bg-nex-gray-100 text-nex-gray-400 px-1.5 py-0.5 rounded">auto</span>
           )}
         </div>
         {campo.ajuda && (
@@ -534,7 +534,7 @@ export default function NovoContratoPage() {
               key={cat.id}
               onClick={() => { setCategoriaAtiva(cat.id); setTipoDoc('') }}
               className={cn(
-                'px-5 py-3 text-xs font-black uppercase tracking-widest whitespace-nowrap transition-colors flex-shrink-0',
+                'px-5 py-3 text-xs font-heading font-semibold uppercase tracking-widest whitespace-nowrap transition-colors flex-shrink-0',
                 categoriaAtiva === cat.id
                   ? 'text-nex-black border-b-2 border-nex-black -mb-px bg-white'
                   : 'text-nex-gray-400 hover:text-nex-gray-700 hover:bg-nex-gray-50'
@@ -551,7 +551,7 @@ export default function NovoContratoPage() {
                 key={t.value}
                 onClick={() => setTipoDoc(t.value)}
                 className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm font-bold transition-colors',
+                  'px-3 py-1.5 rounded-lg text-sm font-heading font-medium transition-colors',
                   tipoDoc === t.value
                     ? 'bg-nex-black text-white'
                     : 'bg-nex-gray-50 text-nex-gray-600 hover:bg-nex-gray-100 hover:text-nex-black border border-nex-gray-200'
@@ -597,11 +597,11 @@ export default function NovoContratoPage() {
             {/* Progresso */}
             <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-nex-gray-100">
-                <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Progresso</p>
+                <p className="text-xs font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Progresso</p>
               </div>
               <div className="p-4">
                 <div className="flex items-end justify-between mb-2">
-                  <span className="text-2xl font-black text-nex-black">{progresso}%</span>
+                  <span className="text-2xl font-heading font-bold text-nex-black">{progresso}%</span>
                   <span className="text-xs font-bold text-nex-gray-400">
                     {preenchidos.length}/{camposObrigatorios.length} obrigatórios
                   </span>
@@ -616,7 +616,7 @@ export default function NovoContratoPage() {
                   />
                 </div>
                 {progresso === 100 && (
-                  <p className="text-xs font-extrabold text-green-600 mt-2 flex items-center gap-1">
+                  <p className="text-xs font-semibold text-green-600 mt-2 flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" /> Pronto para gerar!
                   </p>
                 )}
@@ -626,7 +626,7 @@ export default function NovoContratoPage() {
             {/* Checklist */}
             <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-nex-gray-100">
-                <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Campos obrigatórios</p>
+                <p className="text-xs font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Campos obrigatórios</p>
               </div>
               <div className="p-3 space-y-1.5 max-h-[50vh] overflow-y-auto">
                 {camposObrigatorios.map(campo => {
@@ -654,7 +654,7 @@ export default function NovoContratoPage() {
               <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-green-100 bg-green-50 flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-green-500" />
-                  <p className="text-xs font-black uppercase tracking-widest text-green-700">Gerado com sucesso</p>
+                  <p className="text-xs font-heading font-semibold uppercase tracking-widest text-green-700">Gerado com sucesso</p>
                 </div>
                 <div className="p-3 space-y-2">
                   {gerado.docUrl && (
@@ -690,11 +690,11 @@ export default function NovoContratoPage() {
       {mostraAditivo && (
         <div className="mt-5 bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
           <div className="px-5 py-4 border-b border-nex-gray-100">
-            <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Aditivo Contratual</p>
+            <p className="text-xs font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Aditivo Contratual</p>
           </div>
           <div className="p-5 space-y-4">
             <div className="space-y-1.5">
-              <label className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400">Tipo de Aditivo *</label>
+              <label className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Tipo de Aditivo *</label>
               <Select value={tipoAditivo} onValueChange={v => { setTipoAditivo(v); setAditivoValues({}) }}>
                 <SelectTrigger><SelectValue placeholder="Escolha o tipo de aditivo..." /></SelectTrigger>
                 <SelectContent>

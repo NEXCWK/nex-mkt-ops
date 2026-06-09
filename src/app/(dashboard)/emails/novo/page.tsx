@@ -256,7 +256,7 @@ export default function NovoEmailPage() {
               key={g}
               onClick={() => { setGrupoAtivo(g); setTemplateId('') }}
               className={cn(
-                'px-5 py-3 text-xs font-black uppercase tracking-widest whitespace-nowrap transition-colors flex-shrink-0',
+                'px-5 py-3 text-xs font-heading font-semibold uppercase tracking-widest whitespace-nowrap transition-colors flex-shrink-0',
                 grupoAtivo === g
                   ? 'text-nex-black border-b-2 border-nex-black -mb-px bg-white'
                   : 'text-nex-gray-400 hover:text-nex-gray-700 hover:bg-nex-gray-50'
@@ -272,7 +272,7 @@ export default function NovoEmailPage() {
               key={t.id}
               onClick={() => setTemplateId(t.id)}
               className={cn(
-                'px-3 py-1.5 rounded-lg text-sm font-bold transition-colors',
+                'px-3 py-1.5 rounded-lg text-sm font-heading font-medium transition-colors',
                 templateId === t.id
                   ? 'bg-nex-black text-white'
                   : 'bg-nex-gray-50 text-nex-gray-600 hover:bg-nex-gray-100 hover:text-nex-black border border-nex-gray-200'
@@ -288,15 +288,15 @@ export default function NovoEmailPage() {
       {template && (
         <div className="flex gap-3 mb-5 flex-wrap">
           <div className="flex-1 min-w-0 px-4 py-2.5 bg-nex-gray-50 border border-nex-gray-200 rounded-lg">
-            <p className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400 mb-0.5">Quando usar</p>
-            <p className="text-xs font-bold text-nex-gray-600">{template.trigger}</p>
+            <p className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400 mb-0.5">Quando usar</p>
+            <p className="text-xs text-nex-gray-600">{template.trigger}</p>
           </div>
           {template.notaInterna && (
             <div className="flex gap-2.5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg min-w-0 flex-1">
               <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
               <div className="min-w-0">
-                <p className="text-[11px] font-black uppercase tracking-widest text-amber-600 mb-1">Nota Interna</p>
-                <p className="text-xs font-bold text-amber-800 leading-relaxed">{template.notaInterna}</p>
+                <p className="text-[11px] font-heading font-semibold uppercase tracking-widest text-amber-600 mb-1">Nota Interna</p>
+                <p className="text-xs text-amber-800 leading-relaxed">{template.notaInterna}</p>
               </div>
             </div>
           )}
@@ -311,12 +311,12 @@ export default function NovoEmailPage() {
           <div className="space-y-4">
             <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-nex-gray-100">
-                <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Seus Dados</p>
+                <p className="text-xs font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Seus Dados</p>
               </div>
               <div className="p-4 space-y-3">
                 {globais.map(campo => (
                   <div key={campo.nome} className="space-y-1">
-                    <label className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400">
+                    <label className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">
                       {campo.label}
                     </label>
                     <CampoInput campo={campo} value={campos[campo.nome] ?? ''} onChange={v => setVal(campo.nome, v)} />
@@ -328,12 +328,12 @@ export default function NovoEmailPage() {
             {contextuais.length > 0 && (
               <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-nex-gray-100">
-                  <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Dados do E-mail</p>
+                  <p className="text-xs font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Dados do E-mail</p>
                 </div>
                 <div className="p-4 space-y-3">
                   {contextuais.map(campo => (
                     <div key={campo.nome} className="space-y-1">
-                      <label className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400">
+                      <label className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">
                         {campo.label}
                       </label>
                       <CampoInput campo={campo} value={campos[campo.nome] ?? ''} onChange={v => setVal(campo.nome, v)} />
@@ -345,7 +345,7 @@ export default function NovoEmailPage() {
 
             {pendentes.length > 0 && (
               <div className="px-4 py-3 bg-nex-gray-50 border border-nex-gray-200 rounded-lg">
-                <p className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400 mb-1.5">
+                <p className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400 mb-1.5">
                   Faltam {pendentes.length} campo{pendentes.length > 1 ? 's' : ''}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -367,7 +367,7 @@ export default function NovoEmailPage() {
               <div className="px-5 py-3 border-b border-nex-gray-100 bg-nex-gray-50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Mail className="w-3.5 h-3.5 text-nex-gray-400" />
-                  <span className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Preview</span>
+                  <span className="text-xs font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Preview</span>
                 </div>
                 <Button onClick={copyCorpo.copy} size="sm" variant="outline" className="gap-1.5 h-7 text-xs">
                   {copyCorpo.copied
@@ -380,7 +380,7 @@ export default function NovoEmailPage() {
               {/* Assunto */}
               {template.assunto && (
                 <div className="px-5 py-3 border-b border-nex-gray-100 flex items-center gap-3 group">
-                  <span className="text-[11px] font-black uppercase tracking-widest text-nex-gray-400 w-14 flex-shrink-0">Assunto</span>
+                  <span className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400 w-14 flex-shrink-0">Assunto</span>
                   <span className="flex-1 text-sm text-nex-black min-w-0">
                     {assuntoGerado
                       ? renderInline(assuntoGerado)
@@ -415,7 +415,7 @@ export default function NovoEmailPage() {
                     ) : (
                       <div className="flex items-center gap-2 text-nex-gray-300">
                         <ImageOff className="w-3.5 h-3.5" />
-                        <span className="text-xs font-bold">
+                        <span className="text-xs">
                           Sem assinatura configurada —{' '}
                           <Link href="/perfil" className="underline hover:text-nex-gray-600 transition-colors">
                             adicionar em Perfil
