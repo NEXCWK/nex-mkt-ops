@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
-import { generateDocx } from '@/lib/docx'
+import { generateDocx, formatarCamposParaDocumento } from '@/lib/docx'
 import { uploadDocumentToDrive } from '@/lib/drive'
 
 export async function POST(req: NextRequest) {
@@ -22,23 +22,27 @@ export async function POST(req: NextRequest) {
       .eq('tipo', tipo)
       .order('versao', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    let docBuffer: Buffer
-    let driveUrl: string | null = null
-
-    if (template?.arquivo_url) {
-      // Baixa o template do Supabase Storage e substitui marcadores
-      const { data: fileData } = await supabase.storage
-        .from('templates')
-        .download(template.arquivo_url)
-      if (!fileData) throw new Error('Template não encontrado no storage')
-      const arrayBuf = await fileData.arrayBuffer()
-      docBuffer = await generateDocx(Buffer.from(arrayBuf), campos)
-    } else {
-      // Gera um docx mínimo de placeholder se não houver template configurado
-      docBuffer = Buffer.from(`Documento: ${tipo}\n\n${Object.entries(campos).map(([k, v]) => `${k}: ${v}`).join('\n')}`)
+    if (!template?.arquivo_url) {
+      return NextResponse.json(
+        { error: `Template "${tipo}" não cadastrado. Importe os templates na aba Templates (botão de administração).` },
+        { status: 422 }
+      )
     }
+
+    // Baixa o template do Supabase Storage e substitui marcadores
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('templates')
+      .download(template.arquivo_url)
+    if (downloadError || !fileData) {
+      throw new Error(`Template não encontrado no storage (${template.arquivo_url}): ${downloadError?.message ?? ''}`)
+    }
+    const arrayBuf = await fileData.arrayBuffer()
+    const camposFormatados = formatarCamposParaDocumento(tipo, campos)
+    const docBuffer = await generateDocx(Buffer.from(arrayBuf), camposFormatados)
+
+    let driveUrl: string | null = null
 
     // Salva ou busca cliente
     let clienteId: string | null = null
