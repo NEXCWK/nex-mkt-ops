@@ -26,10 +26,9 @@ export function LogEmailDialog({ log }: { log: any }) {
             </div>
             <div>
               <p className="font-medium mb-2">Corpo do e-mail:</p>
-              <div
-                className="prose prose-sm max-w-none p-4 border rounded bg-white"
-                dangerouslySetInnerHTML={{ __html: log.corpo_final ?? '' }}
-              />
+              <pre className="whitespace-pre-wrap font-body text-sm p-4 border rounded bg-white max-h-[50vh] overflow-y-auto">
+                {log.corpo_final ?? ''}
+              </pre>
             </div>
           </div>
         </DialogContent>

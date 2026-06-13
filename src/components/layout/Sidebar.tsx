@@ -14,6 +14,7 @@ import {
   LogOut,
   Handshake,
   UserCircle,
+  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from 'next-auth/react'
@@ -25,6 +26,7 @@ const navSections = [
       { href: '/dashboard',      label: 'Dashboard',     icon: LayoutDashboard, roles: ['operador', 'gestor', 'admin'] },
       { href: '/contratos/novo', label: 'Novo Contrato', icon: FileText,        roles: ['operador', 'gestor', 'admin'] },
       { href: '/emails/novo',    label: 'Novo E-mail',   icon: Mail,            roles: ['operador', 'gestor', 'admin'] },
+      { href: '/assistente',     label: 'Assistente',    icon: Sparkles,        roles: ['operador', 'gestor', 'admin'] },
     ],
   },
   {

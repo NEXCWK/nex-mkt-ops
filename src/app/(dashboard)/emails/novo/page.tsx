@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -236,7 +236,31 @@ export default function NovoEmailPage() {
   const copyAssunto = useCopy(assuntoGerado)
 
   const assinaturaParaCopia = template?.marcadores.includes('assinatura') ? assinaturaUrl : null
-  const copyCorpo = useCopyCorpo(corpoGerado, assinaturaParaCopia)
+  const copyCorpoBase = useCopyCorpo(corpoGerado, assinaturaParaCopia)
+
+  // Registra a cópia no log (uma vez por conteúdo gerado)
+  const ultimoLogRef = useRef<string>('')
+  const copyCorpo = {
+    copied: copyCorpoBase.copied,
+    copy: async () => {
+      await copyCorpoBase.copy()
+      const chave = `${template?.id}|${corpoGerado}`
+      if (template && chave !== ultimoLogRef.current) {
+        ultimoLogRef.current = chave
+        fetch('/api/emails/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            templateTitulo: `${template.grupo} — ${template.titulo}`,
+            assunto: assuntoGerado,
+            corpo: corpoGerado,
+            nomeCliente: campos.nome_cliente || campos.nome_empresa || null,
+            unidade: campos.nome_unidade || null,
+          }),
+        }).catch(() => {})
+      }
+    },
+  }
 
   const templatesDoGrupo = EMAIL_TEMPLATES.filter(t => t.grupo === grupoAtivo)
   const pendentes = template ? template.marcadores.filter(m => !campos[m]) : []
@@ -389,7 +413,8 @@ export default function NovoEmailPage() {
                   </span>
                   <button
                     onClick={copyAssunto.copy}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[11px] font-bold text-nex-gray-400 hover:text-nex-black flex-shrink-0"
+                    title="Copiar assunto"
+                    className="flex items-center gap-1 text-[11px] text-nex-gray-400 hover:text-nex-black transition-colors flex-shrink-0"
                   >
                     {copyAssunto.copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                   </button>

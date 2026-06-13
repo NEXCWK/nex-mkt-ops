@@ -313,6 +313,7 @@ export default function NovoContratoPage() {
   const [formValues, setFormValues] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [gerado, setGerado] = useState<{ docUrl?: string; driveUrl?: string; documentoId?: string } | null>(null)
+  const [tentouGerar, setTentouGerar] = useState(false)
   const [mostraAditivo, setMostraAditivo] = useState(false)
   const [tipoAditivo, setTipoAditivo] = useState('')
   const [aditivoValues, setAditivoValues] = useState<Record<string, string>>({})
@@ -343,6 +344,7 @@ export default function NovoContratoPage() {
   // Reset ao trocar tipo
   useEffect(() => {
     setFormValues({})
+    setTentouGerar(false)
     setGerado(null)
     setMostraAditivo(false)
     setTipoAditivo('')
@@ -415,7 +417,9 @@ export default function NovoContratoPage() {
   async function handleGerar() {
     const faltando = campos.filter(c => c.obrigatorio && !formValues[c.nome] && c.nome !== 'unidade_selector')
     if (faltando.length > 0) {
-      toast({ title: 'Campos obrigatórios', description: `Preencha: ${faltando.map(c => c.label).join(', ')}`, variant: 'destructive' })
+      setTentouGerar(true)
+      toast({ title: `Faltam ${faltando.length} campos obrigatórios`, description: faltando.slice(0, 4).map(c => c.label).join(', ') + (faltando.length > 4 ? '…' : ''), variant: 'destructive' })
+      document.getElementById(`campo-${faltando[0].nome}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
     setLoading(true)
@@ -464,13 +468,17 @@ export default function NovoContratoPage() {
     } finally { setLoading(false) }
   }
 
-  function renderCampo(campo: Campo, values: Record<string, string>, onChange: (n: string, v: string) => void) {
+  function renderCampo(campo: Campo, values: Record<string, string>, onChange: (n: string, v: string) => void, mostrarErros = false) {
     const isAuto = CAMPOS_AUTO.includes(campo.nome)
     const isFilled = !!values[campo.nome]
+    const temErro = mostrarErros && campo.obrigatorio && !isFilled && campo.nome !== 'unidade_selector'
     return (
-      <div key={campo.nome} className="space-y-1.5">
+      <div key={campo.nome} id={`campo-${campo.nome}`} className="space-y-1.5">
         <div className="flex items-center gap-2">
-          <label className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">
+          <label className={cn(
+            'text-[11px] font-heading font-semibold uppercase tracking-widest',
+            temErro ? 'text-red-500' : 'text-nex-gray-400'
+          )}>
             {campo.label}
             {campo.obrigatorio && <span className="text-red-400 ml-1">*</span>}
           </label>
@@ -486,7 +494,7 @@ export default function NovoContratoPage() {
         {campo.tipo === 'select' ? (
           campo.nome === 'unidade_selector' ? (
             <Select value={values[campo.nome] ?? ''} onValueChange={v => onChange(campo.nome, v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione a unidade..." /></SelectTrigger>
+              <SelectTrigger className={temErro ? 'border-red-300' : ''}><SelectValue placeholder="Selecione a unidade..." /></SelectTrigger>
               <SelectContent>
                 {Object.entries(UNIDADE_EV_LABEL).map(([val, lbl]) => (
                   <SelectItem key={val} value={val}>{lbl}</SelectItem>
@@ -495,7 +503,7 @@ export default function NovoContratoPage() {
             </Select>
           ) : (
             <Select value={values[campo.nome] ?? ''} onValueChange={v => onChange(campo.nome, v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <SelectTrigger className={temErro ? 'border-red-300' : ''}><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
                 {campo.opcoes?.map(op => <SelectItem key={op} value={op}>{op}</SelectItem>)}
               </SelectContent>
@@ -506,7 +514,7 @@ export default function NovoContratoPage() {
             value={values[campo.nome] ?? ''}
             onChange={e => onChange(campo.nome, e.target.value)}
             placeholder={campo.placeholder}
-            className="min-h-[80px] text-sm font-bold"
+            className={cn('min-h-[80px] text-sm font-bold', temErro ? 'border-red-300' : '')}
           />
         ) : (
           <Input
@@ -515,7 +523,11 @@ export default function NovoContratoPage() {
             onChange={e => onChange(campo.nome, e.target.value)}
             placeholder={campo.placeholder}
             readOnly={isAuto && isFilled}
-            className={cn('text-sm font-bold', isAuto && isFilled ? 'bg-nex-gray-50 text-nex-gray-500' : '')}
+            className={cn(
+              'text-sm font-bold',
+              isAuto && isFilled ? 'bg-nex-gray-50 text-nex-gray-500' : '',
+              temErro ? 'border-red-300' : ''
+            )}
           />
         )}
       </div>
@@ -581,7 +593,7 @@ export default function NovoContratoPage() {
               </div>
             )}
             <div className="p-5 space-y-4">
-              {campos.map(campo => renderCampo(campo, formValues, setField))}
+              {campos.map(campo => renderCampo(campo, formValues, setField, tentouGerar))}
             </div>
             <div className="px-5 py-4 border-t border-nex-gray-100">
               <Button className="w-full gap-2" onClick={handleGerar} disabled={loading}>

@@ -27,7 +27,7 @@ export const authOptions: NextAuthOptions = {
         .from('usuarios')
         .select('id, ativo')
         .eq('email', user.email)
-        .single()
+        .maybeSingle()
 
       if (!data || !data.ativo) {
         return '/login?error=unauthorized'
@@ -45,7 +45,7 @@ export const authOptions: NextAuthOptions = {
           .from('usuarios')
           .select('perfil, nome')
           .eq('email', user.email)
-          .single()
+          .maybeSingle()
         token.perfil = data?.perfil
         token.nome = data?.nome ?? user.name
       }
