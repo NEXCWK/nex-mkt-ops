@@ -36,15 +36,32 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ?force=true reimporta todos; padrão importa só os que ainda não existem
+  const force = req.nextUrl.searchParams.get('force') === 'true'
+
   const supabase = createServerClient()
   const results: { tipo: string; status: string; detail?: string }[] = []
   const sourceDir = resolve(process.cwd(), '_template-source')
+
+  // tipos já registrados no banco (para pular os já importados)
+  const { data: existentes } = await supabase
+    .from('templates_documentos')
+    .select('tipo, arquivo_url')
+  const jaImportados = new Map(
+    (existentes ?? []).map((e: { tipo: string; arquivo_url: string | null }) => [e.tipo, e.arquivo_url])
+  )
 
   for (const t of TEMPLATES) {
     const filePath = resolve(sourceDir, t.arquivo)
 
     if (!existsSync(filePath)) {
       results.push({ tipo: t.tipo, status: 'skipped', detail: 'arquivo não encontrado' })
+      continue
+    }
+
+    // já importado e com arquivo registrado → pula (a menos que force)
+    if (!force && jaImportados.has(t.tipo) && jaImportados.get(t.tipo)) {
+      results.push({ tipo: t.tipo, status: 'skipped', detail: 'já importado' })
       continue
     }
 
@@ -75,7 +92,7 @@ export async function POST(req: NextRequest) {
   }
 
   const ok = results.filter(r => r.status === 'ok').length
-  const errors = results.filter(r => r.status !== 'ok' && r.status !== 'skipped')
+  const skipped = results.filter(r => r.status === 'skipped').length
 
-  return NextResponse.json({ ok, total: TEMPLATES.length, results })
+  return NextResponse.json({ ok, skipped, total: TEMPLATES.length, results })
 }
