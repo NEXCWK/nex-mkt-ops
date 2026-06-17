@@ -39,7 +39,7 @@ const navSections = [
   {
     label: 'Gestão',
     items: [
-      { href: '/parceiros', label: 'Parceiros', icon: Handshake, roles: ['gestor', 'admin'] },
+      { href: '/parceiros', label: 'Marketplaces', icon: Handshake, roles: ['gestor', 'admin'] },
       { href: '/templates', label: 'Templates', icon: Settings,  roles: ['gestor', 'admin'] },
       { href: '/usuarios',  label: 'Usuários',  icon: Users,     roles: ['admin'] },
     ],

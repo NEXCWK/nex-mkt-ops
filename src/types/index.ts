@@ -135,6 +135,8 @@ export const TIPOS_CONTRATO = [
   // Nex House
   { value: 'nex_house_atrium',  label: 'Nex House — Atrium' },
   { value: 'nex_house_gallery', label: 'Nex House — Gallery' },
+  { value: 'nex_house_atrium_anual',  label: 'Nex House — Assinatura Atrium Anual' },
+  { value: 'nex_house_gallery_anual', label: 'Nex House — Assinatura Gallery Anual' },
   // Termos de Compromisso
   { value: 'termo_eventos',            label: 'Termo de Compromisso — Eventos (Externo)' },
   { value: 'termo_eventos_residentes', label: 'Termo de Compromisso — Eventos (Residentes)' },

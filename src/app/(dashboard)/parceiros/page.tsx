@@ -22,7 +22,7 @@ export default async function ParceirosPage() {
   return (
     <div>
       <PageHeader
-        title="Parceiros"
+        title="Marketplaces"
         description="Marketplaces e plataformas parceiras do Nex."
       />
       <ParceirosClient initial={parceiros} />

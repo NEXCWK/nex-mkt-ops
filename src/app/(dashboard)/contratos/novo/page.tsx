@@ -42,6 +42,8 @@ const CATEGORIAS_CONTRATO = [
     tipos: [
       { value: 'nex_house_atrium',  label: 'Atrium' },
       { value: 'nex_house_gallery', label: 'Gallery' },
+      { value: 'nex_house_atrium_anual',  label: 'Assinatura Atrium Anual' },
+      { value: 'nex_house_gallery_anual', label: 'Assinatura Gallery Anual' },
     ],
   },
   {
@@ -167,6 +169,24 @@ const CAMPOS_NEX_HOUSE: Campo[] = [
   { nome: 'desconto_mensalidades',    label: 'Desconto nas Mensalidades', tipo: 'text',   obrigatorio: false, placeholder: 'texto livre' },
 ]
 
+// ─────────────────────────────────────────────────────────
+// Campos — Nex House Assinatura Anual (Atrium / Gallery)
+// Planos com preço e taxa fixos no modelo; só dados do membro + início.
+// ─────────────────────────────────────────────────────────
+const CAMPOS_NEX_HOUSE_ANUAL: Campo[] = [
+  { nome: 'nome_cliente',         label: 'Nome / Razão Social',   tipo: 'text', obrigatorio: true },
+  { nome: 'cpf_cnpj',             label: 'CPF / CNPJ',            tipo: 'text', obrigatorio: true },
+  { nome: 'endereco_rua',         label: 'Rua',                   tipo: 'text', obrigatorio: true },
+  { nome: 'endereco_numero',      label: 'Número',                tipo: 'text', obrigatorio: true },
+  { nome: 'endereco_complemento', label: 'Complemento',           tipo: 'text', obrigatorio: false },
+  { nome: 'endereco_bairro',      label: 'Bairro',                tipo: 'text', obrigatorio: true },
+  { nome: 'endereco_cidade',      label: 'Cidade',                tipo: 'text', obrigatorio: true },
+  { nome: 'endereco_uf',          label: 'UF',                    tipo: 'text', obrigatorio: true, placeholder: 'ex: PR' },
+  { nome: 'endereco_estado',      label: 'Estado (por extenso)',  tipo: 'text', obrigatorio: true, placeholder: 'ex: Paraná' },
+  { nome: 'endereco_cep',         label: 'CEP',                   tipo: 'text', obrigatorio: true },
+  { nome: 'data_inicio',          label: 'Data de Início',        tipo: 'date', obrigatorio: true },
+]
+
 const CAMPOS_TERMO_EVENTOS: Campo[] = [
   { nome: 'nome_evento',          label: 'Nome do Evento',                tipo: 'text',     obrigatorio: true },
   { nome: 'nome_responsavel',     label: 'Nome do Responsável',           tipo: 'text',     obrigatorio: true },
@@ -259,6 +279,8 @@ const CAMPOS_POR_TIPO: Record<string, Campo[]> = {
   escritorio_privativo_francisco_rocha: CAMPOS_EP,
   nex_house_atrium:                     CAMPOS_NEX_HOUSE,
   nex_house_gallery:                    CAMPOS_NEX_HOUSE,
+  nex_house_atrium_anual:               CAMPOS_NEX_HOUSE_ANUAL,
+  nex_house_gallery_anual:              CAMPOS_NEX_HOUSE_ANUAL,
   termo_eventos:                        CAMPOS_TERMO_EVENTOS,
   termo_eventos_residentes:             CAMPOS_TERMO_EVENTOS_RESIDENTES,
   termo_diaria_reuniao:                 CAMPOS_DIARIA_REUNIAO,
