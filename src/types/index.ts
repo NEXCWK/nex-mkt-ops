@@ -149,8 +149,9 @@ export const TIPOS_CONTRATO = [
 ]
 
 export const TIPOS_ADITIVO = [
-  { value: 'aditivo_ev_pf_para_pj', label: 'Aditivo EV — Troca de Polo PF → PJ' },
-  { value: 'aditivo_ev_pj_para_pj', label: 'Aditivo EV — Troca de Polo PJ → PJ' },
+  { value: 'aditivo_ev_pf_para_pj',          label: 'Aditivo EV — Troca de Polo PF → PJ' },
+  { value: 'aditivo_ev_pj_para_pj',          label: 'Aditivo EV — Troca de Polo PJ → PJ' },
+  { value: 'aditivo_ev_alteracao_endereco',   label: 'Aditivo EV — Troca de Endereço' },
 ]
 
 export const TIPOS_PROPOSTA = [

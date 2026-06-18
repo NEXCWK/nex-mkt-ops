@@ -65,6 +65,15 @@ const CATEGORIAS_CONTRATO = [
       { value: 'escritorio_virtual_comercial_oab',  label: 'Endereço Comercial OAB' },
     ],
   },
+  {
+    id: 'aditivos_ev',
+    label: 'Aditivos EV',
+    tipos: [
+      { value: 'aditivo_ev_pf_para_pj',         label: 'Troca de Polo PF → PJ' },
+      { value: 'aditivo_ev_pj_para_pj',         label: 'Troca de Polo PJ → PJ' },
+      { value: 'aditivo_ev_alteracao_endereco', label: 'Troca de Endereço' },
+    ],
+  },
 ]
 
 // ─────────────────────────────────────────────────────────
@@ -274,6 +283,50 @@ const CAMPOS_EV_UNIDADE: Campo[] = [
   { nome: 'unidade_email',     label: 'E-mail da Unidade',    tipo: 'text',   obrigatorio: true },
 ]
 
+// ─────────────────────────────────────────────────────────
+// Campos — Aditivos EV (base, sem nome_cliente/cpf_cnpj)
+// Usados no fluxo linked (CAMPOS_ADITIVO) e reutilizados no standalone (CAMPOS_POR_TIPO).
+// ─────────────────────────────────────────────────────────
+const _ADITIVO_PF_PARA_PJ: Campo[] = [
+  { nome: 'data_contrato_originario',  label: 'Data do Contrato Original',       tipo: 'date',     obrigatorio: true },
+  { nome: 'nome_responsavel',          label: 'Nome do Contratante PF Original', tipo: 'text',     obrigatorio: true },
+  { nome: 'qualificacao_coworker_pf',  label: 'Qualificação completa da PF',     tipo: 'textarea', obrigatorio: true,
+    placeholder: 'Ex: brasileira, divorciada, empresária, nascida em 22/02/1980, RG 12.345.678-9, CPF 000.000.000-00, residente na Rua X, nº 00, Curitiba/PR' },
+  { nome: 'data_assinatura',           label: 'Data de Assinatura do Aditivo',   tipo: 'date',     obrigatorio: true },
+]
+
+const _ADITIVO_PJ_PARA_PJ: Campo[] = [
+  { nome: 'data_contrato_originario',    label: 'Data do Contrato Original',           tipo: 'date',   obrigatorio: true },
+  { nome: 'endereco_coworker',           label: 'Endereço da PJ Cedente',              tipo: 'text',   obrigatorio: true },
+  { nome: 'complemento_coworker',        label: 'Complemento',                         tipo: 'text',   obrigatorio: false },
+  { nome: 'cep_coworker',                label: 'CEP da PJ Cedente',                   tipo: 'text',   obrigatorio: true },
+  { nome: 'nome_responsavel',            label: 'Nome do Sócio / Representante Legal', tipo: 'text',   obrigatorio: true },
+  { nome: 'data_nascimento_responsavel', label: 'Data de Nascimento do Responsável',   tipo: 'date',   obrigatorio: true },
+  { nome: 'rg_responsavel',              label: 'RG do Responsável',                   tipo: 'text',   obrigatorio: true },
+  { nome: 'cpf_responsavel',             label: 'CPF do Responsável',                  tipo: 'text',   obrigatorio: true },
+  { nome: 'email_cliente',               label: 'E-mail do Responsável',               tipo: 'text',   obrigatorio: true },
+  { nome: 'cel_coworker',                label: 'Celular da PJ Cedente',               tipo: 'text',   obrigatorio: true },
+  { nome: 'nome_interveniente',          label: 'Razão Social da Nova PJ',             tipo: 'text',   obrigatorio: true },
+  { nome: 'fantasia_interveniente',      label: 'Nome Fantasia da Nova PJ',            tipo: 'text',   obrigatorio: false },
+  { nome: 'endereco_interveniente',      label: 'Endereço da Nova PJ',                tipo: 'text',   obrigatorio: true },
+  { nome: 'complemento_interveniente',   label: 'Complemento da Nova PJ',             tipo: 'text',   obrigatorio: false },
+  { nome: 'cel_interveniente',           label: 'Celular da Nova PJ',                 tipo: 'text',   obrigatorio: true },
+  { nome: 'data_assinatura',             label: 'Data de Assinatura do Aditivo',       tipo: 'date',   obrigatorio: true },
+]
+
+const _ADITIVO_ALTERACAO_ENDERECO: Campo[] = [
+  { nome: 'endereco_antigo',           label: 'Endereço Antigo (completo)',            tipo: 'textarea', obrigatorio: true,
+    placeholder: 'Ex: Rua Emiliano Perneta, 725, Loja 01, bairro Centro, Curitiba-PR, CEP 80.420-080' },
+  { nome: 'data_contrato_originario',  label: 'Data do Contrato Original',            tipo: 'date',   obrigatorio: true },
+  { nome: 'modalidade_ev',             label: 'Modalidade do EV',                     tipo: 'select', obrigatorio: true,
+    opcoes: ['Endereço Fiscal', 'Endereço Fiscal OAB', 'Endereço Comercial', 'Endereço Comercial OAB'] },
+  { nome: 'endereco_novo_rua',         label: 'Novo Endereço — Rua',                  tipo: 'text',   obrigatorio: true,
+    placeholder: 'Ex: Rua Francisco Rocha, 198 – Batel' },
+  { nome: 'endereco_novo_cep',         label: 'Novo Endereço — CEP',                  tipo: 'text',   obrigatorio: true,
+    placeholder: '80.420-130' },
+  { nome: 'data_assinatura',           label: 'Data de Assinatura do Aditivo',        tipo: 'date',   obrigatorio: true },
+]
+
 const CAMPOS_POR_TIPO: Record<string, Campo[]> = {
   escritorio_privativo_nex_house:       CAMPOS_EP,
   escritorio_privativo_francisco_rocha: CAMPOS_EP,
@@ -288,34 +341,27 @@ const CAMPOS_POR_TIPO: Record<string, Campo[]> = {
   escritorio_virtual_fiscal_oab:        CAMPOS_EV_BASE,
   escritorio_virtual_comercial:         [...CAMPOS_EV_BASE, ...CAMPOS_EV_UNIDADE],
   escritorio_virtual_comercial_oab:     [...CAMPOS_EV_BASE, ...CAMPOS_EV_UNIDADE],
+  aditivo_ev_pf_para_pj: [
+    { nome: 'nome_cliente', label: 'Nome / Razão Social',  tipo: 'text', obrigatorio: true },
+    { nome: 'cpf_cnpj',     label: 'CPF / CNPJ',           tipo: 'text', obrigatorio: true },
+    ..._ADITIVO_PF_PARA_PJ,
+  ],
+  aditivo_ev_pj_para_pj: [
+    { nome: 'nome_cliente', label: 'Razão Social da Empresa Cedente', tipo: 'text', obrigatorio: true },
+    { nome: 'cpf_cnpj',     label: 'CNPJ da Empresa Cedente',         tipo: 'text', obrigatorio: true },
+    ..._ADITIVO_PJ_PARA_PJ,
+  ],
+  aditivo_ev_alteracao_endereco: [
+    { nome: 'nome_cliente', label: 'Nome / Razão Social',  tipo: 'text', obrigatorio: true },
+    { nome: 'cpf_cnpj',     label: 'CPF / CNPJ',           tipo: 'text', obrigatorio: true },
+    ..._ADITIVO_ALTERACAO_ENDERECO,
+  ],
 }
 
 const CAMPOS_ADITIVO: Record<string, Campo[]> = {
-  aditivo_ev_pf_para_pj: [
-    { nome: 'data_contrato_originario',  label: 'Data do Contrato Original',       tipo: 'date',     obrigatorio: true },
-    { nome: 'nome_responsavel',          label: 'Nome do Contratante PF Original', tipo: 'text',     obrigatorio: true },
-    { nome: 'qualificacao_coworker_pf',  label: 'Qualificação completa da PF',     tipo: 'textarea', obrigatorio: true,
-      placeholder: 'Ex: brasileira, divorciada, empresária, nascida em 22/02/1980, RG 12.345.678-9, CPF 000.000.000-00, residente na Rua X, nº 00, Curitiba/PR' },
-    { nome: 'data_assinatura',           label: 'Data de Assinatura do Aditivo',   tipo: 'date',     obrigatorio: true },
-  ],
-  aditivo_ev_pj_para_pj: [
-    { nome: 'data_contrato_originario',    label: 'Data do Contrato Original',          tipo: 'date',   obrigatorio: true },
-    { nome: 'endereco_coworker',           label: 'Endereço da PJ Cedente',             tipo: 'text',   obrigatorio: true },
-    { nome: 'complemento_coworker',        label: 'Complemento',                        tipo: 'text',   obrigatorio: false },
-    { nome: 'cep_coworker',                label: 'CEP da PJ Cedente',                  tipo: 'text',   obrigatorio: true },
-    { nome: 'nome_responsavel',            label: 'Nome do Sócio / Representante Legal',tipo: 'text',   obrigatorio: true },
-    { nome: 'data_nascimento_responsavel', label: 'Data de Nascimento do Responsável',  tipo: 'date',   obrigatorio: true },
-    { nome: 'rg_responsavel',              label: 'RG do Responsável',                  tipo: 'text',   obrigatorio: true },
-    { nome: 'cpf_responsavel',             label: 'CPF do Responsável',                 tipo: 'text',   obrigatorio: true },
-    { nome: 'email_cliente',               label: 'E-mail do Responsável',              tipo: 'text',   obrigatorio: true },
-    { nome: 'cel_coworker',                label: 'Celular da PJ Cedente',              tipo: 'text',   obrigatorio: true },
-    { nome: 'nome_interveniente',          label: 'Razão Social da Nova PJ',            tipo: 'text',   obrigatorio: true },
-    { nome: 'fantasia_interveniente',      label: 'Nome Fantasia da Nova PJ',           tipo: 'text',   obrigatorio: false },
-    { nome: 'endereco_interveniente',      label: 'Endereço da Nova PJ',               tipo: 'text',   obrigatorio: true },
-    { nome: 'complemento_interveniente',   label: 'Complemento da Nova PJ',            tipo: 'text',   obrigatorio: false },
-    { nome: 'cel_interveniente',           label: 'Celular da Nova PJ',                tipo: 'text',   obrigatorio: true },
-    { nome: 'data_assinatura',             label: 'Data de Assinatura do Aditivo',      tipo: 'date',   obrigatorio: true },
-  ],
+  aditivo_ev_pf_para_pj:         _ADITIVO_PF_PARA_PJ,
+  aditivo_ev_pj_para_pj:         _ADITIVO_PJ_PARA_PJ,
+  aditivo_ev_alteracao_endereco: _ADITIVO_ALTERACAO_ENDERECO,
 }
 
 const UNIDADE_EV_LABEL: Record<string, string> = {

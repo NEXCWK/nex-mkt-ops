@@ -21,6 +21,7 @@ const TEMPLATES = [
   { tipo: 'escritorio_virtual_comercial_oab',     nome: 'Escritório Virtual — Endereço Comercial OAB',  arquivo: 'escritorio_virtual_comercial_oab.docx' },
   { tipo: 'aditivo_ev_pf_para_pj',               nome: 'Aditivo EV — Troca de Polo PF → PJ',           arquivo: 'aditivo_ev_pf_para_pj.docx' },
   { tipo: 'aditivo_ev_pj_para_pj',               nome: 'Aditivo EV — Troca de Polo PJ → PJ',           arquivo: 'aditivo_ev_pj_para_pj.docx' },
+  { tipo: 'aditivo_ev_alteracao_endereco',        nome: 'Aditivo EV — Troca de Endereço',               arquivo: 'aditivo_ev_alteracao_endereco.docx' },
 ]
 
 export async function POST(req: NextRequest) {
