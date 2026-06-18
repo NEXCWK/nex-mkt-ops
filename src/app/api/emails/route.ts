@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
 
     await sendEmailViaGmail({
       accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
       to: destinatario,
       cc: copiasUnicas,
       subject: assunto,

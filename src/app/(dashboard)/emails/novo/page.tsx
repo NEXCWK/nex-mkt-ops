@@ -11,7 +11,7 @@ import {
   type CampoMarcador,
 } from './templates-data'
 import { cn } from '@/lib/utils'
-import { Copy, Check, AlertTriangle, ImageOff, Mail, Send, Loader2, ChevronDown } from 'lucide-react'
+import { Copy, Check, AlertTriangle, ImageOff, Mail, Send, Loader2, ChevronDown, X } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { COPIAS_FIXAS, COPIAS_POR_UNIDADE, type Unidade } from '@/types'
@@ -216,10 +216,19 @@ export default function NovoEmailPage() {
   const [destinatario, setDestinatario] = useState('')
   const [unidadeSend, setUnidadeSend] = useState<string>('')
   const [usaThread, setUsaThread] = useState(false)
-  const [threadInput, setThreadInput] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const [erroEnvio, setErroEnvio] = useState<string | null>(null)
+
+  // Estado de busca de thread
+  const [threadModo, setThreadModo] = useState<'buscar' | 'colar'>('buscar')
+  const [buscaQuery, setBuscaQuery] = useState('')
+  const [buscandoThreads, setBuscandoThreads] = useState(false)
+  const [threadsResultado, setThreadsResultado] = useState<{ threadId: string; subject: string; from: string; date: string; snippet: string }[]>([])
+  const [threadSelecionada, setThreadSelecionada] = useState<{ threadId: string; subject: string } | null>(null)
+  const [threadUrlInput, setThreadUrlInput] = useState('')
+  const [erroScope, setErroScope] = useState(false)
+  const buscaTimeoutRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     fetch('/api/usuario/perfil')
@@ -281,6 +290,34 @@ export default function NovoEmailPage() {
     },
   }
 
+  // Busca de threads com debounce
+  useEffect(() => {
+    if (!usaThread || threadModo !== 'buscar' || !buscaQuery.trim()) {
+      setThreadsResultado([])
+      return
+    }
+    clearTimeout(buscaTimeoutRef.current)
+    buscaTimeoutRef.current = setTimeout(async () => {
+      setBuscandoThreads(true)
+      setErroScope(false)
+      try {
+        const res = await fetch(`/api/emails/threads?q=${encodeURIComponent(buscaQuery)}`)
+        const data = await res.json()
+        if (data.error === 'scope_insuficiente') {
+          setErroScope(true)
+          setThreadsResultado([])
+        } else {
+          setThreadsResultado(data.threads ?? [])
+        }
+      } catch {
+        setThreadsResultado([])
+      } finally {
+        setBuscandoThreads(false)
+      }
+    }, 400)
+    return () => clearTimeout(buscaTimeoutRef.current)
+  }, [buscaQuery, usaThread, threadModo])
+
   const copiasSend = Array.from(new Set([
     ...COPIAS_FIXAS,
     ...(unidadeSend && COPIAS_POR_UNIDADE[unidadeSend as Unidade]
@@ -288,12 +325,18 @@ export default function NovoEmailPage() {
       : []),
   ]))
 
+  function getThreadId(): string | undefined {
+    if (!usaThread) return undefined
+    if (threadModo === 'buscar') return threadSelecionada?.threadId
+    return threadUrlInput.trim() ? extrairThreadId(threadUrlInput) : undefined
+  }
+
   async function handleEnviar() {
     if (!destinatario.trim() || !template) return
     setEnviando(true)
     setErroEnvio(null)
     try {
-      const threadId = usaThread ? extrairThreadId(threadInput) : undefined
+      const threadId = getThreadId()
       const htmlCorpo = textToEmailHtml(corpoGerado, assinaturaParaCopia)
       const res = await fetch('/api/emails', {
         method: 'POST',
@@ -554,7 +597,12 @@ export default function NovoEmailPage() {
                   <input
                     type="checkbox"
                     checked={usaThread}
-                    onChange={e => setUsaThread(e.target.checked)}
+                    onChange={e => {
+                      setUsaThread(e.target.checked)
+                      setThreadSelecionada(null)
+                      setBuscaQuery('')
+                      setThreadsResultado([])
+                    }}
                     className="rounded border-nex-gray-300 accent-nex-black w-4 h-4 cursor-pointer"
                   />
                   <span className="text-xs font-semibold text-nex-gray-700">
@@ -563,19 +611,99 @@ export default function NovoEmailPage() {
                 </label>
 
                 {usaThread && (
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">
-                      URL ou ID da thread (Gmail)
-                    </label>
-                    <Input
-                      value={threadInput}
-                      onChange={e => setThreadInput(e.target.value)}
-                      placeholder="https://mail.google.com/mail/u/0/#inbox/18c4b5..."
-                      className="text-sm font-mono"
-                    />
-                    <p className="text-[11px] text-nex-gray-400">
-                      Abra a thread no Gmail e copie a URL completa da barra de endereços.
-                    </p>
+                  <div className="space-y-3 pt-1">
+                    {/* Modo: buscar ou colar */}
+                    <div className="flex gap-1 p-0.5 bg-nex-gray-100 rounded-lg">
+                      {(['buscar', 'colar'] as const).map(modo => (
+                        <button
+                          key={modo}
+                          onClick={() => { setThreadModo(modo); setThreadSelecionada(null) }}
+                          className={cn(
+                            'flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                            threadModo === modo
+                              ? 'bg-white text-nex-black shadow-sm'
+                              : 'text-nex-gray-500 hover:text-nex-gray-700'
+                          )}
+                        >
+                          {modo === 'buscar' ? 'Buscar por assunto' : 'Colar URL / ID'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {threadModo === 'buscar' ? (
+                      <div className="space-y-2">
+                        {erroScope ? (
+                          <div className="flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-amber-800">
+                              Faça <strong>login novamente</strong> para autorizar a busca de threads
+                              (nova permissão necessária).
+                            </p>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="relative">
+                              <Input
+                                value={buscaQuery}
+                                onChange={e => { setBuscaQuery(e.target.value); setThreadSelecionada(null) }}
+                                placeholder="Assunto ou palavras-chave…"
+                                className="text-sm pr-8"
+                              />
+                              {buscandoThreads && (
+                                <Loader2 className="absolute right-2.5 top-2.5 w-4 h-4 animate-spin text-nex-gray-400" />
+                              )}
+                            </div>
+
+                            {threadsResultado.length > 0 && !threadSelecionada && (
+                              <div className="border border-nex-gray-200 rounded-lg overflow-hidden divide-y divide-nex-gray-100">
+                                {threadsResultado.map(t => (
+                                  <button
+                                    key={t.threadId}
+                                    onClick={() => setThreadSelecionada(t)}
+                                    className="w-full text-left px-3 py-2.5 hover:bg-nex-gray-50 transition-colors"
+                                  >
+                                    <p className="text-xs font-semibold text-nex-black truncate">{t.subject}</p>
+                                    <p className="text-[11px] text-nex-gray-400 truncate mt-0.5">{t.from}</p>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            {threadSelecionada && (
+                              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                                <Check className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-semibold text-green-800 truncate">{threadSelecionada.subject}</p>
+                                  <p className="text-[11px] text-green-600 font-mono">{threadSelecionada.threadId}</p>
+                                </div>
+                                <button
+                                  onClick={() => { setThreadSelecionada(null); setBuscaQuery('') }}
+                                  className="text-green-500 hover:text-green-700 flex-shrink-0"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+
+                            {buscaQuery.trim() && !buscandoThreads && threadsResultado.length === 0 && !threadSelecionada && (
+                              <p className="text-[11px] text-nex-gray-400 text-center py-1">Nenhuma thread encontrada</p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <Input
+                          value={threadUrlInput}
+                          onChange={e => setThreadUrlInput(e.target.value)}
+                          placeholder="https://mail.google.com/mail/u/0/#inbox/18c4b5..."
+                          className="text-sm font-mono"
+                        />
+                        <p className="text-[11px] text-nex-gray-400">
+                          Abra a thread no Gmail e copie a URL da barra de endereços.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
