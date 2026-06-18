@@ -500,6 +500,20 @@ export default function NovoContratoPage() {
     setAditivoValues(prev => ({ ...prev, [nome]: valor }))
   }
 
+  function baixarDocxBlob(docUrl: string, filename: string) {
+    const base64 = docUrl.includes(',') ? docUrl.split(',')[1] : docUrl
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+    const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   function buildCamposFinais(): Record<string, string> {
     const final: Record<string, string> = { ...formValues }
     if (isEV) {
@@ -529,8 +543,7 @@ export default function NovoContratoPage() {
       setGerado(data)
       toast({ title: 'Documento gerado!', description: 'Download iniciado automaticamente.' })
       if (data.docUrl) {
-        const a = document.createElement('a'); a.href = data.docUrl
-        a.download = `${tipoDoc}_${Date.now()}.docx`; a.click()
+        baixarDocxBlob(data.docUrl, `${tipoDoc}_${Date.now()}.docx`)
       }
     } catch (e: any) {
       toast({ title: 'Erro', description: e.message, variant: 'destructive' })
@@ -555,8 +568,7 @@ export default function NovoContratoPage() {
       setAditivoGerado(data)
       toast({ title: 'Aditivo gerado!', description: 'Download iniciado.' })
       if (data.docUrl) {
-        const a = document.createElement('a'); a.href = data.docUrl
-        a.download = `${tipoAditivo}_${Date.now()}.docx`; a.click()
+        baixarDocxBlob(data.docUrl, `${tipoAditivo}_${Date.now()}.docx`)
       }
     } catch (e: any) {
       toast({ title: 'Erro', description: e.message, variant: 'destructive' })
@@ -765,9 +777,9 @@ export default function NovoContratoPage() {
                 </div>
                 <div className="p-3 space-y-2">
                   {gerado.docUrl && (
-                    <a href={gerado.docUrl} download className="flex items-center gap-2 text-xs font-bold text-nex-black hover:text-nex-gray-600 transition-colors">
+                    <button onClick={() => baixarDocxBlob(gerado.docUrl!, `${tipoDoc}_${Date.now()}.docx`)} className="flex items-center gap-2 text-xs font-bold text-nex-black hover:text-nex-gray-600 transition-colors">
                       <Download className="w-3.5 h-3.5" /> Baixar .docx
-                    </a>
+                    </button>
                   )}
                   {gerado.driveUrl && (
                     <a href={gerado.driveUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-xs font-bold text-nex-black hover:text-nex-gray-600 transition-colors">
@@ -824,9 +836,9 @@ export default function NovoContratoPage() {
             {aditivoGerado && (
               <div className="flex gap-3 pt-2 border-t border-nex-gray-100">
                 {aditivoGerado.docUrl && (
-                  <a href={aditivoGerado.docUrl} download className="flex items-center gap-1.5 text-xs font-bold text-nex-black hover:text-nex-gray-600">
+                  <button onClick={() => baixarDocxBlob(aditivoGerado.docUrl!, `${tipoAditivo}_${Date.now()}.docx`)} className="flex items-center gap-1.5 text-xs font-bold text-nex-black hover:text-nex-gray-600">
                     <Download className="w-3.5 h-3.5" /> Baixar Aditivo
-                  </a>
+                  </button>
                 )}
                 {aditivoGerado.driveUrl && (
                   <a href={aditivoGerado.driveUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs font-bold text-nex-black hover:text-nex-gray-600">

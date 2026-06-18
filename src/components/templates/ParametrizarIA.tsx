@@ -137,10 +137,16 @@ export function ParametrizarIA() {
 
   function baixarDocx() {
     if (!docxBase64 || !arquivo) return
+    const bytes = Uint8Array.from(atob(docxBase64), c => c.charCodeAt(0))
+    const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+    const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${docxBase64}`
+    a.href = url
     a.download = `parametrizado_${arquivo.name}`
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   async function importar() {
