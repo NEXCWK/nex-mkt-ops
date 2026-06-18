@@ -18,6 +18,11 @@ export function formatDateExtenso(iso: string): string {
   return `${d} de ${MESES[m - 1]} de ${y}`
 }
 
+export function formatDateAssinaturaLocal(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return `Curitiba, ${d} de ${MESES[m - 1]} de ${y}`
+}
+
 // Campos de data usados em texto corrido (preâmbulo) por tipo de documento:
 // recebem a forma por extenso em vez de dd/mm/aaaa.
 const CAMPOS_EXTENSO: Record<string, string[]> = {
@@ -33,7 +38,13 @@ export function formatarCamposParaDocumento(
   const out: Record<string, string> = {}
   for (const [k, v] of Object.entries(campos)) {
     if (typeof v === 'string' && ISO_DATE.test(v)) {
-      out[k] = extenso.includes(k) ? `o dia ${formatDateExtenso(v)}` : formatDateBR(v)
+      if (k === 'data_assinatura') {
+        out[k] = formatDateAssinaturaLocal(v)
+      } else if (extenso.includes(k)) {
+        out[k] = `o dia ${formatDateExtenso(v)}`
+      } else {
+        out[k] = formatDateBR(v)
+      }
     } else {
       out[k] = v
     }
