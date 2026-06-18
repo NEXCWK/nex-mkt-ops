@@ -7,6 +7,7 @@ interface SendEmailParams {
   subject: string
   body: string
   senderName?: string
+  threadId?: string
 }
 
 export async function sendEmailViaGmail({
@@ -16,6 +17,7 @@ export async function sendEmailViaGmail({
   subject,
   body,
   senderName,
+  threadId,
 }: SendEmailParams): Promise<{ messageId: string }> {
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -47,7 +49,10 @@ export async function sendEmailViaGmail({
 
   const response = await gmail.users.messages.send({
     userId: 'me',
-    requestBody: { raw: encodedMessage },
+    requestBody: {
+      raw: encodedMessage,
+      ...(threadId ? { threadId } : {}),
+    },
   })
 
   return { messageId: response.data.id ?? '' }

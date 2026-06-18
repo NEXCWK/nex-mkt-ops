@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     if (!session.accessToken) return NextResponse.json({ error: 'Token Gmail não disponível. Faça login novamente.' }, { status: 401 })
 
-    const { modelo, unidade, campos, destinatario, assunto, corpo, copias } = await req.json()
+    const { modelo, unidade, campos, destinatario, assunto, corpo, threadId } = await req.json()
 
     // Monta cópias garantindo as fixas + por unidade
     const copiasFinais: string[] = [...COPIAS_FIXAS]
@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
       subject: assunto,
       body: corpo,
       senderName: session.user.nome ?? session.user.name ?? undefined,
+      threadId: threadId ?? undefined,
     })
 
     const supabase = createServerClient()

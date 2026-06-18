@@ -11,9 +11,10 @@ import {
   type CampoMarcador,
 } from './templates-data'
 import { cn } from '@/lib/utils'
-import { Copy, Check, AlertTriangle, ImageOff, Mail } from 'lucide-react'
+import { Copy, Check, AlertTriangle, ImageOff, Mail, Send, Loader2, ChevronDown } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { COPIAS_FIXAS, COPIAS_POR_UNIDADE, type Unidade } from '@/types'
 
 // ── html helpers ──────────────────────────────────────────────────────────────
 
@@ -193,6 +194,15 @@ function RenderBody({ text }: { text: string }) {
   )
 }
 
+// ── thread id extraction ──────────────────────────────────────────────────────
+
+function extrairThreadId(input: string): string {
+  // Suporta URL completa: https://mail.google.com/mail/u/0/#inbox/18c4b5d8e3f2a1b0
+  const urlMatch = input.match(/[#/]([0-9a-f]{10,})\s*$/)
+  if (urlMatch) return urlMatch[1]
+  return input.trim()
+}
+
 // ── main component ────────────────────────────────────────────────────────────
 
 export default function NovoEmailPage() {
@@ -201,6 +211,15 @@ export default function NovoEmailPage() {
   const [templateId, setTemplateId] = useState<string>('')
   const [campos, setCampos] = useState<Record<string, string>>({})
   const [assinaturaUrl, setAssinaturaUrl] = useState<string | null>(null)
+
+  // Estado de envio
+  const [destinatario, setDestinatario] = useState('')
+  const [unidadeSend, setUnidadeSend] = useState<string>('')
+  const [usaThread, setUsaThread] = useState(false)
+  const [threadInput, setThreadInput] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [enviado, setEnviado] = useState(false)
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/usuario/perfil')
@@ -260,6 +279,44 @@ export default function NovoEmailPage() {
         }).catch(() => {})
       }
     },
+  }
+
+  const copiasSend = Array.from(new Set([
+    ...COPIAS_FIXAS,
+    ...(unidadeSend && COPIAS_POR_UNIDADE[unidadeSend as Unidade]
+      ? [COPIAS_POR_UNIDADE[unidadeSend as Unidade]]
+      : []),
+  ]))
+
+  async function handleEnviar() {
+    if (!destinatario.trim() || !template) return
+    setEnviando(true)
+    setErroEnvio(null)
+    try {
+      const threadId = usaThread ? extrairThreadId(threadInput) : undefined
+      const htmlCorpo = textToEmailHtml(corpoGerado, assinaturaParaCopia)
+      const res = await fetch('/api/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modelo: template.id,
+          unidade: unidadeSend || null,
+          campos,
+          destinatario: destinatario.trim(),
+          assunto: assuntoGerado,
+          corpo: htmlCorpo,
+          threadId,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Erro ao enviar')
+      setEnviado(true)
+      setTimeout(() => setEnviado(false), 5000)
+    } catch (e: any) {
+      setErroEnvio(e.message)
+    } finally {
+      setEnviando(false)
+    }
   }
 
   const templatesDoGrupo = EMAIL_TEMPLATES.filter(t => t.grupo === grupoAtivo)
@@ -422,7 +479,7 @@ export default function NovoEmailPage() {
               )}
 
               {/* Body */}
-              <div className="px-6 py-5 max-h-[60vh] overflow-y-auto">
+              <div className="px-6 py-5 max-h-[50vh] overflow-y-auto">
                 <RenderBody text={corpoGerado} />
 
                 {/* Assinatura visual */}
@@ -449,6 +506,106 @@ export default function NovoEmailPage() {
                       </div>
                     )}
                   </div>
+                )}
+              </div>
+
+              {/* ── Enviar via Gmail ── */}
+              <div className="border-t border-nex-gray-100 px-5 py-4 space-y-3">
+                <p className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400 flex items-center gap-1.5">
+                  <Send className="w-3 h-3" /> Enviar via Gmail
+                </p>
+
+                {/* Para */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Para *</label>
+                  <Input
+                    type="email"
+                    value={destinatario}
+                    onChange={e => setDestinatario(e.target.value)}
+                    placeholder="email@destinatario.com"
+                    className="text-sm"
+                  />
+                </div>
+
+                {/* Unidade para CCs */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">
+                    Unidade (cópias automáticas)
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={unidadeSend}
+                      onChange={e => setUnidadeSend(e.target.value)}
+                      className="w-full h-9 rounded-md border border-nex-gray-200 bg-white px-3 pr-8 text-sm font-bold text-nex-black focus:outline-none focus:ring-1 focus:ring-nex-gray-400 appearance-none"
+                    >
+                      <option value="">Sem unidade específica</option>
+                      <option value="nex_house">Nex House</option>
+                      <option value="francisco_rocha">Francisco Rocha</option>
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-2.5 w-4 h-4 text-nex-gray-400 pointer-events-none" />
+                  </div>
+                  <p className="text-[11px] text-nex-gray-400">
+                    Cópias: {copiasSend.join(', ')}
+                  </p>
+                </div>
+
+                {/* Thread reply toggle */}
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={usaThread}
+                    onChange={e => setUsaThread(e.target.checked)}
+                    className="rounded border-nex-gray-300 accent-nex-black w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-xs font-semibold text-nex-gray-700">
+                    Enviar como resposta em thread existente
+                  </span>
+                </label>
+
+                {usaThread && (
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">
+                      URL ou ID da thread (Gmail)
+                    </label>
+                    <Input
+                      value={threadInput}
+                      onChange={e => setThreadInput(e.target.value)}
+                      placeholder="https://mail.google.com/mail/u/0/#inbox/18c4b5..."
+                      className="text-sm font-mono"
+                    />
+                    <p className="text-[11px] text-nex-gray-400">
+                      Abra a thread no Gmail e copie a URL completa da barra de endereços.
+                    </p>
+                  </div>
+                )}
+
+                {/* Erro */}
+                {erroEnvio && (
+                  <div className="flex items-start gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs font-bold text-red-700">{erroEnvio}</p>
+                  </div>
+                )}
+
+                {/* Botão enviar */}
+                <Button
+                  onClick={handleEnviar}
+                  disabled={enviando || !destinatario.trim() || pendentes.length > 0}
+                  className="w-full gap-2"
+                  variant={enviado ? 'outline' : 'default'}
+                >
+                  {enviado
+                    ? <><Check className="w-4 h-4 text-green-500" /> E-mail enviado!</>
+                    : enviando
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando…</>
+                      : <><Send className="w-4 h-4" /> Enviar via Gmail</>
+                  }
+                </Button>
+
+                {pendentes.length > 0 && (
+                  <p className="text-[11px] text-center text-nex-gray-400">
+                    Preencha todos os campos obrigatórios para enviar
+                  </p>
                 )}
               </div>
             </div>
