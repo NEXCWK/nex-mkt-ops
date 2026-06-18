@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -387,7 +387,34 @@ export default function NovoContratoPage() {
   const [aditivoValues, setAditivoValues] = useState<Record<string, string>>({})
   const [aditivoGerado, setAditivoGerado] = useState<{ docUrl?: string; driveUrl?: string } | null>(null)
 
-  const campos = CAMPOS_POR_TIPO[tipoDoc] ?? []
+  // Templates dinâmicos importados via IA
+  const [categoriasExtra, setCategoriasExtra] = useState<typeof CATEGORIAS_CONTRATO>([])
+  const [camposExtra, setCamposExtra] = useState<Record<string, Campo[]>>({})
+  const carregouDinamicos = useRef(false)
+
+  useEffect(() => {
+    if (carregouDinamicos.current) return
+    carregouDinamicos.current = true
+    fetch('/api/templates/dinamicos')
+      .then(r => r.json())
+      .then(data => {
+        const templates: Array<{ tipo: string; nome: string; campos_json: Campo[] }> = data.templates ?? []
+        if (templates.length === 0) return
+        setCategoriasExtra([{
+          id: 'personalizados',
+          label: 'Personalizados',
+          tipos: templates.map(t => ({ value: t.tipo, label: t.nome })),
+        }])
+        const extra: Record<string, Campo[]> = {}
+        for (const t of templates) extra[t.tipo] = t.campos_json ?? []
+        setCamposExtra(extra)
+      })
+      .catch(() => { /* silencioso — sem personalizados carregados */ })
+  }, [])
+
+  const todasCategorias = [...CATEGORIAS_CONTRATO, ...categoriasExtra]
+
+  const campos = CAMPOS_POR_TIPO[tipoDoc] ?? camposExtra[tipoDoc] ?? []
   const camposAditivo = CAMPOS_ADITIVO[tipoAditivo] ?? []
 
   const isEV = tipoDoc.startsWith('escritorio_virtual')
@@ -405,7 +432,7 @@ export default function NovoContratoPage() {
     : 0
 
   // Nome do tipo selecionado
-  const tipoLabel = CATEGORIAS_CONTRATO
+  const tipoLabel = todasCategorias
     .flatMap(c => c.tipos)
     .find(t => t.value === tipoDoc)?.label ?? ''
 
@@ -609,7 +636,7 @@ export default function NovoContratoPage() {
       {/* ── Seletor visual de categoria ── */}
       <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden mb-5">
         <div className="flex border-b border-nex-gray-100 overflow-x-auto">
-          {CATEGORIAS_CONTRATO.map(cat => (
+          {todasCategorias.map(cat => (
             <button
               key={cat.id}
               onClick={() => { setCategoriaAtiva(cat.id); setTipoDoc('') }}
@@ -626,7 +653,7 @@ export default function NovoContratoPage() {
         </div>
         {categoriaAtiva && (
           <div className="flex flex-wrap gap-2 p-3">
-            {CATEGORIAS_CONTRATO.find(c => c.id === categoriaAtiva)?.tipos.map(t => (
+            {todasCategorias.find(c => c.id === categoriaAtiva)?.tipos.map(t => (
               <button
                 key={t.value}
                 onClick={() => setTipoDoc(t.value)}
