@@ -30,6 +30,51 @@ const CAMPOS_EXTENSO: Record<string, string[]> = {
   termo_diaria_reuniao: ['data_evento'],
 }
 
+function composeQualificacaoPfParaPj(c: Record<string, string>): string {
+  const isFem = c.genero_coworker !== 'Masculino'
+  const nascidoA   = isFem ? 'nascida'             : 'nascido'
+  const portadorA  = isFem ? 'portadora'            : 'portador'
+  const inscritaO  = isFem ? 'inscrita'             : 'inscrito'
+  const residenteA = isFem ? 'residente e domiciliada' : 'residente e domiciliado'
+
+  const dataNasc = ISO_DATE.test(c.data_nascimento_responsavel ?? '')
+    ? formatDateBR(c.data_nascimento_responsavel)
+    : (c.data_nascimento_responsavel ?? '')
+
+  const endPF = [
+    c.endereco_coworker,
+    c.complemento_coworker,
+    c.bairro_coworker ? `Bairro ${c.bairro_coworker}` : '',
+    c.cidade_estado_coworker,
+    c.cep_coworker ? `CEP:${c.cep_coworker}` : '',
+  ].filter(Boolean).join(', ')
+
+  const qualPF =
+    `${c.nome_responsavel ?? ''}, ${c.nacionalidade_coworker ?? ''}, ` +
+    `${c.estado_civil_coworker ?? ''}, ${nascidoA} em ${dataNasc}, ` +
+    `${c.profissao_coworker ?? ''}, ${portadorA} da Carteira de Identidade Civil ` +
+    `RG nº ${c.rg_responsavel ?? ''} ${c.orgao_rg_coworker ?? ''}, ` +
+    `e ${inscritaO} no CPF/MF nº ${c.cpf_responsavel ?? ''}, ` +
+    `${residenteA} na ${endPF}`
+
+  const endPJ = [
+    c.endereco_interveniente,
+    c.bairro_interveniente,
+    c.cidade_interveniente,
+    c.cep_interveniente ? `CEP ${c.cep_interveniente}` : '',
+  ].filter(Boolean).join(', ')
+
+  const qualPJ =
+    `${c.nome_cliente ?? ''}, pessoa jurídica de direito privado, ` +
+    `inscrita no CNPJ/ME n. º ${c.cpf_cnpj ?? ''}, com sede na ${endPJ}, ` +
+    `neste ato representada por ${c.vinculo_representante ?? ''} ${qualPF}`
+
+  return (
+    `Na qualidade de CONTRATANTE (COWORKER):\n${qualPF};\n\n` +
+    `Na qualidade de INTERVENIENTE-ANUENTE:\n${qualPJ};`
+  )
+}
+
 export function formatarCamposParaDocumento(
   tipo: string,
   campos: Record<string, string>
@@ -48,6 +93,9 @@ export function formatarCamposParaDocumento(
     } else {
       out[k] = v
     }
+  }
+  if (tipo === 'aditivo_ev_pf_para_pj') {
+    out.qualificacao_coworker_pf = composeQualificacaoPfParaPj(campos)
   }
   return out
 }

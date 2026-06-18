@@ -288,11 +288,51 @@ const CAMPOS_EV_UNIDADE: Campo[] = [
 // Usados no fluxo linked (CAMPOS_ADITIVO) e reutilizados no standalone (CAMPOS_POR_TIPO).
 // ─────────────────────────────────────────────────────────
 const _ADITIVO_PF_PARA_PJ: Campo[] = [
-  { nome: 'data_contrato_originario',  label: 'Data do Contrato Original',       tipo: 'date',     obrigatorio: true },
-  { nome: 'nome_responsavel',          label: 'Nome do Contratante PF Original', tipo: 'text',     obrigatorio: true },
-  { nome: 'qualificacao_coworker_pf',  label: 'Qualificação completa da PF',     tipo: 'textarea', obrigatorio: true,
-    placeholder: 'Ex: brasileira, divorciada, empresária, nascida em 22/02/1980, RG 12.345.678-9, CPF 000.000.000-00, residente na Rua X, nº 00, Curitiba/PR' },
-  { nome: 'data_assinatura',           label: 'Data de Assinatura do Aditivo',   tipo: 'date',     obrigatorio: true },
+  { nome: 'data_contrato_originario',    label: 'Data do Contrato Original',              tipo: 'date',   obrigatorio: true },
+
+  // ── Contratante — Pessoa Física ──
+  { nome: 'nome_responsavel',            label: 'Nome completo da PF',                    tipo: 'text',   obrigatorio: true },
+  { nome: 'genero_coworker',             label: 'Gênero',                                 tipo: 'select', obrigatorio: true,
+    opcoes: ['Feminino', 'Masculino'] },
+  { nome: 'nacionalidade_coworker',      label: 'Nacionalidade',                          tipo: 'text',   obrigatorio: true,
+    placeholder: 'Ex: brasileira, brasileiro' },
+  { nome: 'estado_civil_coworker',       label: 'Estado civil',                           tipo: 'text',   obrigatorio: true,
+    placeholder: 'Ex: casada, solteiro, divorciada' },
+  { nome: 'data_nascimento_responsavel', label: 'Data de nascimento',                     tipo: 'date',   obrigatorio: true },
+  { nome: 'profissao_coworker',          label: 'Profissão',                              tipo: 'text',   obrigatorio: true,
+    placeholder: 'Ex: administradora, empresário' },
+  { nome: 'rg_responsavel',              label: 'RG',                                     tipo: 'text',   obrigatorio: true },
+  { nome: 'orgao_rg_coworker',           label: 'Órgão emissor do RG',                    tipo: 'text',   obrigatorio: true,
+    placeholder: 'Ex: SSP/SP' },
+  { nome: 'cpf_responsavel',             label: 'CPF',                                    tipo: 'text',   obrigatorio: true },
+  { nome: 'endereco_coworker',           label: 'Endereço residencial (rua + número)',    tipo: 'text',   obrigatorio: true,
+    placeholder: 'Ex: Rua Pau Brasil, nº 4146' },
+  { nome: 'complemento_coworker',        label: 'Complemento',                            tipo: 'text',   obrigatorio: false,
+    placeholder: 'Ex: Casa 113, Apto 42' },
+  { nome: 'bairro_coworker',             label: 'Bairro',                                 tipo: 'text',   obrigatorio: true },
+  { nome: 'cidade_estado_coworker',      label: 'Cidade / Estado',                        tipo: 'text',   obrigatorio: true,
+    placeholder: 'Ex: Fazenda Rio Grande/PR' },
+  { nome: 'cep_coworker',               label: 'CEP',                                    tipo: 'text',   obrigatorio: true },
+
+  // ── Interveniente-Anuente — Pessoa Jurídica ──
+  // (nome_cliente e cpf_cnpj são os dados da PJ, adicionados via CAMPOS_POR_TIPO)
+  { nome: 'vinculo_representante',       label: 'Vínculo do(a) representante na PJ',     tipo: 'select', obrigatorio: true,
+    opcoes: ['sua sócia', 'seu sócio', 'sua diretora', 'seu diretor', 'sua administradora', 'seu administrador'] },
+  { nome: 'endereco_interveniente',      label: 'Endereço da empresa (rua + número)',     tipo: 'text',   obrigatorio: true,
+    placeholder: 'Ex: Rua Francisco Rocha, nº 198' },
+  { nome: 'bairro_interveniente',        label: 'Bairro da empresa',                     tipo: 'text',   obrigatorio: false,
+    placeholder: 'Ex: Batel' },
+  { nome: 'cidade_interveniente',        label: 'Cidade / Estado da empresa',            tipo: 'text',   obrigatorio: true,
+    placeholder: 'Ex: Curitiba/PR' },
+  { nome: 'cep_interveniente',           label: 'CEP da empresa',                        tipo: 'text',   obrigatorio: true },
+
+  // ── Contato ──
+  { nome: 'email_cliente',               label: 'E-mail',                                tipo: 'text',   obrigatorio: true },
+  { nome: 'tel_coworker',                label: 'Telefone fixo',                         tipo: 'text',   obrigatorio: false,
+    placeholder: 'Opcional' },
+  { nome: 'cel_coworker',                label: 'Celular',                               tipo: 'text',   obrigatorio: true },
+
+  { nome: 'data_assinatura',             label: 'Data de Assinatura do Aditivo',         tipo: 'date',   obrigatorio: true },
 ]
 
 const _ADITIVO_PJ_PARA_PJ: Campo[] = [
@@ -342,8 +382,8 @@ const CAMPOS_POR_TIPO: Record<string, Campo[]> = {
   escritorio_virtual_comercial:         [...CAMPOS_EV_BASE, ...CAMPOS_EV_UNIDADE],
   escritorio_virtual_comercial_oab:     [...CAMPOS_EV_BASE, ...CAMPOS_EV_UNIDADE],
   aditivo_ev_pf_para_pj: [
-    { nome: 'nome_cliente', label: 'Nome / Razão Social',  tipo: 'text', obrigatorio: true },
-    { nome: 'cpf_cnpj',     label: 'CPF / CNPJ',           tipo: 'text', obrigatorio: true },
+    { nome: 'nome_cliente', label: 'Razão Social da Nova PJ (Interveniente-Anuente)', tipo: 'text', obrigatorio: true },
+    { nome: 'cpf_cnpj',     label: 'CNPJ da Nova PJ',                                 tipo: 'text', obrigatorio: true },
     ..._ADITIVO_PF_PARA_PJ,
   ],
   aditivo_ev_pj_para_pj: [
