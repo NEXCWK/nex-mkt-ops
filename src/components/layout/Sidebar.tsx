@@ -12,7 +12,6 @@ import {
   ClipboardList,
   Settings,
   LogOut,
-  Handshake,
   UserCircle,
   Sparkles,
 } from 'lucide-react'
@@ -39,7 +38,6 @@ const navSections = [
   {
     label: 'Gestão',
     items: [
-      { href: '/parceiros', label: 'Marketplaces', icon: Handshake, roles: ['gestor', 'admin'] },
       { href: '/templates', label: 'Templates', icon: Settings,  roles: ['gestor', 'admin'] },
       { href: '/usuarios',  label: 'Usuários',  icon: Users,     roles: ['admin'] },
     ],
