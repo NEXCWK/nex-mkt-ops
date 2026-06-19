@@ -55,7 +55,7 @@ function textToEmailHtml(text: string, assinaturaUrl?: string | null): string {
     return `<p style="margin:0 0 14px 0">${htmlLinhas.join('<br>')}</p>`
   }).filter(Boolean)
 
-  const corpo = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:normal;color:#202124;line-height:1.65">${partes.join('')}</div>`
+  const corpo = `<div style="font-family:sans-serif;font-size:14px;font-weight:normal;color:#202124;line-height:1.65">${partes.join('')}</div>`
 
   if (assinaturaUrl) {
     return corpo + `<img src="${assinaturaUrl}" style="display:block;max-height:96px;margin-top:4px" alt="">`
