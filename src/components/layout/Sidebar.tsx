@@ -88,7 +88,7 @@ export function Sidebar() {
                     className={cn(
                       'flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-heading transition-colors',
                       isActive
-                        ? 'bg-nex-gray-100 text-nex-black font-semibold'
+                        ? 'bg-nex-gray-100 text-nex-black'
                         : 'text-nex-gray-500 hover:bg-nex-gray-50 hover:text-nex-gray-800 font-normal'
                     )}
                   >
