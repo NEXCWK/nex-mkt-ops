@@ -661,7 +661,7 @@ export default function NovoContratoPage() {
             value={values[campo.nome] ?? ''}
             onChange={e => onChange(campo.nome, e.target.value)}
             placeholder={campo.placeholder}
-            className={cn('min-h-[80px] text-sm font-bold', temErro ? 'border-red-300' : '')}
+            className={cn('min-h-[80px] text-sm font-normal', temErro ? 'border-red-300' : '')}
           />
         ) : (
           <Input
@@ -671,7 +671,7 @@ export default function NovoContratoPage() {
             placeholder={campo.placeholder}
             readOnly={isAuto && isFilled}
             className={cn(
-              'text-sm font-bold',
+              'text-sm font-normal',
               isAuto && isFilled ? 'bg-nex-gray-50 text-nex-gray-500' : '',
               temErro ? 'border-red-300' : ''
             )}
@@ -722,7 +722,7 @@ export default function NovoContratoPage() {
           </div>
         )}
         {!categoriaAtiva && (
-          <p className="px-4 py-3 text-xs font-bold text-nex-gray-300">Selecione uma categoria acima para começar</p>
+          <p className="px-4 py-3 text-xs font-normal text-nex-gray-300">Selecione uma categoria acima para começar</p>
         )}
       </div>
 
@@ -760,7 +760,7 @@ export default function NovoContratoPage() {
               </div>
               <div className="p-4">
                 <div className="flex items-end justify-between mb-2">
-                  <span className="text-2xl font-heading font-bold text-nex-black">{progresso}%</span>
+                  <span className="text-2xl font-heading font-semibold text-nex-black">{progresso}%</span>
                   <span className="text-xs font-bold text-nex-gray-400">
                     {preenchidos.length}/{camposObrigatorios.length} obrigatórios
                   </span>
@@ -841,7 +841,7 @@ export default function NovoContratoPage() {
         </div>
       ) : tipoDoc ? (
         <div className="bg-white border border-nex-gray-200 rounded-xl flex items-center justify-center py-16">
-          <p className="text-sm font-bold text-nex-gray-300">Nenhum campo configurado para este tipo.</p>
+          <p className="text-sm font-normal text-nex-gray-300">Nenhum campo configurado para este tipo.</p>
         </div>
       ) : null}
 

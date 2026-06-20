@@ -58,18 +58,18 @@ export default function PerfilPage() {
 
       {/* Info */}
       <div className="bg-white border border-nex-gray-200 rounded-xl p-5 mb-4">
-        <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400 mb-3">Conta</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-nex-gray-400 mb-3">Conta</p>
         <div className="space-y-1.5">
           <div className="flex gap-3">
-            <span className="text-xs font-extrabold text-nex-gray-400 w-16">Nome</span>
+            <span className="text-xs font-semibold text-nex-gray-400 w-16">Nome</span>
             <span className="text-sm font-bold text-nex-black">{session?.user?.name ?? '—'}</span>
           </div>
           <div className="flex gap-3">
-            <span className="text-xs font-extrabold text-nex-gray-400 w-16">E-mail</span>
+            <span className="text-xs font-semibold text-nex-gray-400 w-16">E-mail</span>
             <span className="text-sm font-bold text-nex-black">{session?.user?.email ?? '—'}</span>
           </div>
           <div className="flex gap-3">
-            <span className="text-xs font-extrabold text-nex-gray-400 w-16">Perfil</span>
+            <span className="text-xs font-semibold text-nex-gray-400 w-16">Perfil</span>
             <span className="text-sm font-bold text-nex-black capitalize">{session?.user?.perfil ?? '—'}</span>
           </div>
         </div>
@@ -78,7 +78,7 @@ export default function PerfilPage() {
       {/* Assinatura */}
       <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-nex-gray-100">
-          <p className="text-xs font-black uppercase tracking-widest text-nex-gray-400">Assinatura de E-mail</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-nex-gray-400">Assinatura de E-mail</p>
           <p className="text-xs font-bold text-nex-gray-400 mt-0.5">
             Imagem inserida automaticamente ao final de todos os e-mails gerados.
             Formatos aceitos: PNG, JPG. Recomendado: fundo transparente.
@@ -122,7 +122,7 @@ export default function PerfilPage() {
                   {removing ? 'Removendo...' : 'Remover'}
                 </Button>
                 {saved && (
-                  <span className="flex items-center gap-1 text-xs font-extrabold text-green-600">
+                  <span className="flex items-center gap-1 text-xs font-semibold text-green-600">
                     <Check className="w-3.5 h-3.5" /> Salvo!
                   </span>
                 )}
@@ -136,10 +136,10 @@ export default function PerfilPage() {
                 className="w-full border-2 border-dashed border-nex-gray-200 rounded-xl py-10 flex flex-col items-center gap-2 hover:border-nex-gray-400 hover:bg-nex-gray-50 transition-colors"
               >
                 <Upload className="w-5 h-5 text-nex-gray-400" />
-                <span className="text-sm font-extrabold text-nex-gray-400">
+                <span className="text-sm font-semibold text-nex-gray-400">
                   {uploading ? 'Enviando...' : 'Clique para fazer upload da assinatura'}
                 </span>
-                <span className="text-xs font-bold text-nex-gray-300">PNG, JPG ou WebP · máx. 2 MB</span>
+                <span className="text-xs font-normal text-nex-gray-300">PNG, JPG ou WebP · máx. 2 MB</span>
               </button>
             </div>
           )}

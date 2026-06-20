@@ -53,7 +53,7 @@ function SistemaLinks({ value }: { value: string | null }) {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3 py-2 border-b border-nex-gray-100 last:border-0">
-      <span className="text-[11px] font-extrabold uppercase tracking-widest text-nex-gray-400 w-28 flex-shrink-0 pt-0.5">{label}</span>
+      <span className="text-[11px] font-semibold uppercase tracking-widest text-nex-gray-400 w-28 flex-shrink-0 pt-0.5">{label}</span>
       <span className="text-sm text-nex-gray-800 font-bold flex-1 min-w-0 break-words">{children}</span>
     </div>
   )
@@ -64,13 +64,13 @@ function EditField({ label, value, onChange, multiline }: {
 }) {
   return (
     <div className="space-y-1">
-      <label className="text-[11px] font-extrabold uppercase tracking-widest text-nex-gray-400">{label}</label>
+      <label className="text-[11px] font-semibold uppercase tracking-widest text-nex-gray-400">{label}</label>
       {multiline ? (
         <textarea
           value={value}
           onChange={e => onChange(e.target.value)}
           rows={3}
-          className="w-full rounded-md border border-nex-gray-200 bg-white px-3 py-2 text-sm font-bold placeholder:text-nex-gray-300 focus:outline-none focus:ring-1 focus:ring-nex-gray-400 focus:border-nex-gray-400 resize-none transition-colors"
+          className="w-full rounded-md border border-nex-gray-200 bg-white px-3 py-2 text-sm font-normal placeholder:text-nex-gray-300 focus:outline-none focus:ring-1 focus:ring-nex-gray-400 focus:border-nex-gray-400 resize-none transition-colors"
         />
       ) : (
         <Input value={value} onChange={e => onChange(e.target.value)} />
@@ -124,7 +124,7 @@ function ParceiroCard({ parceiro, onUpdate, onDelete }: {
     <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-nex-gray-100">
-        <h3 className="text-base font-black text-nex-black tracking-tight">{parceiro.nome}</h3>
+        <h3 className="text-base font-semibold text-nex-black tracking-tight">{parceiro.nome}</h3>
         <div className="flex items-center gap-1.5">
           {editing ? (
             <>
@@ -167,7 +167,7 @@ function ParceiroCard({ parceiro, onUpdate, onDelete }: {
         <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-nex-gray-100">
           {/* Coluna esquerda — Acesso */}
           <div className="px-5 py-4 space-y-0">
-            <p className="text-[10px] font-black uppercase tracking-widest text-nex-gray-300 mb-3">Acesso</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-nex-gray-300 mb-3">Acesso</p>
             <Row label="Sistema"><SistemaLinks value={parceiro.sistema} /></Row>
             <Row label="Login">{parceiro.login_usuario ?? '—'}</Row>
             <Row label="Senha"><SenhaField value={parceiro.senha} /></Row>
@@ -175,7 +175,7 @@ function ParceiroCard({ parceiro, onUpdate, onDelete }: {
 
           {/* Coluna direita — Valores, Contato, Mesas */}
           <div className="px-5 py-4 space-y-0">
-            <p className="text-[10px] font-black uppercase tracking-widest text-nex-gray-300 mb-3">Detalhes</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-nex-gray-300 mb-3">Detalhes</p>
             <Row label="Diária">{parceiro.valor_diaria ?? '—'}</Row>
             <Row label="Hora">
               <span className="whitespace-pre-line">{parceiro.valor_hora ?? '—'}</span>
@@ -236,12 +236,12 @@ export function ParceirosClient({ initial }: { initial: Parceiro[] }) {
 
       {adding && (
         <div className="bg-white border border-nex-gray-200 rounded-xl p-5 space-y-4">
-          <p className="text-sm font-black text-nex-black">Novo Parceiro</p>
+          <p className="text-sm font-semibold text-nex-black">Novo Parceiro</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(['nome', 'sistema', 'login_usuario', 'senha', 'valor_diaria', 'valor_hora',
                'contato_email', 'contato_telefone', 'mesas', 'observacoes'] as const).map(key => (
               <div key={key} className="space-y-1">
-                <label className="text-[11px] font-extrabold uppercase tracking-widest text-nex-gray-400">
+                <label className="text-[11px] font-semibold uppercase tracking-widest text-nex-gray-400">
                   {key.replace(/_/g, ' ')}
                 </label>
                 <Input
@@ -263,7 +263,7 @@ export function ParceirosClient({ initial }: { initial: Parceiro[] }) {
       )}
 
       {parceiros.length === 0 && !adding && (
-        <div className="text-center py-16 text-nex-gray-400 text-sm font-bold">
+        <div className="text-center py-16 text-nex-gray-400 text-sm font-normal">
           Nenhum parceiro cadastrado ainda.
         </div>
       )}
