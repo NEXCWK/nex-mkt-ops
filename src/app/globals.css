@@ -3,13 +3,56 @@
 @tailwind utilities;
 
 /* ── Proxima Nova ─────────────────────────────────── */
-/* O kit da marca não inclui o peso Regular upright.
-   O Bold (700) cobre a faixa 400–700: é o peso-base de
-   todo o sistema; 800/900 ficam para destaques. */
+/* Escala completa: cada peso aponta para seu arquivo real.
+   400 (Regular) é o peso-base do corpo; 600 (Semibold) é o
+   peso de destaque/títulos. 700/800/900 ficam reservados
+   para ênfases pontuais. */
+@font-face {
+  font-family: 'Proxima Nova';
+  src: url('/fonts/ProximaNova-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Proxima Nova';
+  src: url('/fonts/ProximaNova-LightItalic.otf') format('opentype');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Proxima Nova';
+  src: url('/fonts/ProximaNova-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Proxima Nova';
+  src: url('/fonts/ProximaNova-RegItalic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Proxima Nova';
+  src: url('/fonts/ProximaNova-Semibold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Proxima Nova';
+  src: url('/fonts/ProximaNova-SemiboldItalic.otf') format('opentype');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
 @font-face {
   font-family: 'Proxima Nova';
   src: url('/fonts/ProximaNova-Bold.otf') format('opentype');
-  font-weight: 400 700;
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
@@ -32,20 +75,6 @@
   src: url('/fonts/ProximaNova-Black.otf') format('opentype');
   font-weight: 900;
   font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Proxima Nova';
-  src: url('/fonts/ProximaNova-LightItalic.otf') format('opentype');
-  font-weight: 300;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Proxima Nova';
-  src: url('/fonts/ProximaNova-RegItalic.otf') format('opentype');
-  font-weight: 400;
-  font-style: italic;
   font-display: swap;
 }
 
@@ -84,7 +113,7 @@
     font-weight: 400;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading font-bold tracking-tight;
+    @apply font-heading font-semibold tracking-tight;
   }
   input, textarea, select, button {
     font-family: 'Proxima Nova', Arial, sans-serif;

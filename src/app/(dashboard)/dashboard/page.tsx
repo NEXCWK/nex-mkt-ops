@@ -54,11 +54,11 @@ export default async function DashboardPage() {
             </div>
             <div className="flex items-end justify-between gap-4">
               <div>
-                <p className="text-3xl font-black leading-none">{data.totalContratos}</p>
+                <p className="text-3xl font-bold leading-none">{data.totalContratos}</p>
                 <p className="text-xs text-nex-gray-400 mt-1.5">Total acumulado</p>
               </div>
               <div className="text-right pb-0.5">
-                <p className="inline-flex items-center gap-1.5 text-sm font-extrabold text-nex-black">
+                <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-nex-black">
                   <span className="w-1.5 h-1.5 rounded-full bg-nex-yellow" />
                   +{data.contratosMes}
                 </p>
@@ -76,11 +76,11 @@ export default async function DashboardPage() {
             </div>
             <div className="flex items-end justify-between gap-4">
               <div>
-                <p className="text-3xl font-black leading-none">{data.totalEmails}</p>
+                <p className="text-3xl font-bold leading-none">{data.totalEmails}</p>
                 <p className="text-xs text-nex-gray-400 mt-1.5">Total acumulado</p>
               </div>
               <div className="text-right pb-0.5">
-                <p className="inline-flex items-center gap-1.5 text-sm font-extrabold text-nex-black">
+                <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-nex-black">
                   <span className="w-1.5 h-1.5 rounded-full bg-nex-yellow" />
                   +{data.emailsMes}
                 </p>

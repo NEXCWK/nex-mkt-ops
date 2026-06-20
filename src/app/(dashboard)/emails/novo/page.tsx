@@ -112,7 +112,7 @@ function CampoInput({ campo, value, onChange }: {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full h-9 rounded-md border border-nex-gray-200 bg-white px-3 text-sm font-bold text-nex-black focus:outline-none focus:ring-1 focus:ring-nex-gray-400 focus:border-nex-gray-400 transition-colors"
+        className="w-full h-9 rounded-md border border-nex-gray-200 bg-white px-3 text-sm font-normal text-nex-black focus:outline-none focus:ring-1 focus:ring-nex-gray-400 focus:border-nex-gray-400 transition-colors"
       >
         <option value="">Selecionar...</option>
         {campo.opcoes.map(o => <option key={o} value={o}>{o}</option>)}
@@ -126,7 +126,7 @@ function CampoInput({ campo, value, onChange }: {
         onChange={e => onChange(e.target.value)}
         rows={campo.nome === 'assinatura' ? 4 : 3}
         placeholder={campo.nome === 'assinatura' ? 'Nome\nCargo\nE-mail | Telefone' : ''}
-        className="w-full rounded-md border border-nex-gray-200 bg-white px-3 py-2 text-sm font-bold placeholder:text-nex-gray-300 placeholder:font-bold focus:outline-none focus:ring-1 focus:ring-nex-gray-400 focus:border-nex-gray-400 resize-none transition-colors"
+        className="w-full rounded-md border border-nex-gray-200 bg-white px-3 py-2 text-sm font-normal placeholder:text-nex-gray-300 focus:outline-none focus:ring-1 focus:ring-nex-gray-400 focus:border-nex-gray-400 resize-none transition-colors"
       />
     )
   }
@@ -146,7 +146,7 @@ function renderInline(text: string) {
   const parts = text.split(/(\{\{[^}]+\}\})/g)
   return parts.map((part, i) =>
     /^\{\{[^}]+\}\}$/.test(part)
-      ? <span key={i} className="bg-amber-100 text-amber-700 font-extrabold rounded px-0.5">{part}</span>
+      ? <span key={i} className="bg-amber-100 text-amber-700 font-semibold rounded px-0.5">{part}</span>
       : <span key={i}>{part}</span>
   )
 }
@@ -182,7 +182,7 @@ function RenderBody({ text }: { text: string }) {
               <span key={li}>
                 {li > 0 && <br />}
                 {isSecaoMaiuscula(linha)
-                  ? <strong className="font-extrabold text-nex-black">{renderInline(linha)}</strong>
+                  ? <strong className="font-semibold text-nex-black">{renderInline(linha)}</strong>
                   : <span className="text-sm text-nex-gray-800">{renderInline(linha)}</span>
                 }
               </span>
@@ -579,7 +579,7 @@ export default function NovoEmailPage() {
                     <select
                       value={unidadeSend}
                       onChange={e => setUnidadeSend(e.target.value)}
-                      className="w-full h-9 rounded-md border border-nex-gray-200 bg-white px-3 pr-8 text-sm font-bold text-nex-black focus:outline-none focus:ring-1 focus:ring-nex-gray-400 appearance-none"
+                      className="w-full h-9 rounded-md border border-nex-gray-200 bg-white px-3 pr-8 text-sm font-normal text-nex-black focus:outline-none focus:ring-1 focus:ring-nex-gray-400 appearance-none"
                     >
                       <option value="">Sem unidade específica</option>
                       <option value="nex_house">Nex House</option>
@@ -741,7 +741,7 @@ export default function NovoEmailPage() {
         </div>
       ) : (
         <div className="bg-white border border-nex-gray-200 rounded-xl flex items-center justify-center py-20">
-          <p className="text-sm font-bold text-nex-gray-300">Selecione um template acima para começar</p>
+          <p className="text-sm font-normal text-nex-gray-300">Selecione um template acima para começar</p>
         </div>
       )}
     </div>

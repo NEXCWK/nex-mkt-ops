@@ -45,7 +45,7 @@ export default function SetupPage() {
           <Image src="/nex-logo.png" alt="Nex." width={120} height={36} priority />
         </div>
 
-        <h1 className="text-xl font-bold text-nex-gray-900 mb-1">Configuração inicial</h1>
+        <h1 className="text-xl font-semibold text-nex-gray-900 mb-1">Configuração inicial</h1>
         <p className="text-sm text-nex-gray-500 mb-6">
           Crie o primeiro usuário administrador do sistema.
         </p>
