@@ -14,6 +14,14 @@ import {
   LogOut,
   UserCircle,
   Sparkles,
+  MessageSquare,
+  Phone,
+  Target,
+  Handshake,
+  Megaphone,
+  Layout,
+  Image as ImageIcon,
+  BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from 'next-auth/react'
@@ -36,10 +44,33 @@ const navSections = [
     ],
   },
   {
+    label: 'Qualidade',
+    items: [
+      { href: '/avaliacao-atendimentos', label: 'Avaliação de Atendimentos', icon: MessageSquare, roles: ['operador', 'gestor', 'admin'] },
+      { href: '/avaliacao-telefonemas',  label: 'Avaliador de Telefonemas',  icon: Phone,         roles: ['operador', 'gestor', 'admin'] },
+    ],
+  },
+  {
+    label: 'Prospecção',
+    items: [
+      { href: '/prospeccao/bdr',       label: 'Sistema BDR',       icon: Target,    roles: ['operador', 'gestor', 'admin'] },
+      { href: '/prospeccao/parcerias', label: 'Sistema Parcerias', icon: Handshake, roles: ['operador', 'gestor', 'admin'] },
+      { href: '/cco',                  label: 'Sistema CCO',       icon: Megaphone, roles: ['gestor', 'admin'] },
+    ],
+  },
+  {
+    label: 'Criação',
+    items: [
+      { href: '/criador-lp',        label: 'Criador de LP',        icon: Layout,    roles: ['operador', 'gestor', 'admin'] },
+      { href: '/criador-criativos', label: 'Criador de Criativos', icon: ImageIcon, roles: ['operador', 'gestor', 'admin'] },
+    ],
+  },
+  {
     label: 'Gestão',
     items: [
-      { href: '/templates', label: 'Templates', icon: Settings,  roles: ['gestor', 'admin'] },
-      { href: '/usuarios',  label: 'Usuários',  icon: Users,     roles: ['admin'] },
+      { href: '/templates',         label: 'Templates',                icon: Settings, roles: ['gestor', 'admin'] },
+      { href: '/base-conhecimento', label: 'Base de Conhecimento SDR', icon: BookOpen, roles: ['gestor', 'admin'] },
+      { href: '/usuarios',          label: 'Usuários',                 icon: Users,    roles: ['admin'] },
     ],
   },
 ]
