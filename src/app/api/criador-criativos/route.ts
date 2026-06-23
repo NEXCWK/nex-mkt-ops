@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { askClaudeJSON, assertApiKey } from '@/lib/anthropic'
+import { withNexVoice } from '@/lib/nex-voice'
 
 export const maxDuration = 300
 
@@ -38,7 +39,7 @@ Formato do JSON:
 
   try {
     const result = await askClaudeJSON({
-      system,
+      system: withNexVoice(system),
       user: `Briefing: ${briefing}\n\nFormato: ${dimensao}. Tipo: ${tipo}. ${tipo === 'carrossel' ? `Gere exatamente ${qtd} slides.` : 'Gere 1 criativo.'}`,
       maxTokens: 16000,
     })

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { askClaudeJSON, assertApiKey } from '@/lib/anthropic'
+import { withNexVoice } from '@/lib/nex-voice'
 
 export const maxDuration = 300
 
@@ -30,7 +31,7 @@ Responda em JSON:
 
   try {
     const result = await askClaudeJSON({
-      system,
+      system: withNexVoice(system),
       user: `Conteúdo atual do arquivo:\n\n---\n${markdown ?? ''}\n---\n\nInstrução: ${instrucao}${contexto}`,
       maxTokens: 16000,
     })

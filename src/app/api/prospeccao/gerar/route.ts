@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { askClaudeJSON, assertApiKey } from '@/lib/anthropic'
+import { withNexVoice } from '@/lib/nex-voice'
 
 export const maxDuration = 300
 
@@ -43,7 +44,7 @@ Formato do JSON:
 
   try {
     const result = await askClaudeJSON({
-      system,
+      system: withNexVoice(system),
       user: `Gere a lista para o nicho "${nicho}" em "${regiao || 'Curitiba/PR'}" e o e-mail de prospecção.`,
       maxTokens: 8000,
     })

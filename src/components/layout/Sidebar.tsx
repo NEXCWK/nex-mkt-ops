@@ -21,6 +21,7 @@ import {
   Megaphone,
   Layout,
   Image as ImageIcon,
+  MessageSquareText,
   BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -61,8 +62,9 @@ const navSections = [
   {
     label: 'Criação',
     items: [
-      { href: '/criador-lp',        label: 'Criador de LP',        icon: Layout,    roles: ['operador', 'gestor', 'admin'] },
-      { href: '/criador-criativos', label: 'Criador de Criativos', icon: ImageIcon, roles: ['operador', 'gestor', 'admin'] },
+      { href: '/criador-lp',        label: 'Criador de LP',        icon: Layout,            roles: ['operador', 'gestor', 'admin'] },
+      { href: '/criador-criativos', label: 'Criador de Criativos', icon: ImageIcon,         roles: ['operador', 'gestor', 'admin'] },
+      { href: '/gerador-template',  label: 'Gerador de Template',  icon: MessageSquareText, roles: ['operador', 'gestor', 'admin'] },
     ],
   },
   {
