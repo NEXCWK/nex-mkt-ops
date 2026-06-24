@@ -217,7 +217,7 @@ export default function GeradorTemplatePage() {
             )}
           </div>
           <p className="text-[11px] text-nex-gray-300 mt-1.5 px-0.5">
-            Enter envia · Shift+Enter quebra linha · BODY até 1024 caracteres, HEADER/FOOTER até 60, botões até 25 · variáveis {'{{1}}'}, {'{{2}}'}
+            Enter envia · Shift+Enter quebra linha · BODY até 1024, HEADER/FOOTER até 60, botão resposta rápida 25 / CTA 20 · variáveis {'{{1}}'}, {'{{2}}'}
           </p>
         </div>
       </div>
