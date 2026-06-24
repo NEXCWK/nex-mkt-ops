@@ -8,6 +8,28 @@ import { Send, MessageSquareText, Copy, Check, RotateCcw, Square, Sparkles, Penc
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 type Modo = 'gerar' | 'editar'
 
+const MARKER = '===TEMPLATE LIMPO==='
+
+/** Separa o racional (chat) do texto limpo (box de cópia). */
+function splitTemplate(content: string): { racional: string; limpo: string } {
+  const i = content.indexOf(MARKER)
+  if (i === -1) return { racional: content, limpo: '' }
+  return {
+    racional: content.slice(0, i).trim(),
+    limpo: limparEspacamento(content.slice(i + MARKER.length)),
+  }
+}
+
+/** Remove espaçamento duplo entre parágrafos e espaços nas pontas. */
+function limparEspacamento(texto: string): string {
+  return texto
+    .split('\n')
+    .map(l => l.replace(/[ \t]+$/g, ''))
+    .join('\n')
+    .replace(/\n{2,}/g, '\n')
+    .trim()
+}
+
 const SUGESTOES = [
   'Mensagem inicial de boas-vindas para lead de Escritório Virtual',
   'Template de primeiro contato para prospecção de salas privativas',
@@ -92,6 +114,9 @@ export default function GeradorTemplatePage() {
   function stop() { abortRef.current?.abort() }
   function reset() { if (loading) stop(); setMessages([]); setInput('') }
 
+  const ultimaAssistente = [...messages].reverse().find(m => m.role === 'assistant')
+  const templateLimpo = ultimaAssistente ? splitTemplate(ultimaAssistente.content).limpo : ''
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       <PageHeader
@@ -143,27 +168,25 @@ export default function GeradorTemplatePage() {
               )}
             </div>
           ) : (
-            messages.map((m, i) => (
-              <div key={i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
-                <div className={cn('max-w-[85%] rounded-xl px-4 py-3',
-                  m.role === 'user' ? 'bg-nex-black text-white' : 'bg-nex-gray-50 border border-nex-gray-100 text-nex-gray-800')}>
-                  <div className="text-sm whitespace-pre-wrap leading-relaxed font-mono">
-                    {m.content || (
-                      <span className="inline-flex gap-1 items-center text-nex-gray-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-nex-gray-300 animate-pulse" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-nex-gray-300 animate-pulse [animation-delay:150ms]" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-nex-gray-300 animate-pulse [animation-delay:300ms]" />
-                      </span>
-                    )}
-                  </div>
-                  {m.role === 'assistant' && m.content && (!loading || i < messages.length - 1) && (
-                    <div className="mt-2 pt-2 border-t border-nex-gray-200/60">
-                      <CopyButton text={m.content} />
+            messages.map((m, i) => {
+              const texto = m.role === 'assistant' ? splitTemplate(m.content).racional : m.content
+              return (
+                <div key={i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
+                  <div className={cn('max-w-[85%] rounded-xl px-4 py-3',
+                    m.role === 'user' ? 'bg-nex-black text-white' : 'bg-nex-gray-50 border border-nex-gray-100 text-nex-gray-800')}>
+                    <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                      {texto || (
+                        <span className="inline-flex gap-1 items-center text-nex-gray-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-nex-gray-300 animate-pulse" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-nex-gray-300 animate-pulse [animation-delay:150ms]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-nex-gray-300 animate-pulse [animation-delay:300ms]" />
+                        </span>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
           <div ref={bottomRef} />
         </div>
@@ -198,6 +221,24 @@ export default function GeradorTemplatePage() {
           </p>
         </div>
       </div>
+
+      {/* Box do texto limpo — pronto para copiar */}
+      {templateLimpo && (
+        <div className="flex-shrink-0 mt-3 bg-white border border-nex-gray-200 rounded-xl overflow-hidden flex flex-col max-h-[38%]">
+          <div className="flex items-center justify-between border-b border-nex-gray-100 px-4 py-2">
+            <span className="text-xs font-heading font-semibold uppercase tracking-wide text-nex-gray-400">
+              Template limpo · pronto para copiar
+            </span>
+            <CopyButton text={templateLimpo} />
+          </div>
+          <textarea
+            readOnly
+            value={templateLimpo}
+            onFocus={e => e.currentTarget.select()}
+            className="flex-1 resize-none p-4 text-sm leading-relaxed text-nex-gray-800 focus:outline-none bg-white"
+          />
+        </div>
+      )}
     </div>
   )
 }

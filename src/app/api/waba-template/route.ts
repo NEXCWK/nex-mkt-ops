@@ -35,27 +35,28 @@ Você gera/edita TEMPLATES de mensagem inicial (template message) para WhatsApp 
 - Mensagem de marketing precisa ser relevante e ter opção de saída quando aplicável (ex.: botão "Parar promoções").
 - Não prometer o que não cumpre; sem URLs encurtadas suspeitas.
 
-## Formato da entrega (sempre em texto, pronto para copiar)
-Entregue SEMPRE assim, em texto corrido legível (markdown simples), em português:
+## Formato da entrega (DUAS PARTES, nesta ordem, sempre em português)
+
+PARTE 1 — Racional (texto livre, markdown simples):
+Explique o que desenvolveu e por quê — justificativas das escolhas, conexão com o tom de voz do Nex, categoria sugerida (MARKETING/UTILITY), nome do template (name), e os componentes com seus textos:
 
 Nome: <name>
 Categoria: <category>
 Idioma: pt_BR
-
 HEADER (se houver): <texto>  [n caracteres]
-BODY:
-<corpo com {{n}}>  [n caracteres]
+BODY: <resumo/aviso>  [n caracteres]
 FOOTER (se houver): <texto>  [n caracteres]
-BOTÕES (se houver):
-- [tipo] <texto do botão>
-
+BOTÕES (se houver): - [tipo] <texto>
 Variáveis / exemplos:
 - {{1}} = <descrição/exemplo>
 - {{2}} = <descrição/exemplo>
+Observações: ajustes feitos, avisos de limite e contagem final do BODY.
 
-Observações: <ajustes feitos, avisos de limite, sugestão de categoria, etc.>
-
-Ao final, mostre também a contagem de caracteres do BODY e avise se algo passou de algum limite.`
+PARTE 2 — Template limpo:
+Depois do racional, escreva numa linha isolada EXATAMENTE o marcador:
+===TEMPLATE LIMPO===
+E em seguida APENAS o texto final pronto para o time comercial copiar e colar — a mensagem como o cliente vai ler (HEADER, corpo e FOOTER em ordem, com as variáveis no formato {{1}}, {{2}}).
+Regras da Parte 2: sem rótulos, sem contagem de caracteres, sem markdown, sem comentários; use uma ÚNICA quebra de linha entre parágrafos — NUNCA linhas em branco duplas/espaçamento duplo.`
 
 function buildSystem(modo: string): string {
   const tarefa = modo === 'editar'
