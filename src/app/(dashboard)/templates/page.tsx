@@ -9,7 +9,7 @@ import { formatDateTime } from '@/lib/utils'
 import { SeedTemplatesButton } from '@/components/admin/SeedTemplatesButton'
 import { SeedParceirosButton } from '@/components/admin/SeedParceirosButton'
 import { ParametrizarIA } from '@/components/templates/ParametrizarIA'
-import { FileText, Mail, Sparkles } from 'lucide-react'
+import { FileText, Mail } from 'lucide-react'
 
 async function getTemplates() {
   const supabase = createServerClient()
@@ -56,28 +56,11 @@ export default async function TemplatesPage() {
         </div>
       )}
 
-      {/* ── Parametrizar novo contrato com IA ── */}
-      <div className="mb-6 bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-nex-gray-100 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-nex-gray-400" />
-          <p className="text-xs font-heading font-semibold uppercase tracking-widest text-nex-gray-400">
-            Parametrizar Novo Contrato com IA
-          </p>
-        </div>
-        <div className="p-4">
-          <p className="text-xs text-nex-gray-500 mb-4">
-            Faça upload de um contrato .docx preenchido (exemplo real). O Claude identificará todos os dados variáveis,
-            substituirá por marcadores <code className="bg-nex-gray-100 px-1 rounded">{'{{token}}'}</code> e gerará
-            automaticamente os campos do formulário. Após revisão, importe direto para a aba Novo Contrato.
-          </p>
-          <ParametrizarIA />
-        </div>
-      </div>
-
       <Tabs defaultValue="documentos">
         <TabsList className="mb-6">
           <TabsTrigger value="documentos">Documentos ({docs.length})</TabsTrigger>
           <TabsTrigger value="emails">E-mails ({emails.length})</TabsTrigger>
+          <TabsTrigger value="gerador">Gerador de Templates</TabsTrigger>
         </TabsList>
 
         <TabsContent value="documentos">
@@ -156,6 +139,22 @@ export default async function TemplatesPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="gerador">
+          <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-nex-gray-100">
+              <p className="text-sm font-heading font-semibold text-nex-black mb-1">Parametrizar contrato com IA</p>
+              <p className="text-xs text-nex-gray-500">
+                Faça upload de um contrato .docx preenchido (exemplo real). O Claude identificará todos os dados variáveis,
+                substituirá por marcadores <code className="bg-nex-gray-100 px-1 rounded">{'{{token}}'}</code> e gerará
+                automaticamente os campos do formulário. Após revisão, importe direto para a aba Novo Contrato.
+              </p>
+            </div>
+            <div className="p-5">
+              <ParametrizarIA />
             </div>
           </div>
         </TabsContent>

@@ -130,9 +130,18 @@ function CampoInput({ campo, value, onChange }: {
       />
     )
   }
+  if (campo.tipo === 'data') {
+    const handleDateInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+      let v = e.target.value.replace(/\D/g, '').slice(0, 8)
+      if (v.length > 4) v = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4)
+      else if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2)
+      onChange(v)
+    }
+    return <Input type="text" value={value} onChange={handleDateInput} placeholder="DD/MM/AAAA" maxLength={10} />
+  }
   return (
     <Input
-      type={campo.tipo === 'data' ? 'date' : 'text'}
+      type="text"
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={campo.label}

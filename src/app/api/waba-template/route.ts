@@ -67,10 +67,11 @@ Variáveis / exemplos:
 Observações: ajustes feitos, avisos de limite e contagem final do BODY.
 
 PARTE 2 — Template limpo:
-Depois do racional, escreva numa linha isolada EXATAMENTE o marcador:
+OBRIGATÓRIO: ao final de TODA resposta, mesmo em respostas de edição ou ajuste, você DEVE escrever numa linha isolada, sem qualquer texto antes ou depois nessa linha, EXATAMENTE este marcador (nada mais):
 ===TEMPLATE LIMPO===
-E em seguida APENAS o texto final pronto para o time comercial copiar e colar — a mensagem como o cliente vai ler (HEADER, corpo e FOOTER em ordem, com as variáveis no formato {{1}}, {{2}}).
-Regras da Parte 2: sem rótulos, sem contagem de caracteres, sem markdown, sem comentários; use uma ÚNICA quebra de linha entre parágrafos — NUNCA linhas em branco duplas/espaçamento duplo.`
+Em seguida, APENAS o texto final pronto para o time comercial copiar e colar — a mensagem como o cliente vai ler (HEADER se houver, corpo, FOOTER se houver, nesta ordem, com as variáveis no formato {{1}}, {{2}}).
+Regras da Parte 2: sem rótulos, sem contagem de caracteres, sem markdown, sem comentários; use uma ÚNICA quebra de linha entre parágrafos — NUNCA linhas em branco duplas/espaçamento duplo.
+LEMBRETE CRÍTICO: se você terminar sem escrever ===TEMPLATE LIMPO=== seguido do texto limpo, o sistema não consegue mostrar o template ao usuário. Essa linha é obrigatória em 100% das respostas.`
 
 function buildSystem(modo: string): string {
   const tarefa = modo === 'editar'

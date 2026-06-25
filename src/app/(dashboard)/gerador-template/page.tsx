@@ -9,14 +9,22 @@ type ChatMessage = { role: 'user' | 'assistant'; content: string }
 type Modo = 'gerar' | 'editar'
 
 const MARKER = '===TEMPLATE LIMPO==='
+const MARKER_REGEX = /={2,}\s*TEMPLATE\s+LIMPO\s*={2,}/i
 
 /** Separa o racional (chat) do texto limpo (box de cópia). */
 function splitTemplate(content: string): { racional: string; limpo: string } {
-  const i = content.indexOf(MARKER)
+  // Exact match first
+  let i = content.indexOf(MARKER)
+  let markerLen = MARKER.length
+  // Fallback: tolerate spaces or case variation around the equals signs
+  if (i === -1) {
+    const m = MARKER_REGEX.exec(content)
+    if (m) { i = m.index; markerLen = m[0].length }
+  }
   if (i === -1) return { racional: content, limpo: '' }
   return {
     racional: content.slice(0, i).trim(),
-    limpo: limparEspacamento(content.slice(i + MARKER.length)),
+    limpo: limparEspacamento(content.slice(i + markerLen)),
   }
 }
 
@@ -118,7 +126,7 @@ export default function GeradorTemplatePage() {
   const templateLimpo = ultimaAssistente ? splitTemplate(ultimaAssistente.content).limpo : ''
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
       <PageHeader
         title="Gerador de Template/Script"
         description="Crie ou ajuste templates de mensagem inicial do WhatsApp (WABA) no tom de voz do Nex."

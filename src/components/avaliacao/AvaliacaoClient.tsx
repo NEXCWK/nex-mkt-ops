@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { cn } from '@/lib/utils'
-import { Sparkles, BarChart3, ThumbsUp, AlertTriangle, RotateCcw } from 'lucide-react'
+import { Sparkles, BarChart3, ThumbsUp, AlertTriangle, RotateCcw, PencilLine } from 'lucide-react'
 
 export interface Kpi {
   nome: string
@@ -115,9 +115,14 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
         description={descricao}
         actions={
           resultado ? (
-            <button onClick={() => setResultado(null)} className="flex items-center gap-1.5 text-xs text-nex-gray-400 hover:text-nex-black transition-colors">
-              <RotateCcw className="w-3.5 h-3.5" /> Nova avaliação
-            </button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setResultado(null)} className="flex items-center gap-1.5 text-xs text-nex-gray-400 hover:text-nex-black transition-colors">
+                <PencilLine className="w-3.5 h-3.5" /> Editar
+              </button>
+              <button onClick={() => { setResultado(null); setTranscricoes(''); setData(new Date().toISOString().slice(0, 10)) }} className="flex items-center gap-1.5 text-xs text-nex-gray-400 hover:text-nex-black transition-colors">
+                <RotateCcw className="w-3.5 h-3.5" /> Nova avaliação
+              </button>
+            </div>
           ) : undefined
         }
       />

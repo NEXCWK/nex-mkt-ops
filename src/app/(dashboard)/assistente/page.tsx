@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { cn } from '@/lib/utils'
-import { Send, Sparkles, Copy, Check, RotateCcw, Square } from 'lucide-react'
+import { Send, Sparkles, Copy, Check, RotateCcw, Square, ChevronRight, FileText } from 'lucide-react'
+import { EMAIL_TEMPLATES, GRUPOS } from '@/app/(dashboard)/emails/novo/templates-data'
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 
@@ -13,6 +14,10 @@ const SUGESTOES = [
   'Revise a cláusula de renovação do contrato de Endereço Fiscal',
   'Escreva uma versão mais curta do follow-up de proposta de eventos',
 ]
+
+function buildEditMessage(t: typeof EMAIL_TEMPLATES[0]): string {
+  return `Aqui está o template atual de e-mail "${t.grupo} — ${t.titulo}":\n\nAssunto: ${t.assunto || '(sem assunto)'}\n\n${t.corpo}\n\nPor favor, melhore este template mantendo os marcadores {{}} existentes e o tom de voz da marca.`
+}
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
@@ -35,6 +40,7 @@ export default function AssistentePage() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [grupoAberto, setGrupoAberto] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -112,7 +118,7 @@ export default function AssistentePage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
       <PageHeader
         title="Assistente"
         description="Corrija, melhore e crie modelos de e-mail e templates de contrato com IA."
@@ -128,102 +134,142 @@ export default function AssistentePage() {
         }
       />
 
-      <div className="flex-1 flex flex-col bg-white border border-nex-gray-200 rounded-xl overflow-hidden min-h-0">
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
-          {messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center gap-5">
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-nex-gray-50 border border-nex-gray-200 flex items-center justify-center">
-                  <Sparkles className="w-4.5 h-4.5 text-nex-gray-400" />
-                </div>
-                <p className="text-sm text-nex-gray-400 text-center max-w-sm">
-                  O assistente conhece todos os templates do sistema.
-                  Peça correções, melhorias ou novos modelos — o texto sai pronto para usar.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2 justify-center max-w-lg">
-                {SUGESTOES.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => send(s)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-heading font-medium bg-nex-gray-50 text-nex-gray-600 hover:bg-nex-gray-100 hover:text-nex-black border border-nex-gray-200 transition-colors text-left"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            messages.map((m, i) => (
-              <div key={i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
-                <div className={cn(
-                  'max-w-[85%] rounded-xl px-4 py-3',
-                  m.role === 'user'
-                    ? 'bg-nex-black text-white'
-                    : 'bg-nex-gray-50 border border-nex-gray-100 text-nex-gray-800'
-                )}>
-                  <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                    {m.content || (
-                      <span className="inline-flex gap-1 items-center text-nex-gray-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-nex-gray-300 animate-pulse" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-nex-gray-300 animate-pulse [animation-delay:150ms]" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-nex-gray-300 animate-pulse [animation-delay:300ms]" />
-                      </span>
-                    )}
+      <div className="flex-1 flex gap-3 min-h-0">
+        {/* Template panel */}
+        <div className="w-56 flex-shrink-0 flex flex-col bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
+          <div className="px-3 py-2.5 border-b border-nex-gray-100">
+            <p className="text-[10px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400 flex items-center gap-1.5">
+              <FileText className="w-3 h-3" /> Templates de e-mail
+            </p>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {GRUPOS.map(grupo => (
+              <div key={grupo}>
+                <button
+                  onClick={() => setGrupoAberto(grupoAberto === grupo ? null : grupo)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-nex-gray-50 transition-colors"
+                >
+                  <span className="text-xs font-heading font-semibold text-nex-gray-600">{grupo}</span>
+                  <ChevronRight className={cn('w-3 h-3 text-nex-gray-400 transition-transform', grupoAberto === grupo && 'rotate-90')} />
+                </button>
+                {grupoAberto === grupo && (
+                  <div className="border-t border-nex-gray-100 bg-nex-gray-50/50">
+                    {EMAIL_TEMPLATES.filter(t => t.grupo === grupo).map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => {
+                          setInput(buildEditMessage(t))
+                          inputRef.current?.focus()
+                        }}
+                        className="w-full text-left px-4 py-2 text-xs text-nex-gray-600 hover:bg-nex-gray-100 hover:text-nex-black transition-colors border-b border-nex-gray-100/60 last:border-0"
+                      >
+                        {t.titulo}
+                      </button>
+                    ))}
                   </div>
-                  {m.role === 'assistant' && m.content && (!loading || i < messages.length - 1) && (
-                    <div className="mt-2 pt-2 border-t border-nex-gray-200/60">
-                      <CopyButton text={m.content} />
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
-            ))
-          )}
-          <div ref={bottomRef} />
+            ))}
+          </div>
         </div>
 
-        {/* Input */}
-        <div className="border-t border-nex-gray-100 p-3">
-          <div className="flex items-end gap-2">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  send()
-                }
-              }}
-              rows={2}
-              placeholder="Ex: melhore o e-mail de cancelamento, deixando o tom mais empático..."
-              className="flex-1 resize-none rounded-lg border border-nex-gray-200 bg-white px-3 py-2.5 text-sm placeholder:text-nex-gray-300 focus:outline-none focus:ring-1 focus:ring-nex-gray-400 focus:border-nex-gray-400 transition-colors"
-            />
-            {loading ? (
-              <button
-                onClick={stop}
-                title="Parar"
-                className="h-10 w-10 flex-shrink-0 rounded-lg bg-nex-gray-100 text-nex-gray-600 hover:bg-nex-gray-200 flex items-center justify-center transition-colors"
-              >
-                <Square className="w-4 h-4" />
-              </button>
+        {/* Chat */}
+        <div className="flex-1 flex flex-col bg-white border border-nex-gray-200 rounded-xl overflow-hidden min-h-0">
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+            {messages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center gap-5">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-nex-gray-50 border border-nex-gray-200 flex items-center justify-center">
+                    <Sparkles className="w-4.5 h-4.5 text-nex-gray-400" />
+                  </div>
+                  <p className="text-sm text-nex-gray-400 text-center max-w-sm">
+                    O assistente conhece todos os templates do sistema.
+                    Clique em um template à esquerda para editar, ou digite livremente.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+                  {SUGESTOES.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => send(s)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-heading font-medium bg-nex-gray-50 text-nex-gray-600 hover:bg-nex-gray-100 hover:text-nex-black border border-nex-gray-200 transition-colors text-left"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ) : (
-              <button
-                onClick={() => send()}
-                disabled={!input.trim()}
-                title="Enviar"
-                className="h-10 w-10 flex-shrink-0 rounded-lg bg-nex-black text-white hover:bg-nex-gray-700 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center transition-colors"
-              >
-                <Send className="w-4 h-4" />
-              </button>
+              messages.map((m, i) => (
+                <div key={i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
+                  <div className={cn(
+                    'max-w-[85%] rounded-xl px-4 py-3',
+                    m.role === 'user'
+                      ? 'bg-nex-black text-white'
+                      : 'bg-nex-gray-50 border border-nex-gray-100 text-nex-gray-800'
+                  )}>
+                    <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                      {m.content || (
+                        <span className="inline-flex gap-1 items-center text-nex-gray-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-nex-gray-300 animate-pulse" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-nex-gray-300 animate-pulse [animation-delay:150ms]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-nex-gray-300 animate-pulse [animation-delay:300ms]" />
+                        </span>
+                      )}
+                    </div>
+                    {m.role === 'assistant' && m.content && (!loading || i < messages.length - 1) && (
+                      <div className="mt-2 pt-2 border-t border-nex-gray-200/60">
+                        <CopyButton text={m.content} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
             )}
+            <div ref={bottomRef} />
           </div>
-          <p className="text-[11px] text-nex-gray-300 mt-1.5 px-0.5">
-            Enter envia · Shift+Enter quebra linha · As alterações em templates de código devem ser repassadas ao desenvolvedor
-          </p>
+
+          {/* Input */}
+          <div className="border-t border-nex-gray-100 p-3">
+            <div className="flex items-end gap-2">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    send()
+                  }
+                }}
+                rows={2}
+                placeholder="Ex: melhore o e-mail de cancelamento, deixando o tom mais empático..."
+                className="flex-1 resize-none rounded-lg border border-nex-gray-200 bg-white px-3 py-2.5 text-sm placeholder:text-nex-gray-300 focus:outline-none focus:ring-1 focus:ring-nex-gray-400 focus:border-nex-gray-400 transition-colors"
+              />
+              {loading ? (
+                <button
+                  onClick={stop}
+                  title="Parar"
+                  className="h-10 w-10 flex-shrink-0 rounded-lg bg-nex-gray-100 text-nex-gray-600 hover:bg-nex-gray-200 flex items-center justify-center transition-colors"
+                >
+                  <Square className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => send()}
+                  disabled={!input.trim()}
+                  title="Enviar"
+                  className="h-10 w-10 flex-shrink-0 rounded-lg bg-nex-black text-white hover:bg-nex-gray-700 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center transition-colors"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-nex-gray-300 mt-1.5 px-0.5">
+              Enter envia · Shift+Enter quebra linha · As alterações em templates de código devem ser repassadas ao desenvolvedor
+            </p>
+          </div>
         </div>
       </div>
     </div>
