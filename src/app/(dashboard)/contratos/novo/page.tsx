@@ -325,9 +325,14 @@ const CAMPOS_EV_BASE: Campo[] = [
     ajuda: 'Preenchido automaticamente pela modalidade selecionada' },
   { nome: 'valor_adesao',         label: 'Valor de Adesão',             tipo: 'text',     obrigatorio: true,
     placeholder: 'com descrição de desconto se aplicável' },
-  { nome: 'renovacao_texto',      label: 'Cláusula de Renovação',       tipo: 'textarea', obrigatorio: true },
+  // Cláusula de Renovação é FIXA para Escritório Virtual — preenchida
+  // automaticamente em buildCamposFinais (ver EV_RENOVACAO_FIXA). Não é
+  // mais um campo aberto no formulário.
   { nome: 'data_assinatura',      label: 'Data de Assinatura',          tipo: 'date',     obrigatorio: true },
 ]
+
+// Texto fixo da cláusula de renovação dos contratos de Escritório Virtual
+const EV_RENOVACAO_FIXA = 'automática, de acordo com o valor de tabela vigente'
 
 const CAMPOS_EV_UNIDADE: Campo[] = [
   { nome: 'unidade_selector',  label: 'Unidade',              tipo: 'select', obrigatorio: true,
@@ -492,7 +497,7 @@ export default function NovoContratoPage() {
   useEffect(() => {
     if (carregouDinamicos.current) return
     carregouDinamicos.current = true
-    fetch('/api/templates/dinamicos')
+    fetch('/api/templates/dinamicos', { cache: 'no-store' })
       .then(r => r.json())
       .then(data => {
         const templates: Array<{ tipo: string; nome: string; campos_json: Campo[] }> = data.templates ?? []
@@ -645,6 +650,8 @@ export default function NovoContratoPage() {
     if (isEV) {
       if (isFiscal) final.opcao = 'Endereço Fiscal.'
       if (isComercial) final.opcao = 'Endereço Comercial.'
+      // Cláusula de Renovação é sempre fixa nos contratos de Escritório Virtual
+      final.renovacao_texto = EV_RENOVACAO_FIXA
     }
     return final
   }

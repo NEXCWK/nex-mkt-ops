@@ -3,6 +3,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
 
+// Nunca cachear — um template recém-importado precisa aparecer imediatamente
+// na lista de Novo Contrato sem reimportar nada.
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // Tipos já cobertos pelo código hardcoded em Novo Contrato — não retornar como dinâmicos
 const TIPOS_HARDCODED = new Set([
   'escritorio_privativo_nex_house', 'escritorio_privativo_francisco_rocha',
