@@ -62,25 +62,20 @@ export function replaceAcrossRuns(xml: string, original: string, replacement: st
   const celulas = montarCelulas(xml)
   if (celulas.length === 0) return null
 
-  // Normaliza espaços, mantendo mapa norm→indiceDaCelula
+  // Normalização SEM espaços em branco, mantendo mapa norm→indiceDaCelula.
+  // Ignorar todo whitespace torna o match imune às diferenças de espaçamento
+  // entre runs/parágrafos do Word (que o extrator de texto junta com espaço,
+  // mas que no XML podem não ter separador algum).
   let norm = ''
   const normToCell: number[] = []
-  let prevSpace = false
   for (let c = 0; c < celulas.length; c++) {
     const ch = celulas[c].ch
-    if (/\s/.test(ch)) {
-      if (prevSpace) continue
-      norm += ' '
-      normToCell.push(c)
-      prevSpace = true
-    } else {
-      norm += ch
-      normToCell.push(c)
-      prevSpace = false
-    }
+    if (/\s/.test(ch)) continue
+    norm += ch
+    normToCell.push(c)
   }
 
-  const alvo = original.replace(/\s+/g, ' ').trim()
+  const alvo = original.replace(/\s/g, '')
   if (!alvo) return null
   const idx = norm.indexOf(alvo)
   if (idx === -1) return null

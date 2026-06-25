@@ -22,7 +22,7 @@ export function LogEmailDialog({ log }: { log: any }) {
               <div><span className="text-nex-gray-500">Para:</span> {log.destinatario}</div>
               <div><span className="text-nex-gray-500">Operador:</span> {log.operador_email}</div>
               <div><span className="text-nex-gray-500">Cópias:</span> {Array.isArray(log.copia_json) ? log.copia_json.join(', ') : '—'}</div>
-              <div><span className="text-nex-gray-500">Enviado:</span> {new Date(log.sent_at).toLocaleString('pt-BR')}</div>
+              <div><span className="text-nex-gray-500">Enviado:</span> {new Date(log.sent_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</div>
             </div>
             <div>
               <p className="font-medium mb-2">Corpo do e-mail:</p>

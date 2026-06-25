@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 
 type SeedResult = { tipo: string; status: string; detail?: string }
 type SeedResponse = { ok: number; skipped: number; total: number; results: SeedResult[] }
 
 export function SeedTemplatesButton() {
+  const router = useRouter()
   const [loading, setLoading] = useState<'novos' | 'todos' | null>(null)
   const [results, setResults] = useState<SeedResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -24,6 +26,8 @@ export function SeedTemplatesButton() {
         setError(data.error ?? 'Erro desconhecido')
       } else {
         setResults(data)
+        // Atualiza a listagem e as contagens sem precisar de F5
+        router.refresh()
       }
     } catch (e: any) {
       setError(e.message)

@@ -10,13 +10,13 @@ import { SeedTemplatesButton } from '@/components/admin/SeedTemplatesButton'
 import { SeedParceirosButton } from '@/components/admin/SeedParceirosButton'
 import { ParametrizarIA } from '@/components/templates/ParametrizarIA'
 import { EditorTemplatesIA } from '@/components/templates/EditorTemplatesIA'
-import { ExcluirTemplateButton } from '@/components/templates/ExcluirTemplateButton'
-import { FileText, Mail } from 'lucide-react'
+import { DocumentosTable } from '@/components/templates/DocumentosTable'
+import { Mail } from 'lucide-react'
 
 async function getTemplates() {
   const supabase = createServerClient()
   const [docs, emails] = await Promise.all([
-    supabase.from('templates_documentos').select('*').order('tipo').order('versao', { ascending: false }),
+    supabase.from('templates_documentos').select('*').order('created_at', { ascending: false }),
     supabase.from('templates_email').select('*').order('tipo').order('versao', { ascending: false }),
   ])
   return { docs: docs.data ?? [], emails: emails.data ?? [] }
@@ -66,48 +66,7 @@ export default async function TemplatesPage() {
         </TabsList>
 
         <TabsContent value="documentos">
-          <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-nex-gray-50 border-b border-nex-gray-100">
-                  <tr>
-                    <th className={TH_CLASS}>Nome</th>
-                    <th className={TH_CLASS}>Tipo</th>
-                    <th className={TH_CLASS}>Unidade</th>
-                    <th className={TH_CLASS}>Versão</th>
-                    <th className={TH_CLASS}>Criado por</th>
-                    <th className={TH_CLASS}>Data</th>
-                    <th className={TH_CLASS}></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-nex-gray-100">
-                  {docs.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-14">
-                        <div className="flex flex-col items-center gap-2 text-center">
-                          <FileText className="w-6 h-6 text-nex-gray-300" />
-                          <p className="text-sm text-nex-gray-400">Nenhum template de documento cadastrado.</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  {docs.map((t: any) => (
-                    <tr key={t.id} className="hover:bg-nex-gray-50 transition-colors">
-                      <td className="px-4 py-3 font-medium">{t.nome}</td>
-                      <td className="px-4 py-3"><Badge variant="secondary">{t.tipo?.replace(/_/g, ' ')}</Badge></td>
-                      <td className="px-4 py-3">{t.unidade ?? '—'}</td>
-                      <td className="px-4 py-3"><Badge variant="yellow">v{t.versao}</Badge></td>
-                      <td className="px-4 py-3 text-nex-gray-500">{t.criado_por ?? '—'}</td>
-                      <td className="px-4 py-3 text-nex-gray-500 whitespace-nowrap">{formatDateTime(t.created_at)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <ExcluirTemplateButton tipo={t.tipo} nome={t.nome} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <DocumentosTable docs={docs as any} />
         </TabsContent>
 
         <TabsContent value="emails">

@@ -36,7 +36,7 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
   const data = await getDashboardData()
 
-  const mesAtual = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
+  const mesAtual = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' })
 
   return (
     <div>
@@ -122,7 +122,7 @@ export default async function DashboardPage() {
                       <p className="text-xs text-nex-gray-500 truncate">{doc.operador_email}</p>
                     </div>
                     <Badge variant="secondary" className="text-xs flex-shrink-0">
-                      {new Date(doc.created_at).toLocaleDateString('pt-BR')}
+                      {new Date(doc.created_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
                     </Badge>
                   </div>
                 ))}
@@ -161,7 +161,7 @@ export default async function DashboardPage() {
                       <p className="text-xs text-nex-gray-500 truncate">{email.operador_email}</p>
                     </div>
                     <Badge variant="secondary" className="text-xs flex-shrink-0">
-                      {new Date(email.sent_at).toLocaleDateString('pt-BR')}
+                      {new Date(email.sent_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
                     </Badge>
                   </div>
                 ))}
