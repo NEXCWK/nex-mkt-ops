@@ -79,6 +79,76 @@ function textoDoXML(xml: string): string {
   return matches.map(m => m[1]).join(' ').replace(/\s+/g, ' ').trim()
 }
 
+// Aliases de placeholders [CHAVE] conhecidos do Nex → token + rótulo + tipo.
+// Garante parametrização determinística mesmo quando a IA não mapeia o colchete.
+const BRACKET_ALIAS: Record<string, { token: string; label: string; tipo?: string }> = {
+  RAZAOSOCIAL: { token: 'nome_cliente', label: 'Nome ou Razão Social' },
+  NOMERAZAOSOCIAL: { token: 'nome_cliente', label: 'Nome ou Razão Social' },
+  NOMECLIENTE: { token: 'nome_cliente', label: 'Nome ou Razão Social' },
+  NOME: { token: 'nome_cliente', label: 'Nome ou Razão Social' },
+  CPFCNPJ: { token: 'cpf_cnpj', label: 'CPF ou CNPJ' },
+  CNPJ: { token: 'cpf_cnpj', label: 'CPF ou CNPJ' },
+  CPF: { token: 'cpf_cnpj', label: 'CPF ou CNPJ' },
+  ENDERECORUA: { token: 'endereco_rua', label: 'Rua' },
+  RUA: { token: 'endereco_rua', label: 'Rua' },
+  LOGRADOURO: { token: 'endereco_rua', label: 'Rua' },
+  ENDERECONUMERO: { token: 'endereco_numero', label: 'Número' },
+  NUMERO: { token: 'endereco_numero', label: 'Número' },
+  ENDERECOCOMPLEMENTO: { token: 'endereco_complemento', label: 'Complemento' },
+  COMPLEMENTO: { token: 'endereco_complemento', label: 'Complemento' },
+  ENDERECOBAIRRO: { token: 'endereco_bairro', label: 'Bairro' },
+  BAIRRO: { token: 'endereco_bairro', label: 'Bairro' },
+  ENDERECOCIDADE: { token: 'endereco_cidade', label: 'Cidade' },
+  CIDADE: { token: 'endereco_cidade', label: 'Cidade' },
+  ENDERECOUF: { token: 'endereco_uf', label: 'UF' },
+  UF: { token: 'endereco_uf', label: 'UF' },
+  ENDERECOESTADO: { token: 'endereco_estado', label: 'Estado' },
+  ESTADO: { token: 'endereco_estado', label: 'Estado' },
+  ENDERECOCEP: { token: 'endereco_cep', label: 'CEP' },
+  CEP: { token: 'endereco_cep', label: 'CEP' },
+  EMAIL: { token: 'email_cliente', label: 'E-mail' },
+  EMAILCLIENTE: { token: 'email_cliente', label: 'E-mail' },
+  DATAINICIOCONTRATO: { token: 'data_inicio', label: 'Data de Início', tipo: 'date' },
+  DATAINICIO: { token: 'data_inicio', label: 'Data de Início', tipo: 'date' },
+  DATAASSINATURA: { token: 'data_assinatura', label: 'Data de Assinatura', tipo: 'date' },
+  TELEFONE: { token: 'telefone_cliente', label: 'Telefone' },
+  CELULAR: { token: 'cel_coworker', label: 'Celular' },
+}
+
+/** Normaliza o nome do colchete: remove [], acentos e separadores; deixa MAIÚSCULO. */
+function normalizarBracket(b: string): string {
+  return b
+    .replace(/[[\]]/g, '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^A-Za-z0-9]/g, '')
+    .toUpperCase()
+}
+
+function slugifyToken(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '')
+}
+
+/** Resolve token + rótulo + tipo de um placeholder [CHAVE], com prioridade:
+ *  1) mapa explícito da IA  2) alias conhecido do Nex  3) slug do próprio nome. */
+function resolverBracket(bracket: string, mapaIA: Record<string, string>): { token: string; label: string; tipo: string } {
+  const norm = normalizarBracket(bracket)
+  const doMapa = mapaIA[bracket] ? String(mapaIA[bracket]).replace(/[{}]/g, '') : ''
+  if (doMapa) {
+    const alias = BRACKET_ALIAS[norm]
+    return { token: doMapa, label: alias?.label ?? doMapa.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), tipo: alias?.tipo ?? 'text' }
+  }
+  const alias = BRACKET_ALIAS[norm]
+  if (alias) return { token: alias.token, label: alias.label, tipo: alias.tipo ?? 'text' }
+  const token = slugifyToken(norm) || 'campo'
+  return { token, label: token.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), tipo: 'text' }
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session || !['gestor', 'admin'].includes(session.user.perfil ?? '')) {
@@ -169,33 +239,40 @@ export async function POST(req: NextRequest) {
 
   const mapaColchetes = parsed.mapa_colchetes ?? {}
   const substituicoes = Array.isArray(parsed.substituicoes) ? parsed.substituicoes : []
+  const TEM_BRACKET = /\[[A-ZÀ-Ú0-9_]{2,}\]/
 
   // Aplica substituições no XML
   let xmlModificado = docXml
   const aplicadas: string[] = []
   const naoAplicadas: Array<{ original: string; token: string }> = []
-  // Para exibição na UI, normaliza tudo em "substituicoes"
   const substituicoesUI: Array<{ original: string; token: string; contexto?: string }> = []
+  // Rótulo/tipo derivados dos colchetes, para montar campos_json com bons labels
+  const infoPorToken = new Map<string, { label: string; tipo: string }>()
 
-  // 1) Placeholders [CHAVE] → token (substituição GLOBAL de todas as ocorrências).
-  //    Isso reaproveita o mesmo token onde o dado se repete e evita campos duplicados.
-  for (const [placeholder, tokenRaw] of Object.entries(mapaColchetes)) {
-    if (!placeholder || !tokenRaw) continue
-    const token = String(tokenRaw).replace(/[{}]/g, '')
-    const tokenStr = `{{${token}}}`
-    const r = substituirTodas(xmlModificado, placeholder, tokenStr)
+  // 1) DETERMINÍSTICO: converte TODOS os placeholders [CHAVE] detectados no documento.
+  //    Substituição global → o mesmo dado repetido vira o mesmo marcador (preenche 1x).
+  //    Não depende da IA: usa o mapa dela quando existe, senão alias do Nex, senão slug.
+  for (const bracket of bracketsDetectados) {
+    const { token, label, tipo } = resolverBracket(bracket, mapaColchetes)
+    const r = substituirTodas(xmlModificado, bracket, `{{${token}}}`)
     xmlModificado = r.xml
-    substituicoesUI.push({ original: placeholder, token, contexto: r.count > 1 ? `aplicado em ${r.count} lugares` : undefined })
-    if (r.count > 0) aplicadas.push(token)
-    else naoAplicadas.push({ original: placeholder, token })
+    substituicoesUI.push({ original: bracket, token, contexto: r.count > 1 ? `aplicado em ${r.count} lugares` : undefined })
+    if (r.count > 0) {
+      aplicadas.push(token)
+      if (!infoPorToken.has(token)) infoPorToken.set(token, { label, tipo })
+    } else {
+      naoAplicadas.push({ original: bracket, token })
+    }
   }
 
-  // 2) Substituições por valor preenchido (documentos sem placeholders)
+  // 2) Substituições por VALOR preenchido (documentos sem placeholders).
+  //    Pula qualquer "original" que ainda contenha colchetes — já tratados acima,
+  //    evitando recriar campos compostos duplicados (ex: qualificacao_membro).
   for (const sub of substituicoes) {
     if (!sub.original || !sub.token) continue
+    if (TEM_BRACKET.test(sub.original)) continue
     const token = sub.token.replace(/[{}]/g, '')
-    const tokenStr = `{{${token}}}`
-    const r = substituirTodas(xmlModificado, sub.original, tokenStr)
+    const r = substituirTodas(xmlModificado, sub.original, `{{${token}}}`)
     xmlModificado = r.xml
     substituicoesUI.push({ original: sub.original, token, contexto: sub.contexto })
     if (r.count > 0) aplicadas.push(token)
@@ -216,11 +293,13 @@ export async function POST(req: NextRequest) {
     const nome = String((c as { nome?: string }).nome ?? '').replace(/[{}]/g, '')
     if (nome) camposPorNome.set(nome, { ...c, nome })
   }
-  // Garante um campo para todo token aplicado que não veio em campos_json
+  // Garante um campo para todo token aplicado que não veio em campos_json,
+  // usando o rótulo/tipo derivado do colchete quando disponível.
   for (const token of tokensUsados) {
     if (!camposPorNome.has(token)) {
-      const label = token.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-      camposPorNome.set(token, { nome: token, label, tipo: 'text', obrigatorio: true })
+      const info = infoPorToken.get(token)
+      const label = info?.label ?? token.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      camposPorNome.set(token, { nome: token, label, tipo: info?.tipo ?? 'text', obrigatorio: true })
     }
   }
   const camposJsonFinal = [...camposPorNome.values()].filter(c => tokensUsados.has(String(c.nome)))
