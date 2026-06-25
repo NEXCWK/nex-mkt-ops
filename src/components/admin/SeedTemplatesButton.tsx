@@ -61,9 +61,9 @@ export function SeedTemplatesButton() {
       {results && (
         <div className="text-sm bg-green-50 border border-green-200 rounded p-3 space-y-1">
           <p className="font-semibold text-green-800">
-            {results.ok} importado{results.ok === 1 ? '' : 's'}
-            {results.skipped > 0 && `, ${results.skipped} já existia${results.skipped === 1 ? '' : 'm'}`}
-            {' '}(de {results.total} no total).
+            {results.ok === 0 && results.skipped === results.total
+              ? `Todos os ${results.total} templates já estavam importados — nada novo a fazer.`
+              : `${results.ok} importado${results.ok === 1 ? '' : 's'}${results.skipped > 0 ? `, ${results.skipped} já existia${results.skipped === 1 ? '' : 'm'}` : ''} (de ${results.total} no total).`}
           </p>
           {results.results.filter(r => r.status !== 'ok' && r.status !== 'skipped').map(r => (
             <p key={r.tipo} className="text-orange-700">

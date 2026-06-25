@@ -293,9 +293,8 @@ export function ParametrizarIA() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? `Erro ${res.status}`)
-      // Atualiza a listagem/contagem da aba Documentos sem F5
-      router.refresh()
-      // Popup de confirmação + orientação
+      // Popup de confirmação + orientação (o refresh acontece ao fechar o popup,
+      // para não re-renderizar a página e atropelar a confirmação)
       setSucessoImport({ nome: nomeImport, versao: data.versao ?? 1, substituido: !!data.substituido })
     } catch (e: any) {
       setErroImport(e.message ?? 'Falha ao importar')
@@ -303,6 +302,41 @@ export function ParametrizarIA() {
     } finally {
       setImportando(false)
     }
+  }
+
+  // ── Sucesso: popup de confirmação (tem prioridade sobre qualquer estado) ──
+  if (sucessoImport) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-7 h-7 text-green-500 flex-shrink-0" />
+            <p className="text-base font-heading font-semibold text-nex-black">
+              {sucessoImport.substituido ? 'Template atualizado!' : 'Template importado!'}
+            </p>
+          </div>
+          <p className="text-sm text-nex-gray-600 leading-relaxed">
+            <strong>{sucessoImport.nome}</strong> foi salvo no sistema
+            {sucessoImport.substituido ? ` como nova versão (v${sucessoImport.versao})` : ''}.
+          </p>
+          <div className="px-3.5 py-3 bg-nex-gray-50 rounded-lg space-y-1.5">
+            <p className="text-xs font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Próximos passos</p>
+            <p className="text-xs text-nex-gray-600 leading-relaxed">
+              1. O template já aparece na aba <strong>Documentos</strong> aqui em cima (lista atualizada automaticamente).<br />
+              2. Para gerar contratos com ele, vá em <strong>Novo Contrato</strong> → categoria <strong>Personalizados</strong>.
+            </p>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button variant="outline" className="flex-1" onClick={() => { setSucessoImport(null); resetar(); router.refresh() }}>
+              Fechar
+            </Button>
+            <Button className="flex-1 gap-1.5" onClick={() => { setSucessoImport(null); resetar(); router.push('/contratos/novo') }}>
+              Ir para Novo Contrato
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // ── Idle: área de upload ──
@@ -517,39 +551,6 @@ export function ParametrizarIA() {
   if (estado === 'importando') {
     return (
       <div className="space-y-4">
-        {/* Popup de confirmação pós-importação */}
-        {sucessoImport && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-7 h-7 text-green-500 flex-shrink-0" />
-                <p className="text-base font-heading font-semibold text-nex-black">
-                  {sucessoImport.substituido ? 'Template atualizado!' : 'Template importado!'}
-                </p>
-              </div>
-              <p className="text-sm text-nex-gray-600 leading-relaxed">
-                <strong>{sucessoImport.nome}</strong> foi salvo no sistema
-                {sucessoImport.substituido ? ` como nova versão (v${sucessoImport.versao})` : ''}.
-              </p>
-              <div className="px-3.5 py-3 bg-nex-gray-50 rounded-lg space-y-1.5">
-                <p className="text-xs font-heading font-semibold uppercase tracking-widest text-nex-gray-400">Próximos passos</p>
-                <p className="text-xs text-nex-gray-600 leading-relaxed">
-                  1. O template já aparece na aba <strong>Documentos</strong> aqui em cima (a lista foi atualizada automaticamente).<br />
-                  2. Para gerar contratos com ele, vá em <strong>Novo Contrato</strong> → categoria <strong>Personalizados</strong>.
-                </p>
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Button variant="outline" className="flex-1" onClick={() => { setSucessoImport(null); resetar() }}>
-                  Fechar
-                </Button>
-                <Button className="flex-1 gap-1.5" onClick={() => { setSucessoImport(null); resetar(); router.push('/contratos/novo') }}>
-                  Ir para Novo Contrato
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="flex items-center justify-between">
           <p className="text-sm font-heading font-semibold text-nex-black">Importar template para o sistema</p>
           <button onClick={() => setEstado('resultado')} className="p-1 text-nex-gray-400 hover:text-nex-gray-700">
@@ -669,6 +670,17 @@ export function ParametrizarIA() {
               </>
             )}
           </div>
+
+          {/* Confirma que a comparação rodou e não achou parecido */}
+          {!comparando && !substituirTipo && similares.length === 0 && existentes.length > 0 && (
+            <div className="flex items-start gap-2 px-3 py-2.5 bg-nex-gray-50 border border-nex-gray-200 rounded-lg">
+              <Check className="w-3.5 h-3.5 text-nex-gray-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-nex-gray-500">
+                Comparei estrutura e texto com os {existentes.length} contrato(s) cadastrado(s) e não encontrei
+                um parecido — este será criado como <strong>template novo</strong>.
+              </p>
+            </div>
+          )}
 
           {/* Pendências não bloqueiam a importação */}
           {naoAplicadas.length > 0 && (
