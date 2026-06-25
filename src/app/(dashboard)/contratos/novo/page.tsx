@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/hooks/use-toast'
 import { TIPOS_ADITIVO } from '@/types'
-import { FileText, Download, Plus, ExternalLink, Info, Check, Circle } from 'lucide-react'
+import { FileText, Download, Plus, ExternalLink, Info, Check, Circle, Loader2, MapPin, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ─────────────────────────────────────────────────────────
@@ -131,6 +131,62 @@ function adicionarMeses(isoDate: string, meses: number): string {
   d.setDate(d.getDate() - 1)
   return d.toISOString().split('T')[0]
 }
+
+// ─────────────────────────────────────────────────────────
+// Busca de endereço por CEP (ViaCEP)
+// ─────────────────────────────────────────────────────────
+const UF_EXTENSO: Record<string, string> = {
+  AC: 'Acre', AL: 'Alagoas', AP: 'Amapá', AM: 'Amazonas', BA: 'Bahia', CE: 'Ceará',
+  DF: 'Distrito Federal', ES: 'Espírito Santo', GO: 'Goiás', MA: 'Maranhão',
+  MT: 'Mato Grosso', MS: 'Mato Grosso do Sul', MG: 'Minas Gerais', PA: 'Pará',
+  PB: 'Paraíba', PR: 'Paraná', PE: 'Pernambuco', PI: 'Piauí', RJ: 'Rio de Janeiro',
+  RN: 'Rio Grande do Norte', RS: 'Rio Grande do Sul', RO: 'Rondônia', RR: 'Roraima',
+  SC: 'Santa Catarina', SP: 'São Paulo', SE: 'Sergipe', TO: 'Tocantins',
+}
+
+type ViaCep = { logradouro?: string; complemento?: string; bairro?: string; localidade?: string; uf?: string; cep?: string; erro?: boolean }
+
+function formatarCep(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(0, 8)
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d
+}
+
+/**
+ * Dado o nome do campo de CEP, devolve os campos de endereço a preencher.
+ * Cada grupo de contrato organiza o endereço de forma diferente.
+ */
+function montarEnderecoPorCep(cepField: string, d: ViaCep): Record<string, string> {
+  const rua = d.logradouro ?? ''
+  const bairro = d.bairro ?? ''
+  const cidade = d.localidade ?? ''
+  const uf = (d.uf ?? '').toUpperCase()
+  const estado = UF_EXTENSO[uf] ?? ''
+  const cidadeUf = cidade && uf ? `${cidade}/${uf}` : ''
+  const cepFmt = formatarCep(d.cep ?? '')
+
+  switch (cepField) {
+    // Nex House / Anual: campos de endereço separados
+    case 'endereco_cep':
+      return { endereco_cep: cepFmt, endereco_rua: rua, endereco_bairro: bairro, endereco_cidade: cidade, endereco_uf: uf, endereco_estado: estado }
+    // EP / EV: endereço em linha única (+ cidade/estado no EP)
+    case 'cep_cliente':
+      return { cep_cliente: cepFmt, endereco_cliente: [rua, bairro].filter(Boolean).join(' - '), cidade_estado_cliente: cidadeUf }
+    // Aditivos — contratante PF
+    case 'cep_coworker':
+      return { cep_coworker: cepFmt, endereco_coworker: rua, bairro_coworker: bairro, cidade_estado_coworker: cidadeUf }
+    // Aditivos — interveniente PJ
+    case 'cep_interveniente':
+      return { cep_interveniente: cepFmt, endereco_interveniente: rua, bairro_interveniente: bairro, cidade_interveniente: cidadeUf }
+    // Aditivo de alteração de endereço — novo endereço
+    case 'endereco_novo_cep':
+      return { endereco_novo_cep: cepFmt, endereco_novo_rua: [rua, bairro].filter(Boolean).join(' – ') }
+    default:
+      return {}
+  }
+}
+
+// Campos de CEP que disparam busca automática (exclui unidade_cep — dado fixo do Nex)
+const CEP_FIELDS = new Set(['cep_cliente', 'endereco_cep', 'cep_coworker', 'cep_interveniente', 'endereco_novo_cep'])
 
 // ─────────────────────────────────────────────────────────
 // Definição de campos
@@ -426,6 +482,7 @@ export default function NovoContratoPage() {
   const [tipoAditivo, setTipoAditivo] = useState('')
   const [aditivoValues, setAditivoValues] = useState<Record<string, string>>({})
   const [aditivoGerado, setAditivoGerado] = useState<{ docUrl?: string; driveUrl?: string } | null>(null)
+  const [cepStatus, setCepStatus] = useState<Record<string, 'loading' | 'ok' | 'erro'>>({})
 
   // Templates dinâmicos importados via IA
   const [categoriasExtra, setCategoriasExtra] = useState<typeof CATEGORIAS_CONTRATO>([])
@@ -540,6 +597,35 @@ export default function NovoContratoPage() {
     setAditivoValues(prev => ({ ...prev, [nome]: valor }))
   }
 
+  /** Busca o endereço no ViaCEP e preenche os campos do grupo atual. */
+  async function lookupCep(
+    cepField: string,
+    raw: string,
+    onChange: (n: string, v: string) => void,
+    camposContexto: Campo[],
+  ) {
+    const digits = (raw ?? '').replace(/\D/g, '')
+    if (digits.length !== 8) return
+    setCepStatus(s => ({ ...s, [cepField]: 'loading' }))
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`)
+      const d: ViaCep = await res.json()
+      if (d.erro) {
+        setCepStatus(s => ({ ...s, [cepField]: 'erro' }))
+        return
+      }
+      const updates = montarEnderecoPorCep(cepField, d)
+      const nomesDisponiveis = new Set(camposContexto.map(c => c.nome))
+      Object.entries(updates).forEach(([k, v]) => {
+        if (!v) return
+        if (k === cepField || nomesDisponiveis.has(k)) onChange(k, v)
+      })
+      setCepStatus(s => ({ ...s, [cepField]: 'ok' }))
+    } catch {
+      setCepStatus(s => ({ ...s, [cepField]: 'erro' }))
+    }
+  }
+
   function baixarDocxBlob(docUrl: string, filename: string) {
     const base64 = docUrl.includes(',') ? docUrl.split(',')[1] : docUrl
     const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
@@ -615,10 +701,12 @@ export default function NovoContratoPage() {
     } finally { setLoading(false) }
   }
 
-  function renderCampo(campo: Campo, values: Record<string, string>, onChange: (n: string, v: string) => void, mostrarErros = false) {
+  function renderCampo(campo: Campo, values: Record<string, string>, onChange: (n: string, v: string) => void, mostrarErros = false, camposContexto: Campo[] = []) {
     const isAuto = CAMPOS_AUTO.includes(campo.nome)
     const isFilled = !!values[campo.nome]
     const temErro = mostrarErros && campo.obrigatorio && !isFilled && campo.nome !== 'unidade_selector'
+    const isCep = CEP_FIELDS.has(campo.nome)
+    const statusCep = cepStatus[campo.nome]
     return (
       <div key={campo.nome} id={`campo-${campo.nome}`} className="space-y-1.5">
         <div className="flex items-center gap-2">
@@ -631,6 +719,15 @@ export default function NovoContratoPage() {
           </label>
           {isAuto && (
             <span className="text-[10px] font-heading font-medium uppercase tracking-widest bg-nex-gray-100 text-nex-gray-400 px-1.5 py-0.5 rounded">auto</span>
+          )}
+          {isCep && statusCep === 'loading' && (
+            <span className="text-[10px] font-heading font-medium text-nex-gray-400 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> buscando…</span>
+          )}
+          {isCep && statusCep === 'ok' && (
+            <span className="text-[10px] font-heading font-medium text-green-600 flex items-center gap-1"><MapPin className="w-3 h-3" /> endereço preenchido</span>
+          )}
+          {isCep && statusCep === 'erro' && (
+            <span className="text-[10px] font-heading font-medium text-amber-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> CEP não encontrado</span>
           )}
         </div>
         {campo.ajuda && (
@@ -662,6 +759,21 @@ export default function NovoContratoPage() {
             onChange={e => onChange(campo.nome, e.target.value)}
             placeholder={campo.placeholder}
             className={cn('min-h-[80px] text-sm font-normal', temErro ? 'border-red-300' : '')}
+          />
+        ) : isCep ? (
+          <Input
+            type="text"
+            inputMode="numeric"
+            value={values[campo.nome] ?? ''}
+            onChange={e => {
+              const masked = formatarCep(e.target.value)
+              onChange(campo.nome, masked)
+              if (masked.replace(/\D/g, '').length === 8) lookupCep(campo.nome, masked, onChange, camposContexto)
+            }}
+            onBlur={e => lookupCep(campo.nome, e.target.value, onChange, camposContexto)}
+            placeholder="00000-000"
+            maxLength={9}
+            className={cn('text-sm font-normal', temErro ? 'border-red-300' : '')}
           />
         ) : (
           <Input
@@ -740,7 +852,7 @@ export default function NovoContratoPage() {
               </div>
             )}
             <div className="p-5 space-y-4">
-              {campos.map(campo => renderCampo(campo, formValues, setField, tentouGerar))}
+              {campos.map(campo => renderCampo(campo, formValues, setField, tentouGerar, campos))}
             </div>
             <div className="px-5 py-4 border-t border-nex-gray-100">
               <Button className="w-full gap-2" onClick={handleGerar} disabled={loading}>
@@ -866,7 +978,7 @@ export default function NovoContratoPage() {
                 <div className="px-3 py-2 bg-nex-gray-50 rounded-lg text-xs font-bold text-nex-gray-600">
                   Os dados do contrato de <span className="text-nex-black">{formValues.nome_cliente}</span> serão incorporados automaticamente.
                 </div>
-                {camposAditivo.map(campo => renderCampo(campo, aditivoValues, setAditivoField))}
+                {camposAditivo.map(campo => renderCampo(campo, aditivoValues, setAditivoField, false, camposAditivo))}
                 <Button className="w-full gap-2" onClick={handleGerarAditivo} disabled={loading}>
                   <FileText className="h-4 w-4" />
                   {loading ? 'Gerando...' : 'Gerar Aditivo'}
