@@ -110,6 +110,39 @@ export function replaceAcrossRuns(xml: string, original: string, replacement: st
   return out
 }
 
+/**
+ * Substitui TODAS as ocorrências de `original` por `replacement`, tolerando
+ * fragmentação. Faz primeiro o replace exato global (split/join) e depois repete
+ * o match tolerante a fragmentação até não encontrar mais. Retorna o XML e a
+ * contagem de ocorrências trocadas.
+ */
+export function substituirTodas(
+  xml: string,
+  original: string,
+  replacement: string
+): { xml: string; count: number } {
+  let count = 0
+  let out = xml
+
+  // 1) Ocorrências exatas (todas de uma vez)
+  if (out.includes(original)) {
+    const partes = out.split(original)
+    count += partes.length - 1
+    out = partes.join(replacement)
+  }
+
+  // 2) Ocorrências fragmentadas restantes, uma por vez
+  let guard = 0
+  while (guard++ < 100) {
+    const novo = replaceAcrossRuns(out, original, replacement)
+    if (!novo || novo === out) break
+    out = novo
+    count++
+  }
+
+  return { xml: out, count }
+}
+
 /** Extrai a porção entre o primeiro "[" e o último "]" (placeholders no formato antigo). */
 function porcaoColchetes(s: string): string | null {
   const a = s.indexOf('[')

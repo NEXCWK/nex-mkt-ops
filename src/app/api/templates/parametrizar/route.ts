@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import Anthropic from '@anthropic-ai/sdk'
 import PizZip from 'pizzip'
-import { aplicarSubstituicao } from '@/lib/docx-replace'
+import { substituirTodas } from '@/lib/docx-replace'
 
 export const maxDuration = 300
 
@@ -43,10 +43,19 @@ taxa_adesao, desconto_adesao, desconto_mensalidades, obs_evento
 - {{descricao_pagamento}}: absorve qualquer condição de pagamento (à vista, parcelado, faturamento) em uma descrição textual
 - {{qualificacao_coworker_pf}}: absorve toda qualificação civil da PF (nacionalidade, estado civil, profissão, nascimento, RG, CPF, endereço) em bloco corrido
 
+## REUTILIZAÇÃO — não duplicar campos (MUITO IMPORTANTE)
+- Se o MESMO dado aparece em vários lugares do contrato (ex: a razão social aparece na qualificação inicial E de novo mais adiante), use SEMPRE o MESMO token nas duas ocorrências. O usuário preenche uma vez e o sistema replica em todos os lugares.
+- NÃO crie campos compostos que reempacotam dados já capturados por campos individuais. Ex: se já existem {{nome_cliente}}, {{cpf_cnpj}}, {{endereco_rua}}, NÃO crie um {{qualificacao_membro}} que repete tudo isso — em vez disso, parametrize cada placeholder DENTRO do bloco de qualificação com seu token individual, reaproveitando os mesmos.
+
+## Placeholders no formato antigo [CHAVE]
+Se o documento já vem com placeholders [ASSIM] (colchetes), a forma MAIS confiável de parametrizar é mapear cada placeholder distinto para um token. Inclua no JSON o objeto "mapa_colchetes": cada chave é o placeholder EXATO (com colchetes) e o valor é o token (sem chaves). Use o MESMO token para placeholders que representam o mesmo dado. Ex:
+"mapa_colchetes": { "[RAZAOSOCIAL]": "nome_cliente", "[CPFCNPJ]": "cpf_cnpj", "[ENDERECORUA]": "endereco_rua" }
+
 ## Formato de resposta OBRIGATÓRIO
 Retorne APENAS um objeto JSON válido, sem markdown, sem explicações fora do JSON:
 
 {
+  "mapa_colchetes": { "[PLACEHOLDER]": "token_sem_chaves" },
   "substituicoes": [
     {
       "original": "texto EXATAMENTE como aparece no contrato — mesma capitalização, pontuação, espaços",
@@ -59,10 +68,11 @@ Retorne APENAS um objeto JSON válido, sem markdown, sem explicações fora do J
   ]
 }
 
-Tipos válidos para campos_json: "text", "date", "number", "select", "textarea"
-Para "select" inclua: "opcoes": ["opção1", "opção2"]
-Ordem de campos_json: do mais importante para o menos importante (nome, cpf, datas, valores, etc.)
-CRÍTICO: o campo "original" deve ser a string EXATA do contrato — sem alterar nada.`
+- Use "mapa_colchetes" quando o documento tiver placeholders [ASSIM]. Use "substituicoes" para documentos preenchidos com dados reais (sem placeholders). Pode usar os dois se necessário.
+- Tipos válidos para campos_json: "text", "date", "number", "select", "textarea". Para "select" inclua "opcoes": [...].
+- Ordem de campos_json: do mais importante para o menos importante (nome, cpf, datas, valores, etc.)
+- Em "campos_json" inclua um campo por token DISTINTO (sem repetir tokens).
+CRÍTICO: o campo "original" (em substituicoes) deve ser a string EXATA do contrato — sem alterar nada.`
 
 function textoDoXML(xml: string): string {
   const matches = [...xml.matchAll(/<w:t(?:[^>]*)>([\s\S]*?)<\/w:t>/g)]
@@ -107,14 +117,20 @@ export async function POST(req: NextRequest) {
 
   const texto = textoDoXML(docXml)
 
+  // Placeholders no formato antigo [CHAVE] presentes no documento
+  const bracketsDetectados = [...new Set(texto.match(/\[[A-ZÀ-Ú0-9_]{2,}\]/g) ?? [])]
+
   // Monta mensagens para o Claude
   let messages: { role: 'user' | 'assistant'; content: string }[]
 
   if (historico.length === 0) {
     // Primeira chamada: envia o texto completo
+    const avisoBrackets = bracketsDetectados.length > 0
+      ? `\n\nO documento contém estes placeholders no formato antigo [CHAVE] — mapeie TODOS em "mapa_colchetes":\n${bracketsDetectados.join(', ')}`
+      : ''
     messages = [{
       role: 'user',
-      content: `Texto do contrato (extraído do .docx):\n\n${texto}\n\nIdentifique todos os dados variáveis e retorne o JSON de substituições conforme as instruções.`,
+      content: `Texto do contrato (extraído do .docx):\n\n${texto}\n\nIdentifique todos os dados variáveis e retorne o JSON conforme as instruções.${avisoBrackets}`,
     }]
   } else {
     // Chamada de edição: historico já contém o texto inicial e a resposta anterior
@@ -137,13 +153,13 @@ export async function POST(req: NextRequest) {
 
   // Parseia JSON da resposta
   let parsed: {
-    substituicoes: Array<{ original: string; token: string; contexto?: string }>
-    campos_json: Array<Record<string, unknown>>
+    mapa_colchetes?: Record<string, string>
+    substituicoes?: Array<{ original: string; token: string; contexto?: string }>
+    campos_json?: Array<Record<string, unknown>>
   }
   try {
     const match = respText.match(/\{[\s\S]*\}/)
     parsed = JSON.parse(match?.[0] ?? '{}')
-    if (!Array.isArray(parsed.substituicoes)) throw new Error('Formato inválido')
   } catch {
     return NextResponse.json({
       error: 'Claude retornou formato inesperado. Tente novamente.',
@@ -151,18 +167,39 @@ export async function POST(req: NextRequest) {
     }, { status: 500 })
   }
 
-  // Aplica substituições no XML por string replacement
+  const mapaColchetes = parsed.mapa_colchetes ?? {}
+  const substituicoes = Array.isArray(parsed.substituicoes) ? parsed.substituicoes : []
+
+  // Aplica substituições no XML
   let xmlModificado = docXml
   const aplicadas: string[] = []
   const naoAplicadas: Array<{ original: string; token: string }> = []
+  // Para exibição na UI, normaliza tudo em "substituicoes"
+  const substituicoesUI: Array<{ original: string; token: string; contexto?: string }> = []
 
-  for (const sub of parsed.substituicoes) {
-    if (!sub.original || !sub.token) continue
-    const tokenStr = `{{${sub.token.replace(/[{}]/g, '')}}}`
-    const r = aplicarSubstituicao(xmlModificado, sub.original, tokenStr)
+  // 1) Placeholders [CHAVE] → token (substituição GLOBAL de todas as ocorrências).
+  //    Isso reaproveita o mesmo token onde o dado se repete e evita campos duplicados.
+  for (const [placeholder, tokenRaw] of Object.entries(mapaColchetes)) {
+    if (!placeholder || !tokenRaw) continue
+    const token = String(tokenRaw).replace(/[{}]/g, '')
+    const tokenStr = `{{${token}}}`
+    const r = substituirTodas(xmlModificado, placeholder, tokenStr)
     xmlModificado = r.xml
-    if (r.aplicou) aplicadas.push(sub.token)
-    else naoAplicadas.push({ original: sub.original, token: sub.token })
+    substituicoesUI.push({ original: placeholder, token, contexto: r.count > 1 ? `aplicado em ${r.count} lugares` : undefined })
+    if (r.count > 0) aplicadas.push(token)
+    else naoAplicadas.push({ original: placeholder, token })
+  }
+
+  // 2) Substituições por valor preenchido (documentos sem placeholders)
+  for (const sub of substituicoes) {
+    if (!sub.original || !sub.token) continue
+    const token = sub.token.replace(/[{}]/g, '')
+    const tokenStr = `{{${token}}}`
+    const r = substituirTodas(xmlModificado, sub.original, tokenStr)
+    xmlModificado = r.xml
+    substituicoesUI.push({ original: sub.original, token, contexto: sub.contexto })
+    if (r.count > 0) aplicadas.push(token)
+    else naoAplicadas.push({ original: sub.original, token })
   }
 
   // Reempacota o .docx com o XML modificado
@@ -170,14 +207,32 @@ export async function POST(req: NextRequest) {
   const docBuffer = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' })
   const docxBase64 = docBuffer.toString('base64')
 
+  // campos_json deduplicado por token. Garante um campo por token DISTINTO,
+  // mesmo que o token apareça em vários lugares (sem pedir o dado duas vezes).
+  const camposBase = Array.isArray(parsed.campos_json) ? parsed.campos_json : []
+  const tokensUsados = new Set<string>([...aplicadas])
+  const camposPorNome = new Map<string, Record<string, unknown>>()
+  for (const c of camposBase) {
+    const nome = String((c as { nome?: string }).nome ?? '').replace(/[{}]/g, '')
+    if (nome) camposPorNome.set(nome, { ...c, nome })
+  }
+  // Garante um campo para todo token aplicado que não veio em campos_json
+  for (const token of tokensUsados) {
+    if (!camposPorNome.has(token)) {
+      const label = token.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      camposPorNome.set(token, { nome: token, label, tipo: 'text', obrigatorio: true })
+    }
+  }
+  const camposJsonFinal = [...camposPorNome.values()].filter(c => tokensUsados.has(String(c.nome)))
+
   // Histórico atualizado para a próxima chamada de edição
   const novoHistorico = [...messages, { role: 'assistant' as const, content: respText }]
 
   return NextResponse.json({
     docxBase64,
-    substituicoes: parsed.substituicoes,
-    campos_json: parsed.campos_json ?? [],
-    aplicadas,
+    substituicoes: substituicoesUI,
+    campos_json: camposJsonFinal,
+    aplicadas: [...new Set(aplicadas)],
     naoAplicadas,
     historico: novoHistorico,
   })

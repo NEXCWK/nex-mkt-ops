@@ -78,6 +78,7 @@ export function ParametrizarIA() {
   const [nomeImport, setNomeImport] = useState('')
   const [tipoImport, setTipoImport] = useState('')
   const [importando, setImportando] = useState(false)
+  const [erroImport, setErroImport] = useState<string | null>(null)
   // Detecção de versão / template parecido
   const [existentes, setExistentes] = useState<TemplateExistente[]>([])
   const [substituirTipo, setSubstituirTipo] = useState<string | null>(null)
@@ -237,6 +238,7 @@ export function ParametrizarIA() {
     const tipoFinal = substituirTipo ?? tipoImport
     if (!nomeImport.trim() || !tipoFinal.trim() || !docxBase64) return
     setImportando(true)
+    setErroImport(null)
     try {
       const res = await fetch('/api/templates/importar', {
         method: 'POST',
@@ -244,7 +246,7 @@ export function ParametrizarIA() {
         body: JSON.stringify({ nome: nomeImport, tipo: tipoFinal, docxBase64, campos_json: camposJson }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      if (!res.ok) throw new Error(data.error ?? `Erro ${res.status}`)
       toast({
         title: data.substituido ? `Template atualizado (v${data.versao})` : 'Template importado!',
         description: data.substituido
@@ -253,6 +255,7 @@ export function ParametrizarIA() {
       })
       resetar()
     } catch (e: any) {
+      setErroImport(e.message ?? 'Falha ao importar')
       toast({ title: 'Erro ao importar', description: e.message, variant: 'destructive' })
     } finally {
       setImportando(false)
@@ -574,8 +577,27 @@ export function ParametrizarIA() {
             )}
           </div>
 
+          {/* Pendências não bloqueiam a importação */}
+          {naoAplicadas.length > 0 && (
+            <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-800">
+                Há <strong>{naoAplicadas.length} campo(s) ainda não aplicado(s)</strong>. Você pode
+                importar mesmo assim — o template é salvo como está e você ajusta os campos restantes
+                depois pelo editor de templates. A importação não fica bloqueada.
+              </p>
+            </div>
+          )}
+
+          {erroImport && (
+            <div className="flex items-start gap-2 px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-xs font-bold text-red-700">{erroImport}</p>
+            </div>
+          )}
+
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={() => setEstado('resultado')} className="flex-1">
+            <Button variant="outline" onClick={() => { setErroImport(null); setEstado('resultado') }} className="flex-1">
               Voltar
             </Button>
             <Button
@@ -584,7 +606,7 @@ export function ParametrizarIA() {
               className="flex-1 gap-2"
             >
               {importando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-              {importando ? 'Importando…' : substituirTipo ? 'Substituir template' : 'Confirmar importação'}
+              {importando ? 'Importando…' : substituirTipo ? 'Substituir template' : naoAplicadas.length > 0 ? 'Importar mesmo assim' : 'Confirmar importação'}
             </Button>
           </div>
         </div>

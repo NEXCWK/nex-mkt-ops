@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import PizZip from 'pizzip'
-import { aplicarSubstituicao } from '@/lib/docx-replace'
+import { substituirTodas } from '@/lib/docx-replace'
 
 export const maxDuration = 120
 
@@ -34,9 +34,9 @@ export async function POST(req: NextRequest) {
   for (const sub of substituicoes as Sub[]) {
     if (!sub?.original || !sub?.token) continue
     const tokenStr = `{{${sub.token.replace(/[{}]/g, '')}}}`
-    const r = aplicarSubstituicao(xml, sub.original, tokenStr)
+    const r = substituirTodas(xml, sub.original, tokenStr)
     xml = r.xml
-    if (r.aplicou) aplicadas.push(sub.token)
+    if (r.count > 0) aplicadas.push(sub.token)
     else naoAplicadas.push(sub)
   }
 
