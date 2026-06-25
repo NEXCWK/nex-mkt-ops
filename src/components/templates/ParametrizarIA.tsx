@@ -16,7 +16,7 @@ type Substituicao = {
   contexto?: string
 }
 
-type TemplateExistente = { tipo: string; nome: string; versao: number }
+type TemplateExistente = { tipo: string; nome: string; versao: number; campos?: string[] }
 
 /** Similaridade entre nomes de template (Jaccard sobre conjunto de palavras normalizadas). */
 function palavrasChave(s: string): Set<string> {
@@ -27,12 +27,18 @@ function palavrasChave(s: string): Set<string> {
       .filter(w => w.length > 2)
   )
 }
-function similaridade(a: string, b: string): number {
-  const sa = palavrasChave(a), sb = palavrasChave(b)
-  if (sa.size === 0 || sb.size === 0) return 0
+function jaccard<T>(a: Set<T>, b: Set<T>): number {
+  if (a.size === 0 || b.size === 0) return 0
   let inter = 0
-  sa.forEach(w => { if (sb.has(w)) inter++ })
-  return inter / new Set([...sa, ...sb]).size
+  a.forEach(w => { if (b.has(w)) inter++ })
+  return inter / new Set([...a, ...b]).size
+}
+function similaridadeNome(a: string, b: string): number {
+  return jaccard(palavrasChave(a), palavrasChave(b))
+}
+/** Similaridade estrutural: sobreposição do conjunto de campos (tokens). */
+function similaridadeCampos(a: string[], b: string[]): number {
+  return jaccard(new Set(a), new Set(b))
 }
 
 type CampoJson = {
@@ -85,13 +91,26 @@ export function ParametrizarIA() {
   // Detecção de versão / template parecido
   const [existentes, setExistentes] = useState<TemplateExistente[]>([])
   const [substituirTipo, setSubstituirTipo] = useState<string | null>(null)
+  const [scoresTexto, setScoresTexto] = useState<Record<string, number>>({})
+  const [comparando, setComparando] = useState(false)
 
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Templates parecidos com o nome digitado (ordenados por similaridade)
+  // Tokens do contrato recém-parametrizado (sinal estrutural de "mesmo contrato")
+  const tokensAtuais = camposJson.map(c => c.nome).filter(Boolean)
+
+  // Templates parecidos: combina 3 sinais —
+  //  (1) TEXTO/ESTRUTURA do contrato (shingles do .docx, sinal mais forte),
+  //  (2) sobreposição de CAMPOS (tokens), (3) similaridade de NOME.
   const similares = existentes
-    .map(t => ({ ...t, score: similaridade(t.nome, nomeImport) }))
-    .filter(t => t.score >= 0.4 || t.tipo === tipoImport)
+    .map(t => {
+      const scoreTexto = scoresTexto[t.tipo] ?? 0
+      const scoreCampos = similaridadeCampos(t.campos ?? [], tokensAtuais)
+      const scoreNome = similaridadeNome(t.nome, nomeImport)
+      const score = Math.max(scoreTexto, scoreCampos, scoreNome * 0.9)
+      return { ...t, score, scoreTexto, scoreCampos, scoreNome }
+    })
+    .filter(t => t.score >= 0.35 || t.tipo === tipoImport || t.tipo === substituirTipo)
     .sort((a, b) => b.score - a.score)
     .slice(0, 4)
 
@@ -111,16 +130,40 @@ export function ParametrizarIA() {
   }
 
   async function abrirImportacao() {
-    setNomeImport('')
-    setTipoImport('')
+    // Sugere nome a partir do arquivo enviado (ajuda na detecção por nome também)
+    const sugestao = arquivo
+      ? arquivo.name.replace(/\.docx$/i, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).trim()
+      : ''
+    setNomeImport(sugestao)
+    setTipoImport(sugestao ? slugify(sugestao) : '')
     setSubstituirTipo(null)
+    setScoresTexto({})
     setEstado('importando')
+    // Lista os existentes (com campos) e compara TEXTO/ESTRUTURA do contrato
     try {
       const res = await fetch('/api/templates/listar')
       const data = await res.json()
       setExistentes(data.templates ?? [])
     } catch {
       setExistentes([])
+    }
+    if (docxBase64) {
+      setComparando(true)
+      try {
+        const res = await fetch('/api/templates/comparar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ docxBase64 }),
+        })
+        const data = await res.json()
+        const map: Record<string, number> = {}
+        for (const s of (data.scores ?? []) as Array<{ tipo: string; score: number }>) map[s.tipo] = s.score
+        setScoresTexto(map)
+      } catch {
+        setScoresTexto({})
+      } finally {
+        setComparando(false)
+      }
     }
   }
 
@@ -547,23 +590,40 @@ export function ParametrizarIA() {
             </div>
           )}
 
+          {/* Comparando estrutura/texto do contrato */}
+          {comparando && (
+            <div className="flex items-center gap-2 px-3.5 py-2.5 bg-nex-gray-50 border border-nex-gray-200 rounded-lg">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-nex-gray-400" />
+              <p className="text-xs text-nex-gray-500">Comparando estrutura e texto com os contratos já cadastrados…</p>
+            </div>
+          )}
+
           {/* Detecção de template parecido / nova versão */}
-          {similares.length > 0 && (
+          {!comparando && similares.length > 0 && (
             <div className="px-3.5 py-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2.5">
               <p className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5" />
-                Encontramos {similares.length === 1 ? 'um template parecido' : 'templates parecidos'} já no sistema
+                Este contrato parece muito similar a {similares.length === 1 ? 'um já cadastrado' : 'contratos já cadastrados'} — é uma nova versão?
               </p>
               <div className="space-y-1.5">
                 {similares.map(s => {
                   const escolhido = substituirTipo === s.tipo
+                  const pct = Math.round(s.score * 100)
                   return (
                     <div key={s.tipo} className={cn(
                       'flex items-center justify-between gap-2 rounded-lg border px-3 py-2 bg-white',
                       escolhido ? 'border-nex-black' : 'border-amber-200'
                     )}>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-nex-black truncate">{s.nome}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-semibold text-nex-black truncate">{s.nome}</p>
+                          {pct > 0 && (
+                            <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0',
+                              pct >= 80 ? 'bg-green-100 text-green-700' : pct >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-nex-gray-100 text-nex-gray-500')}>
+                              {pct}% similar
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[11px] text-nex-gray-400 font-mono">{s.tipo} · versão atual v{s.versao}</p>
                       </div>
                       <Button
@@ -575,7 +635,7 @@ export function ParametrizarIA() {
                           else { setSubstituirTipo(s.tipo); setNomeImport(s.nome) }
                         }}
                       >
-                        {escolhido ? <><Check className="w-3 h-3" /> Vai substituir (v{s.versao + 1})</> : <><RefreshCw className="w-3 h-3" /> Substituir esta</>}
+                        {escolhido ? <><Check className="w-3 h-3" /> Sim, substituir (v{s.versao + 1})</> : <><RefreshCw className="w-3 h-3" /> Substituir esta</>}
                       </Button>
                     </div>
                   )
