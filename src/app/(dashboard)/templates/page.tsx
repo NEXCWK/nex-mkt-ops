@@ -9,6 +9,7 @@ import { formatDateTime } from '@/lib/utils'
 import { SeedTemplatesButton } from '@/components/admin/SeedTemplatesButton'
 import { SeedParceirosButton } from '@/components/admin/SeedParceirosButton'
 import { ParametrizarIA } from '@/components/templates/ParametrizarIA'
+import { EditorTemplatesIA } from '@/components/templates/EditorTemplatesIA'
 import { FileText, Mail } from 'lucide-react'
 
 async function getTemplates() {
@@ -155,6 +156,7 @@ export default async function TemplatesPage() {
             </div>
             <div className="p-5">
               <ParametrizarIA />
+              <EditorTemplatesIA />
             </div>
           </div>
         </TabsContent>
