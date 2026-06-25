@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
   const client = new Anthropic()
   const emLote = tiposRaw.length > 1
 
-  const resultados: Array<{
+  type Resultado = {
     tipo: string
     nome: string
     resposta: string
@@ -112,10 +112,9 @@ export async function POST(req: NextRequest) {
     versao: number
     salvo: boolean
     erro?: string
-  }> = []
+  }
 
-  for (const tipo of tiposRaw) {
-    // Versão mais recente do tipo
+  async function processarTemplate(tipo: string): Promise<Resultado> {
     const { data: template } = await supabase
       .from('templates_documentos')
       .select('*')
@@ -125,43 +124,25 @@ export async function POST(req: NextRequest) {
       .maybeSingle<TemplateRow>()
 
     const nome = template?.nome ?? tipo
+    const err = (msg: string): Resultado => ({ tipo, nome, resposta: '', aplicadas: [], naoAplicadas: [], camposNovos: [], versao: template?.versao ?? 0, salvo: false, erro: msg })
 
-    if (!template?.arquivo_url) {
-      resultados.push({ tipo, nome, resposta: '', aplicadas: [], naoAplicadas: [], camposNovos: [], versao: 0, salvo: false, erro: 'Template não encontrado no sistema.' })
-      continue
-    }
+    if (!template?.arquivo_url) return err('Template não encontrado no sistema.')
 
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from('templates')
-      .download(template.arquivo_url)
-    if (downloadError || !fileData) {
-      resultados.push({ tipo, nome, resposta: '', aplicadas: [], naoAplicadas: [], camposNovos: [], versao: template.versao ?? 1, salvo: false, erro: `Falha ao baixar do Storage: ${downloadError?.message ?? ''}` })
-      continue
-    }
+    const { data: fileData, error: downloadError } = await supabase.storage.from('templates').download(template.arquivo_url)
+    if (downloadError || !fileData) return err(`Falha ao baixar do Storage: ${downloadError?.message ?? ''}`)
 
     let zip: PizZip
-    try {
-      zip = new PizZip(Buffer.from(await fileData.arrayBuffer()))
-    } catch {
-      resultados.push({ tipo, nome, resposta: '', aplicadas: [], naoAplicadas: [], camposNovos: [], versao: template.versao ?? 1, salvo: false, erro: 'Arquivo .docx inválido.' })
-      continue
-    }
-    const docXml = zip.file('word/document.xml')?.asText()
-    if (!docXml) {
-      resultados.push({ tipo, nome, resposta: '', aplicadas: [], naoAplicadas: [], camposNovos: [], versao: template.versao ?? 1, salvo: false, erro: 'document.xml não encontrado.' })
-      continue
-    }
-    const texto = textoDoXML(docXml)
+    try { zip = new PizZip(Buffer.from(await fileData.arrayBuffer())) }
+    catch { return err('Arquivo .docx inválido.') }
 
-    // Em lote: cada documento é uma chamada one-shot independente.
-    // Único template: mantém o histórico conversacional para follow-ups.
+    const docXml = zip.file('word/document.xml')?.asText()
+    if (!docXml) return err('document.xml não encontrado.')
+
+    const texto = textoDoXML(docXml)
     const messages: { role: 'user' | 'assistant'; content: string }[] =
       !emLote && historico.length > 0
         ? [...historico, { role: 'user', content: mensagem }]
-        : [{
-            role: 'user',
-            content: `Template atual: "${nome}" (${tipo}).\n\nTexto extraído do .docx:\n\n${texto}\n\nPedido do usuário: ${mensagem}`,
-          }]
+        : [{ role: 'user', content: `Template atual: "${nome}" (${tipo}).\n\nTexto extraído do .docx:\n\n${texto}\n\nPedido do usuário: ${mensagem}` }]
 
     let respText: string
     try {
@@ -173,15 +154,11 @@ export async function POST(req: NextRequest) {
       })
       respText = response.content.find(c => c.type === 'text')?.text ?? ''
     } catch (e) {
-      resultados.push({ tipo, nome, resposta: '', aplicadas: [], naoAplicadas: [], camposNovos: [], versao: template.versao ?? 1, salvo: false, erro: `Erro na API Claude: ${e instanceof Error ? e.message : 'desconhecido'}` })
-      continue
+      return err(`Erro na API Claude: ${e instanceof Error ? e.message : 'desconhecido'}`)
     }
 
     const parsed = parseJson(respText)
-    if (!parsed) {
-      resultados.push({ tipo, nome, resposta: '', aplicadas: [], naoAplicadas: [], camposNovos: [], versao: template.versao ?? 1, salvo: false, erro: 'Claude retornou formato inesperado.' })
-      continue
-    }
+    if (!parsed) return err('Claude retornou formato inesperado.')
 
     const operacoes = Array.isArray(parsed.operacoes) ? parsed.operacoes : []
     let xmlModificado = docXml
@@ -206,8 +183,7 @@ export async function POST(req: NextRequest) {
           upsert: true,
         })
       if (uploadError) {
-        resultados.push({ tipo, nome, resposta: parsed.resposta ?? '', aplicadas, naoAplicadas, camposNovos: [], versao: template.versao ?? 1, salvo: false, erro: `Falha ao salvar no Storage: ${uploadError.message}` })
-        continue
+        return { tipo, nome, resposta: parsed.resposta ?? '', aplicadas, naoAplicadas, camposNovos: [], versao: template.versao ?? 1, salvo: false, erro: `Falha ao salvar no Storage: ${uploadError.message}` }
       }
       novaVersao = (template.versao ?? 1) + 1
 
@@ -219,11 +195,11 @@ export async function POST(req: NextRequest) {
       }
       await supabase
         .from('templates_documentos')
-        .update({ versao: novaVersao, campos_json: camposJson, criado_por: session.user.email })
+        .update({ versao: novaVersao, campos_json: camposJson, criado_por: session?.user.email })
         .eq('id', template.id)
     }
 
-    resultados.push({
+    return {
       tipo,
       nome,
       resposta: parsed.resposta ?? (aplicadas.length > 0 ? 'Alterações aplicadas.' : 'Nenhuma alteração aplicada.'),
@@ -232,8 +208,16 @@ export async function POST(req: NextRequest) {
       camposNovos: parsed.campos_novos ?? [],
       versao: novaVersao,
       salvo: aplicadas.length > 0,
-    })
+    }
   }
+
+  // Processa todos em paralelo — reduz N×T para ~T independente do nº de templates
+  const settled = await Promise.allSettled(tiposRaw.map(tipo => processarTemplate(tipo)))
+  const resultados: Resultado[] = settled.map((r, i) =>
+    r.status === 'fulfilled'
+      ? r.value
+      : { tipo: tiposRaw[i], nome: tiposRaw[i], resposta: '', aplicadas: [], naoAplicadas: [], camposNovos: [], versao: 0, salvo: false, erro: r.reason?.message ?? 'Erro inesperado' }
+  )
 
   // Histórico só faz sentido para conversa de um único template
   let novoHistorico = historico
