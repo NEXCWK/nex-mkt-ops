@@ -48,8 +48,10 @@ export function SeedTemplatesButton() {
       </div>
 
       <p className="text-xs text-nex-gray-400">
-        &ldquo;Importar Templates Novos&rdquo; envia apenas os modelos ainda não importados.
-        Use &ldquo;Reimportar Todos&rdquo; somente para atualizar arquivos já existentes.
+        Esses botões importam apenas os <strong>modelos padrão do sistema</strong> (arquivos pré-carregados em
+        <code className="mx-1 px-1 bg-nex-gray-100 rounded">_template-source/</code>).
+        Templates criados pelo Gerador de Templates já ficam disponíveis automaticamente em Novo Contrato —
+        não é necessário clicar aqui para eles.
       </p>
 
       {error && (

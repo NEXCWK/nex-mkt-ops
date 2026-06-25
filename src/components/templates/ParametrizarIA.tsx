@@ -398,7 +398,7 @@ export function ParametrizarIA() {
   }
 
   // ── Resultado + chat ──
-  if (estado === 'resultado' || (estado === 'importando' && !importando)) {
+  if (estado === 'resultado') {
     return (
       <div className="space-y-4">
         {/* Header com arquivo e botões */}
@@ -533,14 +533,12 @@ export function ParametrizarIA() {
         </div>
 
         {/* Importar para Novo Contrato */}
-        {estado !== 'importando' ? (
-          <div className="flex justify-end">
-            <Button onClick={abrirImportacao} className="gap-2">
-              <Check className="w-4 h-4" />
-              Importar para Novo Contrato
-            </Button>
-          </div>
-        ) : null}
+        <div className="flex justify-end">
+          <Button onClick={abrirImportacao} className="gap-2">
+            <Check className="w-4 h-4" />
+            Importar para Novo Contrato
+          </Button>
+        </div>
       </div>
     )
   }
