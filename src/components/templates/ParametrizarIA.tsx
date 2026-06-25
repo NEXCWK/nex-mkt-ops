@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { toast } from '@/hooks/use-toast'
 import {
   Sparkles, Upload, Download, Check, AlertTriangle,
-  MessageSquare, Loader2, FileText, X, ChevronRight,
+  MessageSquare, Loader2, FileText, X, ChevronRight, RefreshCw, Plus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -13,6 +13,25 @@ type Substituicao = {
   original: string
   token: string
   contexto?: string
+}
+
+type TemplateExistente = { tipo: string; nome: string; versao: number }
+
+/** Similaridade entre nomes de template (Jaccard sobre conjunto de palavras normalizadas). */
+function palavrasChave(s: string): Set<string> {
+  return new Set(
+    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 2)
+  )
+}
+function similaridade(a: string, b: string): number {
+  const sa = palavrasChave(a), sb = palavrasChave(b)
+  if (sa.size === 0 || sb.size === 0) return 0
+  let inter = 0
+  sa.forEach(w => { if (sb.has(w)) inter++ })
+  return inter / new Set([...sa, ...sb]).size
 }
 
 type CampoJson = {
@@ -53,13 +72,24 @@ export function ParametrizarIA() {
   // Chat de edição
   const [mensagemEdit, setMensagemEdit] = useState('')
   const [editando, setEditando] = useState(false)
+  const [forcando, setForcando] = useState(false)
 
   // Import dialog
   const [nomeImport, setNomeImport] = useState('')
   const [tipoImport, setTipoImport] = useState('')
   const [importando, setImportando] = useState(false)
+  // Detecção de versão / template parecido
+  const [existentes, setExistentes] = useState<TemplateExistente[]>([])
+  const [substituirTipo, setSubstituirTipo] = useState<string | null>(null)
 
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Templates parecidos com o nome digitado (ordenados por similaridade)
+  const similares = existentes
+    .map(t => ({ ...t, score: similaridade(t.nome, nomeImport) }))
+    .filter(t => t.score >= 0.4 || t.tipo === tipoImport)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4)
 
   function resetar() {
     setEstado('idle')
@@ -73,6 +103,21 @@ export function ParametrizarIA() {
     setMensagemEdit('')
     setNomeImport('')
     setTipoImport('')
+    setSubstituirTipo(null)
+  }
+
+  async function abrirImportacao() {
+    setNomeImport('')
+    setTipoImport('')
+    setSubstituirTipo(null)
+    setEstado('importando')
+    try {
+      const res = await fetch('/api/templates/listar')
+      const data = await res.json()
+      setExistentes(data.templates ?? [])
+    } catch {
+      setExistentes([])
+    }
   }
 
   function onFileSelect(f: File) {
@@ -135,6 +180,44 @@ export function ParametrizarIA() {
     await parametrizar(historico, msg)
   }
 
+  async function forcarAplicacao() {
+    if (!docxBase64 || naoAplicadas.length === 0) return
+    setForcando(true)
+    try {
+      const res = await fetch('/api/templates/forcar-substituicao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docxBase64, substituicoes: naoAplicadas }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Erro ao forçar aplicação')
+
+      setDocxBase64(data.docxBase64)
+      const novasAplicadas: string[] = data.aplicadas ?? []
+      setAplicadas(prev => Array.from(new Set([...prev, ...novasAplicadas])))
+      setNaoAplicadas(data.naoAplicadas ?? [])
+
+      if (novasAplicadas.length > 0) {
+        toast({
+          title: `${novasAplicadas.length} substituição(ões) aplicada(s)`,
+          description: data.naoAplicadas?.length
+            ? `Ainda restam ${data.naoAplicadas.length} sem localização. Tente um trecho menor pelo chat.`
+            : 'Todos os campos pendentes foram aplicados.',
+        })
+      } else {
+        toast({
+          title: 'Não foi possível localizar os trechos',
+          description: 'Use o chat abaixo e peça ao Claude um trecho menor (ex: só parte do nome ou CPF).',
+          variant: 'destructive',
+        })
+      }
+    } catch (e: any) {
+      toast({ title: 'Erro ao forçar aplicação', description: e.message, variant: 'destructive' })
+    } finally {
+      setForcando(false)
+    }
+  }
+
   function baixarDocx() {
     if (!docxBase64 || !arquivo) return
     const bytes = Uint8Array.from(atob(docxBase64), c => c.charCodeAt(0))
@@ -150,17 +233,24 @@ export function ParametrizarIA() {
   }
 
   async function importar() {
-    if (!nomeImport.trim() || !tipoImport.trim() || !docxBase64) return
+    // Se for substituição, usa o tipo do template anterior; senão o tipo digitado
+    const tipoFinal = substituirTipo ?? tipoImport
+    if (!nomeImport.trim() || !tipoFinal.trim() || !docxBase64) return
     setImportando(true)
     try {
       const res = await fetch('/api/templates/importar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: nomeImport, tipo: tipoImport, docxBase64, campos_json: camposJson }),
+        body: JSON.stringify({ nome: nomeImport, tipo: tipoFinal, docxBase64, campos_json: camposJson }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      toast({ title: 'Template importado!', description: `"${nomeImport}" já está disponível em Novo Contrato.` })
+      toast({
+        title: data.substituido ? `Template atualizado (v${data.versao})` : 'Template importado!',
+        description: data.substituido
+          ? `A versão anterior foi substituída. Agora em v${data.versao}.`
+          : `"${nomeImport}" já está disponível em Novo Contrato.`,
+      })
       resetar()
     } catch (e: any) {
       toast({ title: 'Erro ao importar', description: e.message, variant: 'destructive' })
@@ -267,6 +357,21 @@ export function ParametrizarIA() {
                   </li>
                 ))}
               </ul>
+              <div className="mt-2.5 flex items-center gap-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 bg-white"
+                  onClick={forcarAplicacao}
+                  disabled={forcando}
+                >
+                  {forcando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  Aplicar mesmo assim
+                </Button>
+                <p className="text-[11px] text-amber-700">
+                  Confirma que esses campos são esses parâmetros e aplica mesmo com o texto fragmentado no Word.
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -352,14 +457,7 @@ export function ParametrizarIA() {
         {/* Importar para Novo Contrato */}
         {estado !== 'importando' ? (
           <div className="flex justify-end">
-            <Button
-              onClick={() => {
-                setNomeImport('')
-                setTipoImport('')
-                setEstado('importando')
-              }}
-              className="gap-2"
-            >
+            <Button onClick={abrirImportacao} className="gap-2">
               <Check className="w-4 h-4" />
               Importar para Novo Contrato
             </Button>
@@ -395,28 +493,85 @@ export function ParametrizarIA() {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">
-              Identificador único (tipo) *
-            </label>
-            <Input
-              value={tipoImport}
-              onChange={e => setTipoImport(slugify(e.target.value))}
-              placeholder="contrato_especial_franquias"
-              className="font-mono text-sm"
-            />
-            <p className="text-[11px] text-nex-gray-400">
-              snake_case — letras minúsculas, números e underscore. Usado internamente pelo sistema.
-            </p>
-          </div>
+          {/* Identificador só é relevante quando NÃO é substituição */}
+          {!substituirTipo && (
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">
+                Identificador único (tipo) *
+              </label>
+              <Input
+                value={tipoImport}
+                onChange={e => setTipoImport(slugify(e.target.value))}
+                placeholder="contrato_especial_franquias"
+                className="font-mono text-sm"
+              />
+              <p className="text-[11px] text-nex-gray-400">
+                snake_case — letras minúsculas, números e underscore. Usado internamente pelo sistema.
+              </p>
+            </div>
+          )}
+
+          {/* Detecção de template parecido / nova versão */}
+          {similares.length > 0 && (
+            <div className="px-3.5 py-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2.5">
+              <p className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Encontramos {similares.length === 1 ? 'um template parecido' : 'templates parecidos'} já no sistema
+              </p>
+              <div className="space-y-1.5">
+                {similares.map(s => {
+                  const escolhido = substituirTipo === s.tipo
+                  return (
+                    <div key={s.tipo} className={cn(
+                      'flex items-center justify-between gap-2 rounded-lg border px-3 py-2 bg-white',
+                      escolhido ? 'border-nex-black' : 'border-amber-200'
+                    )}>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-nex-black truncate">{s.nome}</p>
+                        <p className="text-[11px] text-nex-gray-400 font-mono">{s.tipo} · versão atual v{s.versao}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={escolhido ? 'default' : 'outline'}
+                        className="gap-1.5 flex-shrink-0 h-7 text-xs"
+                        onClick={() => {
+                          if (escolhido) { setSubstituirTipo(null) }
+                          else { setSubstituirTipo(s.tipo); setNomeImport(s.nome) }
+                        }}
+                      >
+                        {escolhido ? <><Check className="w-3 h-3" /> Vai substituir (v{s.versao + 1})</> : <><RefreshCw className="w-3 h-3" /> Substituir esta</>}
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <button
+                  onClick={() => setSubstituirTipo(null)}
+                  className={cn('flex items-center gap-1 text-[11px] font-semibold transition-colors',
+                    substituirTipo ? 'text-nex-gray-400 hover:text-nex-black' : 'text-nex-black')}
+                >
+                  <Plus className="w-3 h-3" /> Não, subir como template novo
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="px-3 py-2.5 bg-nex-gray-50 rounded-lg">
-            <p className="text-xs font-bold text-nex-gray-600">
-              {camposJson.length} campo(s) serão criados no formulário de Novo Contrato
-            </p>
-            <p className="text-xs text-nex-gray-400 mt-0.5">
-              O template aparecerá na aba <strong>Personalizados</strong> em Novo Contrato
-            </p>
+            {substituirTipo ? (
+              <p className="text-xs font-bold text-nex-gray-600">
+                Vai <strong>substituir</strong> o template <span className="font-mono">{substituirTipo}</span> por uma nova versão, mantendo-o em Novo Contrato.
+              </p>
+            ) : (
+              <>
+                <p className="text-xs font-bold text-nex-gray-600">
+                  {camposJson.length} campo(s) serão criados no formulário de Novo Contrato
+                </p>
+                <p className="text-xs text-nex-gray-400 mt-0.5">
+                  O template aparecerá na aba <strong>Personalizados</strong> em Novo Contrato
+                </p>
+              </>
+            )}
           </div>
 
           <div className="flex gap-2 pt-2">
@@ -425,11 +580,11 @@ export function ParametrizarIA() {
             </Button>
             <Button
               onClick={importar}
-              disabled={importando || !nomeImport.trim() || !tipoImport.trim()}
+              disabled={importando || !nomeImport.trim() || (!substituirTipo && !tipoImport.trim())}
               className="flex-1 gap-2"
             >
               {importando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-              {importando ? 'Importando…' : 'Confirmar importação'}
+              {importando ? 'Importando…' : substituirTipo ? 'Substituir template' : 'Confirmar importação'}
             </Button>
           </div>
         </div>

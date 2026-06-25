@@ -26,6 +26,18 @@ export async function POST(req: NextRequest) {
   const arquivoPath = `contratos/${tipo}.docx`
   const fileBuffer = Buffer.from(docxBase64, 'base64')
 
+  // Verifica se já existe um template com esse tipo → nova versão (substituição)
+  const { data: existente } = await supabase
+    .from('templates_documentos')
+    .select('versao')
+    .eq('tipo', tipo)
+    .order('versao', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const substituido = !!existente
+  const novaVersao = (existente?.versao ?? 0) + 1
+
   const { error: uploadError } = await supabase.storage
     .from('templates')
     .upload(arquivoPath, fileBuffer, {
@@ -45,7 +57,7 @@ export async function POST(req: NextRequest) {
         nome,
         arquivo_url: arquivoPath,
         campos_json: campos_json ?? [],
-        versao: 1,
+        versao: novaVersao,
         criado_por: session.user.email,
       },
       { onConflict: 'tipo' }
@@ -55,5 +67,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Erro ao registrar: ${dbError.message}` }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, tipo, arquivo: arquivoPath })
+  return NextResponse.json({ ok: true, tipo, arquivo: arquivoPath, versao: novaVersao, substituido })
 }

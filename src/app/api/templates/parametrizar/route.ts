@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import Anthropic from '@anthropic-ai/sdk'
 import PizZip from 'pizzip'
+import { aplicarSubstituicao } from '@/lib/docx-replace'
 
 export const maxDuration = 300
 
@@ -158,12 +159,10 @@ export async function POST(req: NextRequest) {
   for (const sub of parsed.substituicoes) {
     if (!sub.original || !sub.token) continue
     const tokenStr = `{{${sub.token.replace(/[{}]/g, '')}}}`
-    if (xmlModificado.includes(sub.original)) {
-      xmlModificado = xmlModificado.split(sub.original).join(tokenStr)
-      aplicadas.push(sub.token)
-    } else {
-      naoAplicadas.push({ original: sub.original, token: sub.token })
-    }
+    const r = aplicarSubstituicao(xmlModificado, sub.original, tokenStr)
+    xmlModificado = r.xml
+    if (r.aplicou) aplicadas.push(sub.token)
+    else naoAplicadas.push({ original: sub.original, token: sub.token })
   }
 
   // Reempacota o .docx com o XML modificado

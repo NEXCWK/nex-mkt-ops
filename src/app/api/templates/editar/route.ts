@@ -5,6 +5,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { CLAUDE_MODEL } from '@/lib/anthropic'
 import { withNexVoice } from '@/lib/nex-voice'
+import { aplicarSubstituicao } from '@/lib/docx-replace'
 import PizZip from 'pizzip'
 
 export const maxDuration = 300
@@ -188,12 +189,10 @@ export async function POST(req: NextRequest) {
     const naoAplicadas: Operacao[] = []
     for (const op of operacoes) {
       if (!op?.buscar) continue
-      if (xmlModificado.includes(op.buscar)) {
-        xmlModificado = xmlModificado.split(op.buscar).join(op.substituir ?? '')
-        aplicadas.push(op)
-      } else {
-        naoAplicadas.push(op)
-      }
+      const r = aplicarSubstituicao(xmlModificado, op.buscar, op.substituir ?? '')
+      xmlModificado = r.xml
+      if (r.aplicou) aplicadas.push(op)
+      else naoAplicadas.push(op)
     }
 
     let novaVersao = template.versao ?? 1

@@ -10,6 +10,7 @@ import { SeedTemplatesButton } from '@/components/admin/SeedTemplatesButton'
 import { SeedParceirosButton } from '@/components/admin/SeedParceirosButton'
 import { ParametrizarIA } from '@/components/templates/ParametrizarIA'
 import { EditorTemplatesIA } from '@/components/templates/EditorTemplatesIA'
+import { ExcluirTemplateButton } from '@/components/templates/ExcluirTemplateButton'
 import { FileText, Mail } from 'lucide-react'
 
 async function getTemplates() {
@@ -76,12 +77,13 @@ export default async function TemplatesPage() {
                     <th className={TH_CLASS}>Versão</th>
                     <th className={TH_CLASS}>Criado por</th>
                     <th className={TH_CLASS}>Data</th>
+                    <th className={TH_CLASS}></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-nex-gray-100">
                   {docs.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-4 py-14">
+                      <td colSpan={7} className="px-4 py-14">
                         <div className="flex flex-col items-center gap-2 text-center">
                           <FileText className="w-6 h-6 text-nex-gray-300" />
                           <p className="text-sm text-nex-gray-400">Nenhum template de documento cadastrado.</p>
@@ -97,6 +99,9 @@ export default async function TemplatesPage() {
                       <td className="px-4 py-3"><Badge variant="yellow">v{t.versao}</Badge></td>
                       <td className="px-4 py-3 text-nex-gray-500">{t.criado_por ?? '—'}</td>
                       <td className="px-4 py-3 text-nex-gray-500 whitespace-nowrap">{formatDateTime(t.created_at)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <ExcluirTemplateButton tipo={t.tipo} nome={t.nome} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
