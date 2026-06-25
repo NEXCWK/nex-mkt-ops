@@ -63,6 +63,7 @@ export default async function TemplatesPage() {
           <TabsTrigger value="documentos">Documentos ({docs.length})</TabsTrigger>
           <TabsTrigger value="emails">E-mails ({emails.length})</TabsTrigger>
           <TabsTrigger value="gerador">Gerador de Templates</TabsTrigger>
+          <TabsTrigger value="editor">Editor de Templates</TabsTrigger>
         </TabsList>
 
         <TabsContent value="documentos">
@@ -120,6 +121,20 @@ export default async function TemplatesPage() {
             </div>
             <div className="p-5">
               <ParametrizarIA />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="editor">
+          <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-nex-gray-100">
+              <p className="text-sm font-heading font-semibold text-nex-black mb-1">Editar templates já cadastrados</p>
+              <p className="text-xs text-nex-gray-500">
+                Selecione um ou mais contratos já cadastrados e peça alterações em linguagem natural. A IA edita os
+                arquivos diretamente no sistema, preservando layout, fontes e marcadores, e salva uma nova versão.
+              </p>
+            </div>
+            <div className="p-5">
               <EditorTemplatesIA />
             </div>
           </div>

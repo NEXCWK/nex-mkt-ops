@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
+import { lerExcluidos, desmarcarExcluido } from '@/lib/templates-blocklist'
 import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
@@ -52,11 +53,20 @@ export async function POST(req: NextRequest) {
     (existentes ?? []).map((e: { tipo: string; arquivo_url: string | null }) => [e.tipo, e.arquivo_url])
   )
 
+  // tipos excluídos manualmente → NÃO reimportar (a menos que force)
+  const excluidos = new Set(await lerExcluidos(supabase))
+
   for (const t of TEMPLATES) {
     const filePath = resolve(sourceDir, t.arquivo)
 
     if (!existsSync(filePath)) {
       results.push({ tipo: t.tipo, status: 'skipped', detail: 'arquivo não encontrado' })
+      continue
+    }
+
+    // excluído manualmente → não reimporta (use "Reimportar Todos" para forçar)
+    if (!force && excluidos.has(t.tipo)) {
+      results.push({ tipo: t.tipo, status: 'skipped', detail: 'excluído manualmente' })
       continue
     }
 
@@ -84,6 +94,9 @@ export async function POST(req: NextRequest) {
     const { error: dbError } = await supabase
       .from('templates_documentos')
       .upsert({ tipo: t.tipo, nome: t.nome, arquivo_url: storagePath, versao: 1 }, { onConflict: 'tipo' })
+
+    // Reimportado com sucesso (ex: via "Reimportar Todos") → remove da blocklist
+    if (!dbError && excluidos.has(t.tipo)) await desmarcarExcluido(supabase, t.tipo)
 
     results.push({
       tipo: t.tipo,

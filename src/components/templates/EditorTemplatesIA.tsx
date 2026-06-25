@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
-  Sparkles, Send, Loader2, Check, AlertTriangle,
+  Send, Loader2, Check, AlertTriangle,
   FileText, RotateCcw, Save, Layers,
 } from 'lucide-react'
 
@@ -129,11 +129,7 @@ export function EditorTemplatesIA() {
   }
 
   return (
-    <div className="border-t border-nex-gray-100 pt-5 mt-5">
-      <div className="flex items-center gap-2 mb-1">
-        <Sparkles className="w-4 h-4 text-nex-gray-400" />
-        <p className="text-sm font-heading font-semibold text-nex-black">Editar templates existentes com IA</p>
-      </div>
+    <div>
       <p className="text-xs text-nex-gray-500 mb-4">
         Marque um, vários, um grupo de produto inteiro ou todos os contratos já cadastrados e peça a alteração
         em linguagem natural. A IA edita os arquivos <strong>diretamente no sistema</strong> (Storage),

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
+import { marcarExcluido } from '@/lib/templates-blocklist'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -29,6 +30,9 @@ export async function POST(req: NextRequest) {
   // Remove os registros do banco
   const { error } = await supabase.from('templates_documentos').delete().eq('tipo', tipo)
   if (error) return NextResponse.json({ error: `Erro ao excluir: ${error.message}` }, { status: 500 })
+
+  // Marca como excluído para o seed NÃO reimportar este template
+  await marcarExcluido(supabase, tipo)
 
   return NextResponse.json({ ok: true, tipo, removidos: regs?.length ?? 0 })
 }

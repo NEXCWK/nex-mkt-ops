@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
+import { desmarcarExcluido } from '@/lib/templates-blocklist'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -66,6 +67,9 @@ export async function POST(req: NextRequest) {
   if (dbError) {
     return NextResponse.json({ error: `Erro ao registrar: ${dbError.message}` }, { status: 500 })
   }
+
+  // Reimportado manualmente → remove da blocklist de excluídos
+  await desmarcarExcluido(supabase, tipo)
 
   return NextResponse.json({ ok: true, tipo, arquivo: arquivoPath, versao: novaVersao, substituido })
 }
