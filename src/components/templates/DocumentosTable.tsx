@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { formatDateTime } from '@/lib/utils'
 import { ExcluirTemplateButton } from '@/components/templates/ExcluirTemplateButton'
-import { FileText, ArrowUp, ArrowDown } from 'lucide-react'
+import { FileText, ArrowUp, ArrowDown, Download, Loader2 } from 'lucide-react'
 
 const TH_CLASS = 'text-left px-4 py-3 text-[11px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400'
 
@@ -20,6 +20,35 @@ type Doc = {
 export function DocumentosTable({ docs }: { docs: Doc[] }) {
   // Padrão: mais novo → mais antigo
   const [dir, setDir] = useState<'desc' | 'asc'>('desc')
+  const [baixando, setBaixando] = useState<string | null>(null)
+
+  async function baixar(tipo: string, nome: string) {
+    if (baixando) return
+    setBaixando(tipo)
+    try {
+      const res = await fetch(`/api/templates/baixar?tipo=${encodeURIComponent(tipo)}`)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error ?? 'Não foi possível baixar o template.')
+        return
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const cd = res.headers.get('Content-Disposition')
+      const m = cd?.match(/filename="([^"]+)"/)
+      a.download = m?.[1] ?? `${tipo}.docx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch {
+      alert('Erro ao baixar o template.')
+    } finally {
+      setBaixando(null)
+    }
+  }
 
   const ordenados = useMemo(() => {
     return [...docs].sort((a, b) => {
@@ -66,14 +95,38 @@ export function DocumentosTable({ docs }: { docs: Doc[] }) {
             )}
             {ordenados.map(t => (
               <tr key={t.id} className="hover:bg-nex-gray-50 transition-colors">
-                <td className="px-4 py-3 font-medium">{t.nome}</td>
+                <td className="px-4 py-3 font-medium">
+                  <button
+                    onClick={() => baixar(t.tipo, t.nome)}
+                    disabled={baixando === t.tipo}
+                    className="inline-flex items-center gap-1.5 text-left hover:text-nex-black hover:underline disabled:opacity-50"
+                    title="Baixar a versão .docx deste template"
+                  >
+                    {baixando === t.tipo
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin text-nex-gray-400 flex-shrink-0" />
+                      : <FileText className="w-3.5 h-3.5 text-nex-gray-400 flex-shrink-0" />}
+                    {t.nome}
+                  </button>
+                </td>
                 <td className="px-4 py-3"><Badge variant="secondary">{t.tipo?.replace(/_/g, ' ')}</Badge></td>
                 <td className="px-4 py-3">{t.unidade ?? '—'}</td>
                 <td className="px-4 py-3"><Badge variant="yellow">v{t.versao}</Badge></td>
                 <td className="px-4 py-3 text-nex-gray-500">{t.criado_por ?? '—'}</td>
                 <td className="px-4 py-3 text-nex-gray-500 whitespace-nowrap">{formatDateTime(t.created_at)}</td>
-                <td className="px-4 py-3 text-right">
-                  <ExcluirTemplateButton tipo={t.tipo} nome={t.nome} />
+                <td className="px-4 py-3">
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => baixar(t.tipo, t.nome)}
+                      disabled={baixando === t.tipo}
+                      className="p-1.5 text-nex-gray-400 hover:text-nex-black hover:bg-nex-gray-100 rounded transition-colors disabled:opacity-50"
+                      title="Baixar .docx"
+                    >
+                      {baixando === t.tipo
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Download className="w-4 h-4" />}
+                    </button>
+                    <ExcluirTemplateButton tipo={t.tipo} nome={t.nome} />
+                  </div>
                 </td>
               </tr>
             ))}
