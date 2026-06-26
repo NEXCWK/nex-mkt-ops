@@ -71,7 +71,13 @@ PARTE 2 — Template limpo:
 OBRIGATÓRIO: ao final de TODA resposta, mesmo em respostas de edição ou ajuste, você DEVE escrever numa linha isolada, sem qualquer texto antes ou depois nessa linha, EXATAMENTE este marcador (nada mais):
 ===TEMPLATE LIMPO===
 Em seguida, APENAS o texto final pronto para o time comercial copiar e colar — a mensagem como o cliente vai ler (HEADER se houver, corpo, FOOTER se houver, nesta ordem, com as variáveis no formato {{1}}, {{2}}).
-Regras da Parte 2: sem rótulos, sem contagem de caracteres, sem markdown, sem comentários; use uma ÚNICA quebra de linha entre parágrafos — NUNCA linhas em branco duplas/espaçamento duplo.
+Regras da Parte 2 (formatação do texto limpo):
+- Sem rótulos, sem contagem de caracteres, sem markdown de título, sem comentários — apenas a mensagem.
+- ESPAÇAMENTO: separe os parágrafos com uma LINHA EM BRANCO entre eles (espaçamento duplo), para a mensagem ficar arejada e legível no WhatsApp. Não junte tudo em bloco.
+- NEGRITO no padrão do WhatsApp: use UM asterisco de cada lado do trecho, assim *texto em negrito*. Negrite com PARCIMÔNIA apenas as partes mais importantes que você julgar (tipicamente a saudação inicial e, no máximo, mais um ou dois pontos-chave). NUNCA negrite a mensagem inteira nem vários trechos seguidos.
+- SAUDAÇÃO PADRÃO OBRIGATÓRIA: todo script DEVE começar com a saudação, em negrito, exatamente neste formato:
+  *Olá, {{1}}! Tudo bem? {{2}} Nex aqui.*
+  Onde {{1}} = nome do lead e {{2}} = nome do atendente. Em seguida, uma linha em branco e o restante da mensagem. Mantenha essa abertura mesmo em modo de edição, adaptando os números das variáveis se já houver outras.
 LEMBRETE CRÍTICO: se você terminar sem escrever ===TEMPLATE LIMPO=== seguido do texto limpo, o sistema não consegue mostrar o template ao usuário. Essa linha é obrigatória em 100% das respostas.`
 
 function buildSystem(modo: string): string {
@@ -96,7 +102,7 @@ ${WABA_RULES}
 
 ## Sua tarefa
 ${tarefa}
-Responda sempre em português brasileiro, em texto (não em JSON), no formato de entrega especificado. Se o briefing for vago, faça suposições razoáveis fundamentadas na base de conhecimento e sinalize-as. Use variáveis {{1}}, {{2}} para nome e empresa quando fizer sentido.`
+Responda sempre em português brasileiro, em texto (não em JSON), no formato de entrega especificado. Se o briefing for vago, faça suposições razoáveis fundamentadas na base de conhecimento e sinalize-as. Convenção de variáveis: {{1}} = nome do lead e {{2}} = nome do atendente (usados na saudação padrão). Variáveis adicionais seguem em {{3}}, {{4}}… quando fizer sentido.`
 }
 
 export async function POST(req: NextRequest) {

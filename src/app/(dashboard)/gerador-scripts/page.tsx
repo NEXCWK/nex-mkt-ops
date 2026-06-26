@@ -26,13 +26,14 @@ function splitTemplate(content: string): { racional: string; limpo: string } {
   }
 }
 
-/** Remove espaçamento duplo entre parágrafos e espaços nas pontas. */
+/** Normaliza o texto limpo: remove espaços nas pontas das linhas e mantém UMA
+ *  linha em branco entre parágrafos (espaçamento duplo), colapsando 3+ em 2. */
 function limparEspacamento(texto: string): string {
   return texto
     .split('\n')
     .map(l => l.replace(/[ \t]+$/g, ''))
     .join('\n')
-    .replace(/\n{2,}/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
 
@@ -63,10 +64,25 @@ export default function GeradorScriptsPage() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const limpoRef = useRef<HTMLTextAreaElement>(null)
+  // Mantém o auto-scroll só quando o usuário já está perto do fim do chat.
+  // Evita o "scroll bugado" que aparecia ao rolar a página inteira a cada token.
+  const pinnedRef = useRef(true)
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+  function onChatScroll() {
+    const el = scrollRef.current
+    if (!el) return
+    pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+  }
+
+  // Rola SOMENTE o container do chat (nunca a página) e de forma instantânea,
+  // apenas se o usuário estiver fixado no fim.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el && pinnedRef.current) el.scrollTop = el.scrollHeight
+  }, [messages])
 
   async function send(texto?: string) {
     const content = (texto ?? input).trim()
@@ -124,8 +140,16 @@ export default function GeradorScriptsPage() {
   const ultimaAssistente = [...messages].reverse().find(m => m.role === 'assistant')
   const templateLimpo = ultimaAssistente ? splitTemplate(ultimaAssistente.content).limpo : ''
 
+  // Box limpo cresce para mostrar o script inteiro, sem barra de rolagem interna.
+  useEffect(() => {
+    const el = limpoRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [templateLimpo])
+
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-y-auto">
       <PageHeader
         title="Gerador de Scripts"
         description="Crie ou ajuste scripts e templates de mensagem do WhatsApp API Oficial (WABA), no tom de voz do Nex e fiéis à base de conhecimento."
@@ -149,8 +173,8 @@ export default function GeradorScriptsPage() {
         ))}
       </div>
 
-      <div className="flex-1 flex flex-col bg-white border border-nex-gray-200 rounded-xl overflow-hidden min-h-0">
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+      <div className="flex-1 flex flex-col bg-white border border-nex-gray-200 rounded-xl overflow-hidden min-h-[320px]">
+        <div ref={scrollRef} onScroll={onChatScroll} className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center gap-5">
               <div className="flex flex-col items-center gap-2">
@@ -195,7 +219,6 @@ export default function GeradorScriptsPage() {
               )
             })
           )}
-          <div ref={bottomRef} />
         </div>
 
         <div className="border-t border-nex-gray-100 p-3">
@@ -229,9 +252,9 @@ export default function GeradorScriptsPage() {
         </div>
       </div>
 
-      {/* Box do texto limpo — pronto para copiar */}
+      {/* Box do texto limpo — pronto para copiar, expandido (sem rolagem interna) */}
       {templateLimpo && (
-        <div className="flex-shrink-0 mt-3 bg-white border border-nex-gray-200 rounded-xl overflow-hidden flex flex-col max-h-[38%]">
+        <div className="flex-shrink-0 mt-3 bg-white border border-nex-gray-200 rounded-xl overflow-hidden flex flex-col">
           <div className="flex items-center justify-between border-b border-nex-gray-100 px-4 py-2">
             <span className="text-xs font-heading font-semibold uppercase tracking-wide text-nex-gray-400">
               Script limpo · pronto para copiar
@@ -239,10 +262,12 @@ export default function GeradorScriptsPage() {
             <CopyButton text={templateLimpo} />
           </div>
           <textarea
+            ref={limpoRef}
             readOnly
             value={templateLimpo}
             onFocus={e => e.currentTarget.select()}
-            className="flex-1 resize-none p-4 text-sm leading-relaxed text-nex-gray-800 focus:outline-none bg-white"
+            rows={1}
+            className="resize-none overflow-hidden p-4 text-sm leading-relaxed text-nex-gray-800 focus:outline-none bg-white"
           />
         </div>
       )}
