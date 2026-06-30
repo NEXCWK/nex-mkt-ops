@@ -292,7 +292,7 @@ export default function RegistroReservasPage() {
                       })}
                     </tbody>
                   </table>
-                  <p className="text-nex-gray-300 text-[10px]">Registrado por {operador} via Nex Operações.</p>
+                  <p className="text-nex-gray-300 text-[10px]">Registrado por {operador} via Nex Marketing Operações.</p>
                 </div>
               </div>
             </div>

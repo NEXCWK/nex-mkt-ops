@@ -60,7 +60,7 @@ function buildEmailHtml(dados: {
         </tr>
         <tr>
           <td style="padding:0 32px 32px;">
-            <p style="margin:0;font-size:12px;color:#aaa;">Registrado por ${dados.operador} via Nex Operações.</p>
+            <p style="margin:0;font-size:12px;color:#aaa;">Registrado por ${dados.operador} via Nex Marketing Operações.</p>
           </td>
         </tr>
       </table>

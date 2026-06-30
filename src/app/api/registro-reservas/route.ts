@@ -102,7 +102,7 @@ function buildEmailHtml(dados: {
         </tr>
         <tr>
           <td style="padding:0 32px 32px;">
-            <p style="margin:0;font-size:12px;color:#aaa;">Registrado por ${dados.operador} via Nex Operações.</p>
+            <p style="margin:0;font-size:12px;color:#aaa;">Registrado por ${dados.operador} via Nex Marketing Operações.</p>
           </td>
         </tr>
       </table>
@@ -149,6 +149,7 @@ export async function POST(req: NextRequest) {
 
   if (destinatarios.length > 0) {
     const [to, ...cc] = destinatarios
+    const fromEmail = process.env.COMERCIAL_FROM_EMAIL || 'comercial@nexcoworking.com.br'
     await sendEmailViaGmail({
       accessToken: session.accessToken,
       refreshToken: session.refreshToken,
@@ -156,7 +157,7 @@ export async function POST(req: NextRequest) {
       cc,
       subject: assunto,
       body: corpo,
-      senderName: session.user.nome ?? session.user.name ?? undefined,
+      senderName: `Nex Marketing Operações <${fromEmail}>`,
     })
   }
 
