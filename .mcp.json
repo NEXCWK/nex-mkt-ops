@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "rdcrm": {
+      "type": "sse",
+      "url": "https://mcp.rdstationmentor.com/crm/mcp?key=019ef10b-1d90-7f41-a943-d274c1c5571c"
+    }
+  }
+}
