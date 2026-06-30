@@ -6,19 +6,18 @@ import { listFunnels, listStages, listAllDeals, type RDDeal, type RDStage } from
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-/** Nome parcial para identificar o funil de Escritório Privativo */
-const EP_FUNNEL_KEYWORDS = ['escritório privativo', 'escritorio privativo', 'privativo']
-/** Nome da coluna "Deals" no funil de EP (case-insensitive) */
-const DEALS_STAGE_KEYWORDS = ['deals', 'deal']
-
+// Funis de Escritório Privativo confirmados no RD CRM:
+// "[FCO] Escritório Privativo" e "[CPE] Escritório Privativo"
+// Detectados pelo sufixo "escritório privativo" (case-insensitive, ignora acento)
 function isEPFunnel(name: string) {
-  const n = name.toLowerCase()
-  return EP_FUNNEL_KEYWORDS.some(k => n.includes(k))
+  const n = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  return n.includes('escritorio privativo')
 }
 
+// Coluna "Deals" no funil de EP: correspondência exata ou prefixo "[…] Deals"
 function isDealsStage(name: string) {
-  const n = name.toLowerCase()
-  return DEALS_STAGE_KEYWORDS.some(k => n === k || n.includes(k))
+  const n = name.trim().toLowerCase()
+  return n === 'deals' || n.endsWith('] deals') || n.startsWith('deals')
 }
 
 function groupByMonth(deals: RDDeal[]): Record<string, number> {
