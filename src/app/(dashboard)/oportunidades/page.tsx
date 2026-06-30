@@ -333,8 +333,9 @@ export default function OportunidadesPage() {
           <div>
             <p className="text-sm font-medium text-amber-700">Nenhum funil encontrado no RD CRM</p>
             <p className="text-xs text-amber-600 mt-0.5">
-              Verifique se o token RDCRM_TOKEN está correto e se a conta possui funis cadastrados.
-              Consulte os logs do Railway para diagnóstico detalhado.
+              O servidor MCP não retornou funis. Acesse{' '}
+              <a href="/api/rdcrm-probe" target="_blank" className="underline font-semibold">/api/rdcrm-probe</a>
+              {' '}para ver as tools disponíveis e diagnóstico detalhado.
             </p>
           </div>
         </div>
