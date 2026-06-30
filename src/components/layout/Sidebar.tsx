@@ -23,6 +23,8 @@ import {
   Image as ImageIcon,
   BookOpen,
   MessagesSquare,
+  CalendarCheck,
+  UserCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from 'next-auth/react'
@@ -40,8 +42,10 @@ const navSections = [
   {
     label: 'Registros',
     items: [
-      { href: '/historico',  label: 'Histórico',      icon: History,       roles: ['operador', 'gestor', 'admin'] },
-      { href: '/log-emails', label: 'Log de E-mails', icon: ClipboardList, roles: ['gestor', 'admin'] },
+      { href: '/historico',         label: 'Histórico',            icon: History,       roles: ['operador', 'gestor', 'admin'] },
+      { href: '/log-emails',        label: 'Log de E-mails',       icon: ClipboardList, roles: ['gestor', 'admin'] },
+      { href: '/registro-reservas', label: 'Registro de Reservas', icon: CalendarCheck, roles: ['operador', 'gestor', 'admin'] },
+      { href: '/registro-visita',   label: 'Registro de Visita',   icon: UserCheck,     roles: ['operador', 'gestor', 'admin'] },
     ],
   },
   {
