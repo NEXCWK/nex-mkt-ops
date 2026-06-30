@@ -1,9 +1,14 @@
 /**
- * Cliente MCP para rdstationmentor.com
- * Auto-descobre as tools disponíveis via tools/list antes de chamar qualquer uma.
+ * Cliente MCP para rdstationmentor.com (protocolo Streamable HTTP / JSON-RPC 2.0)
+ *
+ * Detalhes importantes do protocolo:
+ *  - O servidor devolve um header `Mcp-Session-Id` na resposta de `initialize`.
+ *    Esse id PRECISA ser reenviado em todas as requisições seguintes.
+ *  - As respostas podem vir como JSON puro ou como SSE (text/event-stream).
  */
 
 const MCP_URL = 'https://mcp.rdstationmentor.com/crm/mcp?key=019ef10b-1d90-7f41-a943-d274c1c5571c'
+const PROTOCOL_VERSION = '2025-03-26'
 
 let _msgId = 0
 const nextId = () => ++_msgId
@@ -14,63 +19,99 @@ interface JsonRpcResp {
   error?: { code: number; message: string }
 }
 
-async function post(body: object): Promise<JsonRpcResp> {
+export interface RawCall {
+  method: string
+  status: number
+  contentType: string
+  sessionId: string | null
+  body: string
+}
+
+interface PostResult { json: JsonRpcResp; raw: RawCall }
+
+// ── Estado de sessão (vive enquanto o processo Node estiver vivo) ───────────────
+let _sessionId: string | null = null
+
+async function post(method: string, params: Record<string, unknown> | undefined, isNotification = false): Promise<PostResult> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json, text/event-stream',
+    'MCP-Protocol-Version': PROTOCOL_VERSION,
+  }
+  if (_sessionId) headers['Mcp-Session-Id'] = _sessionId
+
+  const payload: Record<string, unknown> = { jsonrpc: '2.0', method }
+  if (params !== undefined) payload.params = params
+  if (!isNotification) payload.id = nextId()
+
   const res = await fetch(MCP_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json, text/event-stream',
-    },
-    body: JSON.stringify(body),
+    headers,
+    body: JSON.stringify(payload),
     cache: 'no-store',
   })
 
-  if (!res.ok) {
-    const txt = await res.text().catch(() => '')
-    throw new Error(`MCP HTTP ${res.status} ${res.statusText}: ${txt.slice(0, 300)}`)
+  // Captura o session id quando o servidor o cria (resposta do initialize)
+  const sid = res.headers.get('mcp-session-id') ?? res.headers.get('Mcp-Session-Id')
+  if (sid) _sessionId = sid
+
+  const contentType = res.headers.get('content-type') ?? ''
+  const text = await res.text()
+
+  const raw: RawCall = {
+    method,
+    status: res.status,
+    contentType,
+    sessionId: sid,
+    body: text.slice(0, 2000),
   }
 
-  const ct = res.headers.get('content-type') ?? ''
-  if (ct.includes('text/event-stream')) {
-    const text = await res.text()
-    const line = text.split('\n').find(l => l.startsWith('data: '))
-    if (!line) return {}
-    return JSON.parse(line.slice(6)) as JsonRpcResp
+  let json: JsonRpcResp = {}
+  if (text) {
+    if (contentType.includes('text/event-stream')) {
+      // Pega a última linha "data:" com payload JSON-RPC
+      const dataLines = text.split('\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim())
+      for (const d of dataLines.reverse()) {
+        try { json = JSON.parse(d); break } catch { /* continua */ }
+      }
+    } else {
+      try { json = JSON.parse(text) } catch { /* mantém vazio */ }
+    }
   }
 
-  return res.json() as Promise<JsonRpcResp>
+  return { json, raw }
 }
 
-// ── Cache de sessão (válido enquanto o processo Node estiver vivo) ─────────────
-export interface MCPTool { name: string; description?: string }
+// ── Cache de tools ──────────────────────────────────────────────────────────────
+export interface MCPTool { name: string; description?: string; inputSchema?: unknown }
 let _tools: MCPTool[] | null = null
+const _trace: RawCall[] = []
 
-async function ensureReady(): Promise<MCPTool[]> {
-  if (_tools !== null) return _tools
+async function ensureReady(force = false): Promise<MCPTool[]> {
+  if (_tools !== null && !force) return _tools
+  _trace.length = 0
 
-  // Inicialização obrigatória pelo protocolo MCP
+  // 1. initialize → cria sessão
+  const init = await post('initialize', {
+    protocolVersion: PROTOCOL_VERSION,
+    capabilities: {},
+    clientInfo: { name: 'nex-mkt-ops', version: '1.0' },
+  })
+  _trace.push(init.raw)
+
+  // 2. notifications/initialized (sem id — é notificação)
   try {
-    await post({
-      jsonrpc: '2.0', id: nextId(), method: 'initialize',
-      params: {
-        protocolVersion: '2024-11-05',
-        capabilities: {},
-        clientInfo: { name: 'nex-mkt-ops', version: '1.0' },
-      },
-    })
-    // Notificação "initialized" (best-effort, alguns servidores exigem)
-    await post({ jsonrpc: '2.0', method: 'notifications/initialized', params: {} }).catch(() => {})
-  } catch (e) {
-    console.warn('[mcp] initialize falhou (pode ser ignorável):', e instanceof Error ? e.message : e)
-  }
+    const notif = await post('notifications/initialized', {}, true)
+    _trace.push(notif.raw)
+  } catch { /* best effort */ }
 
-  // Lista tools disponíveis
-  const listRes = await post({ jsonrpc: '2.0', id: nextId(), method: 'tools/list', params: {} })
-  const raw = (listRes.result as { tools?: MCPTool[] })?.tools
-               ?? (listRes as { tools?: MCPTool[] }).tools
-               ?? []
+  // 3. tools/list (já com Mcp-Session-Id)
+  const list = await post('tools/list', {})
+  _trace.push(list.raw)
+
+  const raw = (list.json.result as { tools?: MCPTool[] })?.tools ?? []
   _tools = Array.isArray(raw) ? raw : []
-  console.log('[mcp] tools disponíveis:', _tools.map(t => t.name).join(', ') || '(nenhuma)')
+  console.log('[mcp] tools:', _tools.map(t => t.name).join(', ') || '(nenhuma)')
   return _tools
 }
 
@@ -80,25 +121,21 @@ function pickTool(tools: MCPTool[], keywords: string[]): string | null {
 }
 
 async function invokeTool<T>(name: string, args: Record<string, unknown> = {}): Promise<T | null> {
-  const res = await post({ jsonrpc: '2.0', id: nextId(), method: 'tools/call', params: { name, arguments: args } })
-  if (res.error) throw new Error(`MCP tool '${name}': ${res.error.message}`)
+  const { json } = await post('tools/call', { name, arguments: args })
+  if (json.error) throw new Error(`MCP tool '${name}': ${json.error.message}`)
 
-  // Desempacota content (formato padrão MCP)
-  const content = (res.result as { content?: Array<{ type: string; text: string }> })?.content
+  const content = (json.result as { content?: Array<{ type: string; text: string }> })?.content
   const text = Array.isArray(content) ? content.find(c => c.type === 'text')?.text : null
   if (text) {
-    try { return JSON.parse(text) as T } catch { return text as T }
+    try { return JSON.parse(text) as T } catch { return text as unknown as T }
   }
-
-  // Alguns servidores retornam diretamente no result
-  if (res.result && typeof res.result === 'object' && !Array.isArray(res.result)) {
-    return res.result as T
+  if (json.result && typeof json.result === 'object' && !Array.isArray(json.result)) {
+    return json.result as T
   }
   return null
 }
 
-// ── Tipos exportados ──────────────────────────────────────────────────────────
-
+// ── Tipos exportados ────────────────────────────────────────────────────────────
 export interface RDFunnel { _id: string; name: string }
 export interface RDStage  { _id: string; name: string; deal_pipeline_id: string }
 export interface RDDeal   {
@@ -109,17 +146,22 @@ export interface RDDeal   {
   amount_montly: number | null; amount_total: number | null
 }
 
-// ── Funções públicas ──────────────────────────────────────────────────────────
+// ── Diagnóstico ───────────────────────────────────────────────────────────────
+export async function probeMCP(): Promise<{ tools: MCPTool[]; trace: RawCall[]; sessionId: string | null }> {
+  const tools = await ensureReady(true)
+  return { tools, trace: [..._trace], sessionId: _sessionId }
+}
 
 export async function listMCPTools(): Promise<MCPTool[]> {
   return ensureReady()
 }
 
+// ── Funções de negócio ──────────────────────────────────────────────────────────
 export async function listFunnelsMCP(): Promise<RDFunnel[]> {
   const tools = await ensureReady()
   const name = pickTool(tools, ['pipeline', 'funil', 'funnel', 'deal_pipeline'])
   if (!name) {
-    console.warn('[mcp] nenhuma tool de funis encontrada. Tools:', tools.map(t => t.name))
+    console.warn('[mcp] nenhuma tool de funis. Tools:', tools.map(t => t.name))
     return []
   }
   const res = await invokeTool<RDFunnel[] | { deal_pipelines?: RDFunnel[]; pipelines?: RDFunnel[] }>(name)
