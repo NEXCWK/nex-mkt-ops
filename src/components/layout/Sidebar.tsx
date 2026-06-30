@@ -25,6 +25,7 @@ import {
   MessagesSquare,
   CalendarCheck,
   UserCheck,
+  Lightbulb,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from 'next-auth/react'
@@ -58,9 +59,10 @@ const navSections = [
   {
     label: 'Prospecção',
     items: [
-      { href: '/prospeccao/bdr',       label: 'Sistema BDR',       icon: Target,    roles: ['operador', 'gestor', 'admin'] },
-      { href: '/prospeccao/parcerias', label: 'Sistema Parcerias', icon: Handshake, roles: ['operador', 'gestor', 'admin'] },
-      { href: '/cco',                  label: 'Sistema CCO',       icon: Megaphone, roles: ['gestor', 'admin'] },
+      { href: '/prospeccao/bdr',       label: 'Sistema BDR',           icon: Target,    roles: ['operador', 'gestor', 'admin'] },
+      { href: '/prospeccao/parcerias', label: 'Sistema Parcerias',     icon: Handshake, roles: ['operador', 'gestor', 'admin'] },
+      { href: '/cco',                  label: 'Sistema CCO',           icon: Megaphone, roles: ['gestor', 'admin'] },
+      { href: '/oportunidades',        label: 'Oportunidades Geradas', icon: Lightbulb, roles: ['gestor', 'admin'] },
     ],
   },
   {
