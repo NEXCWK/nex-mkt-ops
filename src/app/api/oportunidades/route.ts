@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { listFunnels, listStages, listAllDeals, type RDDeal, type RDStage } from '@/lib/rdcrm'
+import { listFunnelsMCP, listStagesMCP, listAllDealsMCP, type RDDeal, type RDStage, type RDFunnel } from '@/lib/rdcrm-mcp'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-// Funis de Escritório Privativo: detectados por "escritório privativo" no nome
 function isEPFunnel(name: string) {
   const n = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
   return n.includes('escritorio privativo')
 }
 
-// Etapa "Closer | Deal" (ou variantes) no funil EP
 function isCloserDealStage(name: string) {
   const n = name.trim().toLowerCase()
   return (
@@ -47,48 +45,39 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-  if (!process.env.RDCRM_TOKEN) {
-    return NextResponse.json(
-      { error: 'RDCRM_TOKEN não configurado. Adicione a variável no Railway.' },
-      { status: 500 }
-    )
-  }
-
   const { searchParams } = new URL(req.url)
-  const de  = searchParams.get('de')  ?? undefined   // YYYY-MM-DD
-  const ate = searchParams.get('ate') ?? undefined   // YYYY-MM-DD
+  const de  = searchParams.get('de')  ?? undefined
+  const ate = searchParams.get('ate') ?? undefined
 
   try {
-    const funnels = await listFunnels()
-    console.log(`[oportunidades] ${funnels.length} funis encontrados`)
+    const funnels: RDFunnel[] = await listFunnelsMCP()
+    console.log(`[oportunidades] ${funnels.length} funis encontrados via MCP`)
+
+    if (funnels.length === 0) {
+      console.warn('[oportunidades] MCP retornou 0 funis — verifique /api/rdcrm-probe para diagnóstico')
+    }
 
     const funnelData = await Promise.all(
       funnels.map(async (funnel) => {
         const [stages, allDeals] = await Promise.all([
-          listStages(funnel._id),
-          listAllDeals(funnel._id),
+          listStagesMCP(funnel._id),
+          listAllDealsMCP(funnel._id),
         ])
 
-        // Filtra pelo período APÓS buscar tudo (mais simples e seguro)
         const deals = filterByPeriod(allDeals, de, ate)
-
-        const isEP = isEPFunnel(funnel.name)
+        const isEP  = isEPFunnel(funnel.name)
         const stageMap = Object.fromEntries(stages.map((s: RDStage) => [s._id, s.name]))
 
-        // Conta por etapa
         const byStage: Record<string, number> = {}
         for (const s of stages) byStage[s._id] = 0
         for (const d of deals) {
           if (d.deal_stage_id in byStage) byStage[d.deal_stage_id]++
         }
 
-        // Etapa Closer | Deal
-        const closerStages = stages.filter((s: RDStage) => isCloserDealStage(s.name))
-        const closerStageIds = new Set(closerStages.map((s: RDStage) => s._id))
+        const closerStages    = stages.filter((s: RDStage) => isCloserDealStage(s.name))
+        const closerStageIds  = new Set(closerStages.map((s: RDStage) => s._id))
         const closerStageName = closerStages[0]?.name ?? null
-        const closerDeals = isEP
-          ? deals.filter(d => closerStageIds.has(d.deal_stage_id))
-          : []
+        const closerDeals     = isEP ? deals.filter(d => closerStageIds.has(d.deal_stage_id)) : []
 
         const sortedDeals = [...deals].sort(
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -125,22 +114,16 @@ export async function GET(req: NextRequest) {
       })
     )
 
-    const totalGeral = funnelData.reduce((s, f) => s + f.total, 0)
+    const totalGeral  = funnelData.reduce((s, f) => s + f.total, 0)
     const totalCloser = funnelData
       .filter(f => f.isEP)
       .reduce((s, f) => s + (f.closerCount ?? 0), 0)
 
-    return NextResponse.json({
-      funnels: funnelData,
-      totalGeral,
-      totalCloser,
-      de,
-      ate,
-      _meta: { funnelCount: funnels.length },
-    })
+    return NextResponse.json({ funnels: funnelData, totalGeral, totalCloser, de, ate })
   } catch (e) {
+    console.error('[oportunidades] erro:', e instanceof Error ? e.message : e)
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'Erro ao buscar dados do RD CRM' },
+      { error: e instanceof Error ? e.message : 'Erro ao buscar dados via MCP' },
       { status: 500 }
     )
   }
