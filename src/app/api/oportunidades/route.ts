@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { listFunnels, listStages, listAllDeals, type RDDeal, type RDStage } from '@/lib/rdcrm'
@@ -6,18 +6,22 @@ import { listFunnels, listStages, listAllDeals, type RDDeal, type RDStage } from
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-// Funis de Escritório Privativo confirmados no RD CRM:
-// "[FCO] Escritório Privativo" e "[CPE] Escritório Privativo"
-// Detectados pelo sufixo "escritório privativo" (case-insensitive, ignora acento)
+// Funis de Escritório Privativo: detectados por "escritório privativo" no nome
 function isEPFunnel(name: string) {
   const n = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
   return n.includes('escritorio privativo')
 }
 
-// Coluna "Deals" no funil de EP: correspondência exata ou prefixo "[…] Deals"
-function isDealsStage(name: string) {
+// Etapa "Closer | Deal" (ou variantes) no funil EP
+function isCloserDealStage(name: string) {
   const n = name.trim().toLowerCase()
-  return n === 'deals' || n.endsWith('] deals') || n.startsWith('deals')
+  return (
+    n === 'deals' ||
+    n === 'deal' ||
+    n === 'closer | deal' ||
+    n === 'closer | deals' ||
+    (n.includes('closer') && n.includes('deal'))
+  )
 }
 
 function groupByMonth(deals: RDDeal[]): Record<string, number> {
@@ -29,7 +33,17 @@ function groupByMonth(deals: RDDeal[]): Record<string, number> {
   return counts
 }
 
-export async function GET() {
+function filterByPeriod(deals: RDDeal[], de?: string, ate?: string): RDDeal[] {
+  if (!de && !ate) return deals
+  return deals.filter(d => {
+    const dt = d.created_at?.slice(0, 10) ?? ''
+    if (de && dt < de) return false
+    if (ate && dt > ate) return false
+    return true
+  })
+}
+
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
@@ -40,68 +54,82 @@ export async function GET() {
     )
   }
 
+  const { searchParams } = new URL(req.url)
+  const de  = searchParams.get('de')  ?? undefined   // YYYY-MM-DD
+  const ate = searchParams.get('ate') ?? undefined   // YYYY-MM-DD
+
   try {
     const funnels = await listFunnels()
 
     const funnelData = await Promise.all(
       funnels.map(async (funnel) => {
-        const [stages, deals] = await Promise.all([
+        const [stages, allDeals] = await Promise.all([
           listStages(funnel._id),
           listAllDeals(funnel._id),
         ])
 
-        const isEP = isEPFunnel(funnel.name)
-        const dealsStageIds = isEP
-          ? stages.filter((s: RDStage) => isDealsStage(s.name)).map((s: RDStage) => s._id)
-          : []
+        // Filtra pelo período APÓS buscar tudo (mais simples e seguro)
+        const deals = filterByPeriod(allDeals, de, ate)
 
+        const isEP = isEPFunnel(funnel.name)
         const stageMap = Object.fromEntries(stages.map((s: RDStage) => [s._id, s.name]))
 
-        const byStage: Record<string, { stageName: string; count: number; deals: RDDeal[] }> = {}
-        for (const stage of stages) {
-          byStage[stage._id] = { stageName: stage.name, count: 0, deals: [] }
-        }
-        for (const deal of deals) {
-          if (byStage[deal.deal_stage_id]) {
-            byStage[deal.deal_stage_id].count++
-            byStage[deal.deal_stage_id].deals.push(deal)
-          }
+        // Conta por etapa
+        const byStage: Record<string, number> = {}
+        for (const s of stages) byStage[s._id] = 0
+        for (const d of deals) {
+          if (d.deal_stage_id in byStage) byStage[d.deal_stage_id]++
         }
 
-        const dealsCount = isEP
-          ? deals.filter(d => dealsStageIds.includes(d.deal_stage_id)).length
-          : null
+        // Etapa Closer | Deal
+        const closerStages = stages.filter((s: RDStage) => isCloserDealStage(s.name))
+        const closerStageIds = new Set(closerStages.map((s: RDStage) => s._id))
+        const closerStageName = closerStages[0]?.name ?? null
+        const closerDeals = isEP
+          ? deals.filter(d => closerStageIds.has(d.deal_stage_id))
+          : []
+
+        const sortedDeals = [...deals].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
 
         return {
           id: funnel._id,
           name: funnel.name,
           isEP,
           total: deals.length,
-          dealsCount,
-          byStage: Object.values(byStage).map(s => ({
-            stageName: s.stageName,
-            count: s.count,
+          closerCount: isEP ? closerDeals.length : null,
+          closerStageName,
+          byStage: stages.map((s: RDStage) => ({
+            stageName: s.name,
+            count: byStage[s._id] ?? 0,
+            isCloser: isCloserDealStage(s.name),
           })),
           byMonth: groupByMonth(deals),
-          stageMap,
-          recentDeals: deals
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .slice(0, 30)
-            .map(d => ({
-              id: d._id,
-              name: d.name,
-              stage: stageMap[d.deal_stage_id] ?? 'Desconhecido',
-              created_at: d.created_at,
-              win: d.win,
-              amount: d.amount_montly,
-            })),
+          allDeals: sortedDeals.slice(0, 100).map(d => ({
+            id: d._id,
+            name: d.name,
+            stage: stageMap[d.deal_stage_id] ?? 'Desconhecido',
+            isCloser: closerStageIds.has(d.deal_stage_id),
+            created_at: d.created_at,
+            win: d.win,
+          })),
+          closerDeals: closerDeals.slice(0, 100).map(d => ({
+            id: d._id,
+            name: d.name,
+            stage: stageMap[d.deal_stage_id] ?? '',
+            created_at: d.created_at,
+          })),
         }
       })
     )
 
     const totalGeral = funnelData.reduce((s, f) => s + f.total, 0)
+    const totalCloser = funnelData
+      .filter(f => f.isEP)
+      .reduce((s, f) => s + (f.closerCount ?? 0), 0)
 
-    return NextResponse.json({ funnels: funnelData, totalGeral })
+    return NextResponse.json({ funnels: funnelData, totalGeral, totalCloser, de, ate })
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Erro ao buscar dados do RD CRM' },
