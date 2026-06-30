@@ -156,6 +156,8 @@ create table if not exists registro_visitas (
 
 alter table registro_reservas enable row level security;
 alter table registro_visitas enable row level security;
+drop policy if exists "Service role full access" on registro_reservas;
+drop policy if exists "Service role full access" on registro_visitas;
 create policy "Service role full access" on registro_reservas for all using (true);
 create policy "Service role full access" on registro_visitas for all using (true);
 
