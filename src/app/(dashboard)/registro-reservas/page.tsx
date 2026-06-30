@@ -32,8 +32,19 @@ const TIPO_LABEL: Record<Tipo, string> = {
   quatro_horas: 'Reunião — 4 horas ou mais',
 }
 
-const SALAS_FCO = ['Sala 1', 'Sala 2', 'Sala 3', 'Sala 4', 'Sala Grande']
-const SALAS_NH  = ['Sala Nex House 1', 'Sala Nex House 2', 'Sala Nex House 3']
+const SALAS_FCO = [
+  'Sala R1 - 8 posições',
+  'Sala R2 - 6 posições',
+  'Sala R3 - 12 posições',
+  'Sala R4 - 4 posições',
+  'Sala C1 - 4 posições',
+  'Sala C2 - 6 posições',
+]
+const SALAS_NH = [
+  'Sala R1 - 4 posições',
+  'Sala R2 - 8 posições',
+  'Sala R3 - 6 posições',
+]
 
 const PRODUTOS = ['Escritório Virtual', 'Mesa Fixa', 'Escritório Privativo', 'Nex House — Atrium', 'Nex House — Gallery', 'Sala de Reunião', 'Todos']
 
