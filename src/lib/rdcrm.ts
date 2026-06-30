@@ -9,9 +9,16 @@ function token() {
 async function get<T>(path: string, params: Record<string, string | number> = {}): Promise<T> {
   const qs = new URLSearchParams({ token: token() })
   Object.entries(params).forEach(([k, v]) => qs.set(k, String(v)))
-  const res = await fetch(`${BASE}${path}?${qs.toString()}`, { cache: 'no-store' })
-  if (!res.ok) throw new Error(`RD CRM ${path} → ${res.status} ${res.statusText}`)
-  return res.json() as Promise<T>
+  const url = `${BASE}${path}?${qs.toString()}`
+  const res = await fetch(url, { cache: 'no-store' })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    console.error(`[rdcrm] ${path} → HTTP ${res.status} ${res.statusText}`, body.slice(0, 200))
+    throw new Error(`RD CRM ${path} → ${res.status} ${res.statusText}`)
+  }
+  const json = await res.json()
+  console.log(`[rdcrm] ${path} keys:`, Object.keys(json as object))
+  return json as T
 }
 
 export interface RDFunnel {
@@ -44,8 +51,12 @@ interface StagesResponse  { deal_pipeline_stages: RDStage[] }
 interface DealsResponse   { deals: RDDeal[]; total: number }
 
 export async function listFunnels(): Promise<RDFunnel[]> {
-  const data = await get<FunnelsResponse>('/deal_pipelines')
-  return data.deal_pipelines ?? []
+  const raw = await get<Record<string, unknown>>('/deal_pipelines')
+  // A API pode retornar 'deal_pipelines' (array) diretamente
+  const list = (raw.deal_pipelines as RDFunnel[] | undefined) ?? []
+  console.log(`[rdcrm] listFunnels → ${list.length} funis`)
+  if (list.length === 0) console.warn('[rdcrm] listFunnels retornou vazio. Resposta bruta:', JSON.stringify(raw).slice(0, 300))
+  return list
 }
 
 export async function listStages(funnelId: string): Promise<RDStage[]> {

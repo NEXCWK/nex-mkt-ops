@@ -327,6 +327,17 @@ export default function OportunidadesPage() {
             <p className="text-xs text-red-500 mt-0.5">{data.error}</p>
           </div>
         </div>
+      ) : !loading && data && data.funnels?.length === 0 ? (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-6 py-4">
+          <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-amber-700">Nenhum funil encontrado no RD CRM</p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              Verifique se o token RDCRM_TOKEN está correto e se a conta possui funis cadastrados.
+              Consulte os logs do Railway para diagnóstico detalhado.
+            </p>
+          </div>
+        </div>
       ) : (
         <>
           {/* Cards gerais */}

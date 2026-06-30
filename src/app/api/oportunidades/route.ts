@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const funnels = await listFunnels()
+    console.log(`[oportunidades] ${funnels.length} funis encontrados`)
 
     const funnelData = await Promise.all(
       funnels.map(async (funnel) => {
@@ -129,7 +130,14 @@ export async function GET(req: NextRequest) {
       .filter(f => f.isEP)
       .reduce((s, f) => s + (f.closerCount ?? 0), 0)
 
-    return NextResponse.json({ funnels: funnelData, totalGeral, totalCloser, de, ate })
+    return NextResponse.json({
+      funnels: funnelData,
+      totalGeral,
+      totalCloser,
+      de,
+      ate,
+      _meta: { funnelCount: funnels.length },
+    })
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Erro ao buscar dados do RD CRM' },
