@@ -69,6 +69,14 @@ export default function RegistroVisitaPage() {
   const [carregando, setCarregando] = useState(false)
   const [toggleLoading, setToggleLoading] = useState<string | null>(null)
 
+  const [operador, setOperador] = useState('')
+
+  useEffect(() => {
+    fetch('/api/auth/session').then(r => r.json()).then(s => {
+      setOperador(s?.user?.nome ?? s?.user?.name ?? s?.user?.email ?? '')
+    }).catch(() => {})
+  }, [])
+
   // Filtro de período do relatório (padrão: mês corrente)
   const [de, setDe] = useState(inicioMes())
   const [ate, setAte] = useState(hoje())
@@ -140,7 +148,7 @@ export default function RegistroVisitaPage() {
         description="Registre visitas de leads ao espaço e acompanhe Show / No-Show."
       />
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
         {/* Form */}
         <div className="bg-white border border-nex-gray-200 rounded-xl p-5">
           <h2 className="text-sm font-heading font-semibold text-nex-black mb-4">Nova Visita</h2>
@@ -202,20 +210,61 @@ export default function RegistroVisitaPage() {
           </form>
         </div>
 
-        {/* Stats */}
-        <div className="xl:col-span-2 grid grid-cols-2 md:grid-cols-4 xl:grid-cols-2 gap-4 content-start">
-          {[
-            { label: 'Total de Visitas', value: totalVisitas, color: 'text-nex-black' },
-            { label: 'Taxa de Show', value: `${taxaShow}%`, color: 'text-green-600' },
-            { label: 'Shows', value: shows, color: 'text-green-600' },
-            { label: 'No-Shows', value: noShows, color: 'text-red-500' },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="bg-white border border-nex-gray-200 rounded-xl px-5 py-4">
-              <p className="text-[10px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400 mb-1">{label}</p>
-              <p className={cn('text-3xl font-bold', color)}>{value}</p>
+        {/* Email Preview */}
+        <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden flex flex-col">
+          <div className="border-b border-nex-gray-100 px-4 py-2.5 flex items-center justify-between gap-2 flex-wrap">
+            <span className="text-xs font-heading font-semibold uppercase tracking-wide text-nex-gray-400">Prévia do E-mail</span>
+            <span className="text-[11px] text-nex-gray-400 truncate max-w-[60%]">Para: {DESTINATARIOS_UI[form.unidade].join(', ')}</span>
+          </div>
+          {form.nome_lead || form.hora || form.produto_interesse ? (
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="rounded-lg border border-nex-gray-100 overflow-hidden text-xs font-mono">
+                <div className="bg-nex-gray-800 text-white px-4 py-3">
+                  <p className="font-bold text-xs">Nex. <span className="font-normal text-nex-gray-400 ml-2">Registro de Visita</span></p>
+                </div>
+                <div className="p-4 space-y-3">
+                  <p className="text-nex-gray-600 text-[11px] leading-relaxed">Uma nova visita foi registrada. Prepare o espaço e a recepção!</p>
+                  <table className="w-full border border-nex-gray-100 rounded text-[11px]">
+                    <tbody>
+                      {[
+                        ['Lead', form.nome_lead],
+                        ['Data', form.data ? new Date(form.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : '—'],
+                        ['Horário', form.hora || '—'],
+                        ['Produto de Interesse', form.produto_interesse || '—'],
+                        ['Unidade', UNIDADES.find(u => u.value === form.unidade)?.label ?? form.unidade],
+                      ].map(([k, v], i) => (
+                        <tr key={k} className={i % 2 === 0 ? 'bg-nex-gray-50' : ''}>
+                          <td className="px-3 py-1.5 text-nex-gray-500 font-semibold w-36">{k}</td>
+                          <td className="px-3 py-1.5 text-nex-gray-800 capitalize">{v}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="text-nex-gray-300 text-[10px]">Registrado por {operador} via Nex Marketing Operações.</p>
+                </div>
+              </div>
             </div>
-          ))}
+          ) : (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <p className="text-sm text-nex-gray-300 text-center">Preencha o formulário ao lado para ver a prévia do e-mail.</p>
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: 'Total de Visitas', value: totalVisitas, color: 'text-nex-black' },
+          { label: 'Taxa de Show', value: `${taxaShow}%`, color: 'text-green-600' },
+          { label: 'Shows', value: shows, color: 'text-green-600' },
+          { label: 'No-Shows', value: noShows, color: 'text-red-500' },
+        ].map(({ label, value, color }) => (
+          <div key={label} className="bg-white border border-nex-gray-200 rounded-xl px-5 py-4">
+            <p className="text-[10px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400 mb-1">{label}</p>
+            <p className={cn('text-3xl font-bold', color)}>{value}</p>
+          </div>
+        ))}
       </div>
 
       {/* Table */}
