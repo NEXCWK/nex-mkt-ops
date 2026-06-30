@@ -149,6 +149,7 @@ create table if not exists registro_visitas (
   data date not null,
   hora text not null,
   produto_interesse text not null,
+  unidade text check (unidade in ('nex_house', 'francisco_rocha')),
   compareceu boolean default false,
   operador_email text not null,
   created_at timestamptz default now()

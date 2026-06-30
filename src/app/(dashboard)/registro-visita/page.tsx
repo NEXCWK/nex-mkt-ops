@@ -11,9 +11,27 @@ interface Visita {
   data: string
   hora: string
   produto_interesse: string
+  unidade: string
   compareceu: boolean
   operador_email: string
   created_at: string
+}
+
+type Unidade = 'francisco_rocha' | 'nex_house'
+
+const UNIDADES: { value: Unidade; label: string }[] = [
+  { value: 'francisco_rocha', label: 'Francisco Rocha (FCO)' },
+  { value: 'nex_house',       label: 'Nex House (NH)' },
+]
+
+const DESTINATARIOS_UI: Record<Unidade, string[]> = {
+  francisco_rocha: ['felipe@nex.work', 'lenise@nex.work', 'edmilson@nex.work', 'virginia@nex.work', 'marialuiza@nex.work'],
+  nex_house:       ['felipe@nex.work', 'lenise@nex.work', 'altieres@nex.work', 'lorena@nex.work'],
+}
+
+const UNIDADE_LABEL: Record<string, string> = {
+  francisco_rocha: 'Francisco Rocha',
+  nex_house:       'Nex House',
 }
 
 const PRODUTOS = [
@@ -38,6 +56,7 @@ const EMPTY_FORM = {
   data: hoje(),
   hora: '',
   produto_interesse: '',
+  unidade: 'francisco_rocha' as Unidade,
 }
 
 export default function RegistroVisitaPage() {
@@ -68,7 +87,7 @@ export default function RegistroVisitaPage() {
 
   async function registrar(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.nome_lead || !form.data || !form.hora || !form.produto_interesse) return
+    if (!form.nome_lead || !form.data || !form.hora || !form.produto_interesse || !form.unidade) return
     setLoading(true)
     setErro(null)
     setSucesso(false)
@@ -154,6 +173,14 @@ export default function RegistroVisitaPage() {
               </select>
             </div>
 
+            <div>
+              <label className="block text-xs font-heading text-nex-gray-500 mb-1">Unidade *</label>
+              <select required value={form.unidade} onChange={e => setForm(p => ({ ...p, unidade: e.target.value as Unidade }))}
+                className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400">
+                {UNIDADES.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+              </select>
+            </div>
+
             {sucesso && (
               <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700">
                 Visita registrada e e-mail enviado!
@@ -169,7 +196,7 @@ export default function RegistroVisitaPage() {
               {loading ? 'Registrando…' : 'Registrar Visita'}
             </button>
             <p className="text-[11px] text-nex-gray-300 text-center">
-              E-mail automático para felipe@nex.work e lenise@nex.work
+              E-mail automático para: {DESTINATARIOS_UI[form.unidade].join(', ')}
             </p>
           </form>
         </div>
@@ -221,7 +248,7 @@ export default function RegistroVisitaPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-nex-gray-100">
-                  {['Data', 'Hora', 'Lead', 'Produto de Interesse', 'Registrado por', 'Status'].map(h => (
+                  {['Data', 'Hora', 'Lead', 'Produto de Interesse', 'Unidade', 'Registrado por', 'Status'].map(h => (
                     <th key={h} className="px-4 py-2.5 text-left text-[10px] font-heading font-semibold uppercase tracking-wide text-nex-gray-400 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -235,6 +262,7 @@ export default function RegistroVisitaPage() {
                     <td className="px-4 py-2.5 text-nex-gray-800 whitespace-nowrap">{v.hora}</td>
                     <td className="px-4 py-2.5 text-nex-gray-800 font-medium">{v.nome_lead}</td>
                     <td className="px-4 py-2.5 text-nex-gray-600">{v.produto_interesse}</td>
+                    <td className="px-4 py-2.5 text-nex-gray-600">{UNIDADE_LABEL[v.unidade] ?? v.unidade ?? '—'}</td>
                     <td className="px-4 py-2.5 text-nex-gray-400 text-xs">{v.operador_email}</td>
                     <td className="px-4 py-2.5">
                       <button

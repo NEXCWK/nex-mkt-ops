@@ -6,18 +6,29 @@ import { sendEmailViaGmail } from '@/lib/gmail'
 
 export const dynamic = 'force-dynamic'
 
-const DESTINATARIOS_VISITA = ['felipe@nex.work', 'lenise@nex.work']
+// Destinatários por unidade (mesmas listas do Registro de Reservas)
+const DESTINATARIOS: Record<string, string[]> = {
+  francisco_rocha: ['felipe@nex.work', 'lenise@nex.work', 'edmilson@nex.work', 'virginia@nex.work', 'marialuiza@nex.work'],
+  nex_house:       ['felipe@nex.work', 'lenise@nex.work', 'altieres@nex.work', 'lorena@nex.work'],
+}
+
+const UNIDADE_LABEL: Record<string, string> = {
+  francisco_rocha: 'Francisco Rocha (FCO)',
+  nex_house:       'Nex House (NH)',
+}
 
 function buildEmailHtml(dados: {
   nome_lead: string
   data: string
   hora: string
   produto_interesse: string
+  unidade: string
   operador: string
 }): { assunto: string; corpo: string } {
   const dataFormatada = new Date(dados.data + 'T12:00:00').toLocaleDateString('pt-BR', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   })
+  const unidadeLabel = UNIDADE_LABEL[dados.unidade] ?? dados.unidade
 
   const assunto = `[Visita] ${dados.nome_lead} — ${dataFormatada}, ${dados.hora} · ${dados.produto_interesse}`
 
@@ -55,6 +66,10 @@ function buildEmailHtml(dados: {
                 <td style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;border-top:1px solid #f0f0f0;">Produto de Interesse</td>
                 <td style="padding:10px 16px;font-size:14px;color:#0a0a0a;border-top:1px solid #f0f0f0;">${dados.produto_interesse}</td>
               </tr>
+              <tr style="background:#f9f9f9;">
+                <td style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;border-top:1px solid #f0f0f0;">Unidade</td>
+                <td style="padding:10px 16px;font-size:14px;color:#0a0a0a;border-top:1px solid #f0f0f0;">${unidadeLabel}</td>
+              </tr>
             </table>
           </td>
         </tr>
@@ -78,16 +93,19 @@ export async function POST(req: NextRequest) {
   if (!session.accessToken) return NextResponse.json({ error: 'Token Gmail não disponível. Faça login novamente.' }, { status: 401 })
 
   const body = await req.json()
-  const { nome_lead, data, hora, produto_interesse } = body
+  const { nome_lead, data, hora, produto_interesse, unidade } = body
 
-  if (!nome_lead || !data || !hora || !produto_interesse) {
+  if (!nome_lead || !data || !hora || !produto_interesse || !unidade) {
     return NextResponse.json({ error: 'Campos obrigatórios ausentes' }, { status: 400 })
+  }
+  if (!DESTINATARIOS[unidade]) {
+    return NextResponse.json({ error: 'Unidade inválida' }, { status: 400 })
   }
 
   const supabase = createServerClient()
 
   const { data: registro, error } = await supabase.from('registro_visitas').insert({
-    nome_lead, data, hora, produto_interesse,
+    nome_lead, data, hora, produto_interesse, unidade,
     compareceu: false,
     operador_email: session.user.email,
   }).select().single()
@@ -95,11 +113,13 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const { assunto, corpo } = buildEmailHtml({
-    nome_lead, data, hora, produto_interesse,
+    nome_lead, data, hora, produto_interesse, unidade,
     operador: session.user.nome ?? session.user.name ?? session.user.email ?? '',
   })
 
-  const [to, ...cc] = DESTINATARIOS_VISITA
+  const destinatarios = DESTINATARIOS[unidade] ?? []
+  const fromEmail = process.env.COMERCIAL_FROM_EMAIL || 'comercial@nexcoworking.com.br'
+  const [to, ...cc] = destinatarios
   await sendEmailViaGmail({
     accessToken: session.accessToken,
     refreshToken: session.refreshToken,
@@ -107,7 +127,7 @@ export async function POST(req: NextRequest) {
     cc,
     subject: assunto,
     body: corpo,
-    senderName: session.user.nome ?? session.user.name ?? undefined,
+    senderName: `Nex Marketing Operações <${fromEmail}>`,
   })
 
   return NextResponse.json({ success: true, registro })
@@ -120,12 +140,14 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const de = searchParams.get('de')
   const ate = searchParams.get('ate')
+  const unidade = searchParams.get('unidade')
 
   const supabase = createServerClient()
   let query = supabase.from('registro_visitas').select('*').order('data', { ascending: false }).order('hora', { ascending: false })
 
   if (de) query = query.gte('data', de)
   if (ate) query = query.lte('data', ate)
+  if (unidade) query = query.eq('unidade', unidade)
 
   const { data, error } = await query.limit(200)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
