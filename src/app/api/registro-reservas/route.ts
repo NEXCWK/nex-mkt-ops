@@ -38,7 +38,9 @@ function buildEmailHtml(dados: {
   const tipoLabel = TIPO_LABEL[dados.tipo] ?? dados.tipo
   const unidadeLabel = UNIDADE_LABEL[dados.unidade] ?? dados.unidade
 
-  const assunto = `[${tipoLabel}] ${dados.nome_cliente} — ${dataFormatada}, ${dados.horario} · ${unidadeLabel}`
+  const assunto = dados.tipo === 'primeira_vez'
+    ? 'Time Comercial > Alerta de 1o Uso de Cliente'
+    : 'Time Comercial > Alerta Reunião 4h ou mais'
 
   const intro = dados.tipo === 'primeira_vez'
     ? 'Uma nova reserva de sala foi registrada para um cliente <strong>de primeira vez</strong>. Fique de olho para garantir uma ótima experiência!'
@@ -62,9 +64,9 @@ function buildEmailHtml(dados: {
           <td style="padding:32px 32px 24px;">
             <p style="margin:0 0 16px;font-size:14px;color:#555;line-height:1.6;">${intro}</p>
             <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e5e5;border-radius:8px;overflow:hidden;">
-              <tr style="background:#f9f9f9;">
-                <td style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;width:40%;">Tipo</td>
-                <td style="padding:10px 16px;font-size:14px;color:#0a0a0a;font-weight:600;">${tipoLabel}</td>
+              <tr style="background:#ffe14d;">
+                <td style="padding:12px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#0a0a0a;width:40%;">Tipo</td>
+                <td style="padding:12px 16px;font-size:15px;color:#0a0a0a;font-weight:700;">${tipoLabel}</td>
               </tr>
               <tr>
                 <td style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;border-top:1px solid #f0f0f0;">Cliente</td>

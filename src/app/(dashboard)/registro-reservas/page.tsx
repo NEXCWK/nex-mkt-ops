@@ -281,12 +281,15 @@ export default function RegistroReservasPage() {
                         ['Pessoas', form.quantidade_pessoas || '—'],
                         ['Unidade', preview.unidadeLabel],
                         ...(form.observacoes ? [['Observações', form.observacoes]] : []),
-                      ].map(([k, v], i) => (
-                        <tr key={k} className={i % 2 === 0 ? 'bg-nex-gray-50' : ''}>
-                          <td className="px-3 py-1.5 text-nex-gray-500 font-semibold w-32">{k}</td>
-                          <td className="px-3 py-1.5 text-nex-gray-800 capitalize">{v}</td>
-                        </tr>
-                      ))}
+                      ].map(([k, v], i) => {
+                        const isTipo = k === 'Tipo'
+                        return (
+                          <tr key={k} className={isTipo ? 'bg-nex-yellow/30' : i % 2 === 0 ? 'bg-nex-gray-50' : ''}>
+                            <td className={`px-3 py-1.5 font-semibold w-32 ${isTipo ? 'text-nex-black' : 'text-nex-gray-500'}`}>{k}</td>
+                            <td className={`px-3 py-1.5 capitalize ${isTipo ? 'text-nex-black font-bold' : 'text-nex-gray-800'}`}>{v}</td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                   <p className="text-nex-gray-300 text-[10px]">Registrado por {operador} via Nex Operações.</p>
