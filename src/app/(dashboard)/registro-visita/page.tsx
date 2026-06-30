@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { cn } from '@/lib/utils'
-import { Send, Loader2, CheckCircle2, XCircle, RefreshCw } from 'lucide-react'
+import { Send, Loader2, CheckCircle2, XCircle, RefreshCw, CalendarDays } from 'lucide-react'
 
 interface Visita {
   id: string
@@ -29,6 +29,9 @@ const PRODUTOS = [
 function hoje() {
   return new Date().toISOString().slice(0, 10)
 }
+function inicioMes() {
+  return new Date().toISOString().slice(0, 8) + '01'
+}
 
 const EMPTY_FORM = {
   nome_lead: '',
@@ -46,15 +49,22 @@ export default function RegistroVisitaPage() {
   const [carregando, setCarregando] = useState(false)
   const [toggleLoading, setToggleLoading] = useState<string | null>(null)
 
-  const carregar = useCallback(async () => {
+  // Filtro de período do relatório (padrão: mês corrente)
+  const [de, setDe] = useState(inicioMes())
+  const [ate, setAte] = useState(hoje())
+
+  const carregar = useCallback(async (d = de, a = ate) => {
     setCarregando(true)
-    const res = await fetch('/api/registro-visitas')
+    const params = new URLSearchParams()
+    if (d) params.set('de', d)
+    if (a) params.set('ate', a)
+    const res = await fetch(`/api/registro-visitas?${params}`)
     const json = await res.json()
     setVisitas(json.visitas ?? [])
     setCarregando(false)
-  }, [])
+  }, [de, ate])
 
-  useEffect(() => { carregar() }, [carregar])
+  useEffect(() => { carregar() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function registrar(e: React.FormEvent) {
     e.preventDefault()
@@ -182,11 +192,23 @@ export default function RegistroVisitaPage() {
 
       {/* Table */}
       <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
-        <div className="border-b border-nex-gray-100 px-5 py-3 flex items-center justify-between">
+        <div className="border-b border-nex-gray-100 px-5 py-3 flex items-center justify-between gap-4 flex-wrap">
           <span className="text-xs font-heading font-semibold uppercase tracking-wide text-nex-gray-400">Visitas Registradas</span>
-          <button onClick={carregar} className="flex items-center gap-1 text-xs text-nex-gray-400 hover:text-nex-black transition-colors">
-            <RefreshCw className={cn('w-3 h-3', carregando && 'animate-spin')} /> Atualizar
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <CalendarDays className="w-3.5 h-3.5 text-nex-gray-400" />
+            <input type="date" value={de} onChange={e => setDe(e.target.value)}
+              className="rounded-md border border-nex-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
+            <span className="text-xs text-nex-gray-400">até</span>
+            <input type="date" value={ate} onChange={e => setAte(e.target.value)}
+              className="rounded-md border border-nex-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
+            <button onClick={() => carregar()}
+              className="px-3 py-1 rounded-md bg-nex-black text-white text-xs font-heading font-medium hover:bg-nex-gray-700 transition-colors">
+              Aplicar
+            </button>
+            <button onClick={() => carregar()} className="flex items-center gap-1 text-xs text-nex-gray-400 hover:text-nex-black transition-colors">
+              <RefreshCw className={cn('w-3 h-3', carregando && 'animate-spin')} /> Atualizar
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           {carregando ? (
