@@ -9,9 +9,7 @@ function token() {
 async function get<T>(path: string, params: Record<string, string | number> = {}): Promise<T> {
   const qs = new URLSearchParams({ token: token() })
   Object.entries(params).forEach(([k, v]) => qs.set(k, String(v)))
-  const res = await fetch(`${BASE}${path}?${qs.toString()}`, {
-    next: { revalidate: 120 }, // cache 2 min
-  })
+  const res = await fetch(`${BASE}${path}?${qs.toString()}`, { cache: 'no-store' })
   if (!res.ok) throw new Error(`RD CRM ${path} → ${res.status} ${res.statusText}`)
   return res.json() as Promise<T>
 }
@@ -43,7 +41,7 @@ export interface RDDeal {
 
 interface FunnelsResponse { deal_pipelines: RDFunnel[] }
 interface StagesResponse  { deal_pipeline_stages: RDStage[] }
-interface DealsResponse   { deals: RDDeal[]; total: number; next_page?: number }
+interface DealsResponse   { deals: RDDeal[]; total: number }
 
 export async function listFunnels(): Promise<RDFunnel[]> {
   const data = await get<FunnelsResponse>('/deal_pipelines')
@@ -57,18 +55,21 @@ export async function listStages(funnelId: string): Promise<RDStage[]> {
 
 /** Busca TODAS as negociações de um funil (itera páginas automaticamente). */
 export async function listAllDeals(funnelId: string): Promise<RDDeal[]> {
+  const LIMIT = 200
   const all: RDDeal[] = []
   let page = 1
   while (true) {
     const data = await get<DealsResponse>('/deals', {
       deal_pipeline_id: funnelId,
       page,
-      limit: 200,
+      limit: LIMIT,
     })
-    all.push(...(data.deals ?? []))
-    if (!data.next_page || data.deals?.length === 0) break
-    page = data.next_page
-    if (page > 50) break // safety cap
+    const batch = data.deals ?? []
+    all.push(...batch)
+    // Para quando não há mais resultados ou atingiu o total declarado
+    if (batch.length < LIMIT || all.length >= (data.total ?? 0)) break
+    page++
+    if (page > 50) break // safety cap: máx 10.000 negociações por funil
   }
   return all
 }
