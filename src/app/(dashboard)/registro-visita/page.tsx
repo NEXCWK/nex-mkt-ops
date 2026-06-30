@@ -41,6 +41,7 @@ const PRODUTOS = [
   'Nex House — Atrium',
   'Nex House — Gallery',
   'Sala de Reunião',
+  'Gravações e Fotografias',
   'Todos os produtos',
 ]
 
