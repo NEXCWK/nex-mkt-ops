@@ -127,5 +127,37 @@ create policy "Service role full access" on espacos for all using (true);
 create policy "Service role full access" on leads_influenciadores for all using (true);
 create policy "Service role full access" on parceiros for all using (true);
 
+-- Registro de reservas de salas de reunião
+create table if not exists registro_reservas (
+  id uuid primary key default uuid_generate_v4(),
+  tipo text check (tipo in ('primeira_vez', 'quatro_horas')) not null,
+  nome_cliente text not null,
+  data date not null,
+  horario text not null,
+  nome_sala text not null,
+  quantidade_pessoas integer,
+  observacoes text,
+  unidade text check (unidade in ('nex_house', 'francisco_rocha')) not null,
+  operador_email text not null,
+  created_at timestamptz default now()
+);
+
+-- Registro de visitas de leads
+create table if not exists registro_visitas (
+  id uuid primary key default uuid_generate_v4(),
+  nome_lead text not null,
+  data date not null,
+  hora text not null,
+  produto_interesse text not null,
+  compareceu boolean default false,
+  operador_email text not null,
+  created_at timestamptz default now()
+);
+
+alter table registro_reservas enable row level security;
+alter table registro_visitas enable row level security;
+create policy "Service role full access" on registro_reservas for all using (true);
+create policy "Service role full access" on registro_visitas for all using (true);
+
 -- Bucket de storage para templates
 insert into storage.buckets (id, name, public) values ('templates', 'templates', false) on conflict do nothing;
