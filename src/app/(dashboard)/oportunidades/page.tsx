@@ -28,6 +28,7 @@ interface FunnelData {
 interface ApiResponse {
   funnels: FunnelData[]; totalGeral: number; totalCloser: number
   de?: string; ate?: string; error?: string
+  diagnostico?: unknown
 }
 
 // ── Helpers de data ───────────────────────────────────────────────────────────
@@ -328,16 +329,28 @@ export default function OportunidadesPage() {
           </div>
         </div>
       ) : !loading && data && data.funnels?.length === 0 ? (
-        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-6 py-4">
-          <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-amber-700">Nenhum funil encontrado no RD CRM</p>
-            <p className="text-xs text-amber-600 mt-0.5">
-              O servidor MCP não retornou funis. Acesse{' '}
-              <a href="/api/rdcrm-probe" target="_blank" className="underline font-semibold">/api/rdcrm-probe</a>
-              {' '}para ver as tools disponíveis e diagnóstico detalhado.
-            </p>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-6 py-4">
+            <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-amber-700">Nenhum funil encontrado no RD CRM</p>
+              <p className="text-xs text-amber-600 mt-0.5">
+                O servidor MCP não retornou funis. Diagnóstico bruto abaixo (envie um print para suporte técnico).
+              </p>
+            </div>
           </div>
+          {data.diagnostico != null && (
+            <div className="bg-nex-gray-900 rounded-xl overflow-hidden border border-nex-gray-200">
+              <div className="px-4 py-2 border-b border-nex-gray-700 flex items-center gap-2">
+                <span className="text-[10px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400">
+                  Diagnóstico MCP · trace bruto
+                </span>
+              </div>
+              <pre className="text-[11px] leading-relaxed text-green-300 font-mono p-4 overflow-x-auto max-h-[520px] whitespace-pre-wrap break-all">
+                {JSON.stringify(data.diagnostico, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
       ) : (
         <>

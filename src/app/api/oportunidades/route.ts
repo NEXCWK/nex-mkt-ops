@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { listFunnelsMCP, listStagesMCP, listAllDealsMCP, type RDDeal, type RDStage, type RDFunnel } from '@/lib/rdcrm-mcp'
+import { listFunnelsMCP, listStagesMCP, listAllDealsMCP, probeMCP, type RDDeal, type RDStage, type RDFunnel } from '@/lib/rdcrm-mcp'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -53,8 +53,14 @@ export async function GET(req: NextRequest) {
     const funnels: RDFunnel[] = await listFunnelsMCP()
     console.log(`[oportunidades] ${funnels.length} funis encontrados via MCP`)
 
+    // Sem funis: devolve o diagnóstico bruto do MCP junto, para depuração na própria tela
     if (funnels.length === 0) {
-      console.warn('[oportunidades] MCP retornou 0 funis — verifique /api/rdcrm-probe para diagnóstico')
+      console.warn('[oportunidades] MCP retornou 0 funis — anexando diagnóstico')
+      const diag = await probeMCP().catch(e => ({ error: e instanceof Error ? e.message : String(e) }))
+      return NextResponse.json({
+        funnels: [], totalGeral: 0, totalCloser: 0, de, ate,
+        diagnostico: diag,
+      })
     }
 
     const funnelData = await Promise.all(
