@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { listFunnelsMCP, listStagesMCP, listAllDealsMCP, probeMCP, type RDDeal, type RDStage, type RDFunnel } from '@/lib/rdcrm-mcp'
+import { listFunnelsMCP, listStagesMCP, listDealsMCP, probeMCP, type RDDeal, type RDStage, type RDFunnel } from '@/lib/rdcrm-mcp'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
+// Funis de Escritório Privativo: [FCO] Escritório Privativo e [CPE] Escritório Privativo
 function isEPFunnel(name: string) {
   const n = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
   return n.includes('escritorio privativo')
 }
 
+// Etapa "Closer | Deal" (ou variantes) nos funis EP
 function isCloserDealStage(name: string) {
   const n = name.trim().toLowerCase()
   return (
@@ -51,46 +53,41 @@ export async function GET(req: NextRequest) {
 
   try {
     const funnels: RDFunnel[] = await listFunnelsMCP()
-    console.log(`[oportunidades] ${funnels.length} funis encontrados via MCP`)
+    console.log(`[oportunidades] ${funnels.length} funis via MCP:`, funnels.map(f => f.name).join(' | '))
 
-    // Sem funis: devolve o diagnóstico bruto do MCP junto, para depuração na própria tela
     if (funnels.length === 0) {
-      console.warn('[oportunidades] MCP retornou 0 funis — anexando diagnóstico')
       const diag = await probeMCP().catch(e => ({ error: e instanceof Error ? e.message : String(e) }))
-      return NextResponse.json({
-        funnels: [], totalGeral: 0, totalCloser: 0, de, ate,
-        diagnostico: diag,
-      })
+      return NextResponse.json({ funnels: [], totalGeral: 0, totalCloser: 0, de, ate, diagnostico: diag })
     }
 
     const funnelData = await Promise.all(
       funnels.map(async (funnel) => {
-        const [stages, allDeals] = await Promise.all([
-          listStagesMCP(funnel._id),
-          listAllDealsMCP(funnel._id),
+        const [stages, rawDeals] = await Promise.all([
+          listStagesMCP(funnel.id),
+          listDealsMCP(funnel.id, de),   // RDQL já filtra created_at >= de
         ])
 
-        const deals = filterByPeriod(allDeals, de, ate)
+        const deals = filterByPeriod(rawDeals, de, ate)  // garante o limite superior (ate)
         const isEP  = isEPFunnel(funnel.name)
-        const stageMap = Object.fromEntries(stages.map((s: RDStage) => [s._id, s.name]))
+        const stageMap = Object.fromEntries(stages.map((s: RDStage) => [s.id, s.name]))
 
         const byStage: Record<string, number> = {}
-        for (const s of stages) byStage[s._id] = 0
+        for (const s of stages) byStage[s.id] = 0
         for (const d of deals) {
-          if (d.deal_stage_id in byStage) byStage[d.deal_stage_id]++
+          if (d.stage_id in byStage) byStage[d.stage_id]++
         }
 
         const closerStages    = stages.filter((s: RDStage) => isCloserDealStage(s.name))
-        const closerStageIds  = new Set(closerStages.map((s: RDStage) => s._id))
+        const closerStageIds  = new Set(closerStages.map((s: RDStage) => s.id))
         const closerStageName = closerStages[0]?.name ?? null
-        const closerDeals     = isEP ? deals.filter(d => closerStageIds.has(d.deal_stage_id)) : []
+        const closerDeals     = isEP ? deals.filter(d => closerStageIds.has(d.stage_id)) : []
 
         const sortedDeals = [...deals].sort(
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )
 
         return {
-          id: funnel._id,
+          id: funnel.id,
           name: funnel.name,
           isEP,
           total: deals.length,
@@ -98,22 +95,22 @@ export async function GET(req: NextRequest) {
           closerStageName,
           byStage: stages.map((s: RDStage) => ({
             stageName: s.name,
-            count: byStage[s._id] ?? 0,
+            count: byStage[s.id] ?? 0,
             isCloser: isCloserDealStage(s.name),
           })),
           byMonth: groupByMonth(deals),
           allDeals: sortedDeals.slice(0, 100).map(d => ({
-            id: d._id,
+            id: d.id,
             name: d.name,
-            stage: stageMap[d.deal_stage_id] ?? 'Desconhecido',
-            isCloser: closerStageIds.has(d.deal_stage_id),
+            stage: stageMap[d.stage_id] ?? 'Desconhecido',
+            isCloser: closerStageIds.has(d.stage_id),
             created_at: d.created_at,
-            win: d.win,
+            win: d.status === 'won' ? true : d.status === 'lost' ? false : null,
           })),
           closerDeals: closerDeals.slice(0, 100).map(d => ({
-            id: d._id,
+            id: d.id,
             name: d.name,
-            stage: stageMap[d.deal_stage_id] ?? '',
+            stage: stageMap[d.stage_id] ?? '',
             created_at: d.created_at,
           })),
         }
