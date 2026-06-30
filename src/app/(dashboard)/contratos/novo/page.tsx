@@ -258,7 +258,16 @@ const CAMPOS_TERMO_EVENTOS: Campo[] = [
   { nome: 'cpf_responsavel',      label: 'CPF do Responsável',            tipo: 'text',     obrigatorio: true },
   { nome: 'nome_cliente',         label: 'Razão Social da Empresa',       tipo: 'text',     obrigatorio: true },
   { nome: 'cnpj_cliente',         label: 'CNPJ da Empresa',               tipo: 'text',     obrigatorio: true },
-  { nome: 'data_evento',          label: 'Data do Evento',                tipo: 'date',     obrigatorio: true },
+  { nome: 'data_evento',          label: 'Data do Evento (preâmbulo)',     tipo: 'date',     obrigatorio: true,
+    ajuda: 'Usado no texto corrido. Ex: "durante o dia 17 de junho de 2026"' },
+  { nome: 'data_evento_exibicao', label: 'Data do Evento (exibição)',      tipo: 'text',     obrigatorio: true,
+    placeholder: 'ex: 17/06/2026', ajuda: 'Preenchida automaticamente ao informar a data acima' },
+  { nome: 'perfil_evento',        label: 'Perfil do Evento',              tipo: 'text',     obrigatorio: true, placeholder: 'ex: Palestra, Workshop' },
+  { nome: 'horario_evento',       label: 'Horário',                       tipo: 'text',     obrigatorio: true, placeholder: 'ex: 18:30 às 21:30hs' },
+  { nome: 'num_participantes',    label: 'Número de Participantes',       tipo: 'number',   obrigatorio: true },
+  { nome: 'formato_evento',       label: 'Formato',                       tipo: 'text',     obrigatorio: true, placeholder: 'ex: Plenária, U-shape' },
+  { nome: 'ambientes_adicionais', label: 'Ambientes Adicionais',          tipo: 'text',     obrigatorio: false },
+  { nome: 'obs_evento',           label: 'Observações',                   tipo: 'textarea', obrigatorio: false },
   { nome: 'descricao_pagamento',  label: 'Condição de Pagamento',         tipo: 'textarea', obrigatorio: true,
     placeholder: 'Ex: R$ 2.000,00 à vista, pagos em D+1 via PIX.' },
   { nome: 'valor_hora_adicional', label: 'Valor por Hora Adicional (R$)', tipo: 'text',     obrigatorio: true },
@@ -524,7 +533,7 @@ export default function NovoContratoPage() {
   const isComercial = tipoDoc.includes('_comercial')
   const isFiscal = tipoDoc.includes('_fiscal')
   const isEP = tipoDoc.startsWith('escritorio_privativo')
-  const hasDataEvento = ['termo_eventos_residentes', 'termo_diaria_reuniao'].includes(tipoDoc)
+  const hasDataEvento = ['termo_eventos', 'termo_eventos_residentes', 'termo_diaria_reuniao'].includes(tipoDoc)
 
   // Métricas de progresso
   const camposObrigatorios = campos.filter(c => c.obrigatorio && c.nome !== 'unidade_selector')

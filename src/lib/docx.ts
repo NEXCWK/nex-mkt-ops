@@ -26,6 +26,7 @@ export function formatDateAssinaturaLocal(iso: string): string {
 // Campos de data usados em texto corrido (preâmbulo) por tipo de documento:
 // recebem a forma por extenso em vez de dd/mm/aaaa.
 const CAMPOS_EXTENSO: Record<string, string[]> = {
+  termo_eventos: ['data_evento'],
   termo_eventos_residentes: ['data_evento'],
   termo_diaria_reuniao: ['data_evento'],
 }
