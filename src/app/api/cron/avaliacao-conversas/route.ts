@@ -29,8 +29,8 @@ export async function GET(req: NextRequest) {
   const apiErr = assertApiKey()
   if (apiErr) return NextResponse.json({ error: apiErr }, { status: 500 })
 
-  if (!process.env.RD_CONVERSAS_MCP_URL) {
-    return NextResponse.json({ error: 'RD_CONVERSAS_MCP_URL não configurada' }, { status: 500 })
+  if (!process.env.RD_CONVERSAS_TOKEN) {
+    return NextResponse.json({ error: 'RD_CONVERSAS_TOKEN não configurado' }, { status: 500 })
   }
 
   const supabase = createServerClient()
