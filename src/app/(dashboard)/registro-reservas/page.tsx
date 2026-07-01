@@ -6,7 +6,14 @@ import { cn } from '@/lib/utils'
 import { Send, Loader2, CalendarDays, Users, Clock, MapPin, SlidersHorizontal, RefreshCw } from 'lucide-react'
 
 type Unidade = 'francisco_rocha' | 'nex_house'
-type Tipo = 'primeira_vez' | 'quatro_horas'
+type Tipo = 'primeira_vez' | 'quatro_horas' | 'primeiro_uso_diaria' | 'primeiro_uso_access_pass'
+
+// Tipos que não exigem escolha de sala e têm unidade fixa
+const NO_SALA_TIPOS: Tipo[] = ['primeiro_uso_diaria', 'primeiro_uso_access_pass']
+const UNIDADE_FIXA: Partial<Record<Tipo, Unidade>> = {
+  primeiro_uso_diaria: 'francisco_rocha',
+  primeiro_uso_access_pass: 'nex_house',
+}
 
 interface Reserva {
   id: string
@@ -14,7 +21,7 @@ interface Reserva {
   nome_cliente: string
   data: string
   horario: string
-  nome_sala: string
+  nome_sala: string | null
   quantidade_pessoas: number | null
   observacoes: string | null
   unidade: Unidade
@@ -30,6 +37,8 @@ const UNIDADE_LABEL: Record<Unidade, string> = {
 const TIPO_LABEL: Record<Tipo, string> = {
   primeira_vez: 'Reunião — Primeira vez',
   quatro_horas: 'Reunião — 4 horas ou mais',
+  primeiro_uso_diaria: 'Primeiro Uso — Diária',
+  primeiro_uso_access_pass: 'Primeiro Uso — Access Pass',
 }
 
 const SALAS_FCO = [
@@ -37,7 +46,7 @@ const SALAS_FCO = [
   'Sala R2 - 6 posições',
   'Sala R3 - 12 posições',
   'Sala R4 - 4 posições',
-  'Sala C1 - 4 posições',
+  'Sala C1 - 3 posições',
   'Sala C2 - 6 posições',
 ]
 const SALAS_NH = [
@@ -57,20 +66,32 @@ function inicioMes() {
   return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10)
 }
 
+function introDoTipo(tipo: Tipo): string {
+  switch (tipo) {
+    case 'primeira_vez':
+      return 'Uma nova reserva de sala foi registrada para um cliente <strong>de primeira vez</strong>. Fique de olho para garantir uma ótima experiência!'
+    case 'quatro_horas':
+      return 'Uma nova reserva de sala foi registrada para uma sessão de <strong>4 horas ou mais</strong>. Atenção especial ao acolhimento!'
+    case 'primeiro_uso_diaria':
+      return 'Um novo registro de <strong>Primeiro Uso — Diária</strong> foi realizado. Fique de olho para garantir uma ótima experiência!'
+    case 'primeiro_uso_access_pass':
+      return 'Um novo registro de <strong>Primeiro Uso — Access Pass</strong> foi realizado. Fique de olho para garantir uma ótima experiência!'
+  }
+}
+
 function buildPreviewHtml(f: typeof EMPTY_FORM & { operador: string }) {
-  if (!f.nome_cliente || !f.data || !f.horario || !f.nome_sala || !f.unidade) return null
+  const precisaSala = !NO_SALA_TIPOS.includes(f.tipo)
+  if (!f.nome_cliente || !f.data || !f.horario || !f.unidade || (precisaSala && !f.nome_sala)) return null
   const dataFormatada = new Date(f.data + 'T12:00:00').toLocaleDateString('pt-BR', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   })
-  const tipoLabel = f.tipo === 'primeira_vez' ? 'Reunião — Primeira vez' : 'Reunião — 4 horas ou mais'
+  const tipoLabel = TIPO_LABEL[f.tipo]
   const unidadeLabel = UNIDADE_LABEL[f.unidade]
-  const intro = f.tipo === 'primeira_vez'
-    ? 'Uma nova reserva de sala foi registrada para um cliente <strong>de primeira vez</strong>. Fique de olho para garantir uma ótima experiência!'
-    : 'Uma nova reserva de sala foi registrada para uma sessão de <strong>4 horas ou mais</strong>. Atenção especial ao acolhimento!'
+  const intro = introDoTipo(f.tipo)
   const destinatarios = f.unidade === 'francisco_rocha'
     ? 'felipe@nex.work, lenise@nex.work, edmilson@nex.work, virginia@nex.work, marialuiza@nex.work'
     : 'felipe@nex.work, lenise@nex.work, altieres@nex.work, lorena@nex.work'
-  return { dataFormatada, tipoLabel, unidadeLabel, intro, destinatarios }
+  return { dataFormatada, tipoLabel, unidadeLabel, intro, destinatarios, precisaSala }
 }
 
 const EMPTY_FORM = {
@@ -117,14 +138,21 @@ export default function RegistroReservasPage() {
   useEffect(() => { carregar() }, [carregar])
 
   useEffect(() => {
-    setForm(prev => ({ ...prev, tipo: tab, nome_sala: '' }))
+    setForm(prev => ({
+      ...prev,
+      tipo: tab,
+      nome_sala: '',
+      unidade: UNIDADE_FIXA[tab] ?? prev.unidade,
+    }))
   }, [tab])
 
   const salas = form.unidade === 'nex_house' ? SALAS_NH : SALAS_FCO
+  const precisaSala = !NO_SALA_TIPOS.includes(tab)
+  const unidadeFixa = UNIDADE_FIXA[tab]
 
   async function registrar(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.nome_cliente || !form.data || !form.horario || !form.nome_sala) return
+    if (!form.nome_cliente || !form.data || !form.horario || (precisaSala && !form.nome_sala)) return
     setLoading(true)
     setErro(null)
     setSucesso(false)
@@ -168,8 +196,8 @@ export default function RegistroReservasPage() {
       />
 
       {/* Sub-tabs */}
-      <div className="flex gap-2 mb-5">
-        {(['primeira_vez', 'quatro_horas'] as Tipo[]).map(t => (
+      <div className="flex gap-2 mb-5 flex-wrap">
+        {(['primeira_vez', 'quatro_horas', 'primeiro_uso_diaria', 'primeiro_uso_access_pass'] as Tipo[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={cn('px-4 py-2 rounded-lg text-xs font-heading font-medium border transition-colors',
               tab === t ? 'border-nex-black bg-nex-gray-50 text-nex-black' : 'border-nex-gray-200 text-nex-gray-500 hover:bg-nex-gray-50')}>
@@ -192,11 +220,15 @@ export default function RegistroReservasPage() {
               </div>
               <div>
                 <label className="block text-xs font-heading text-nex-gray-500 mb-1">Unidade *</label>
-                <select required value={form.unidade} onChange={e => setForm(p => ({ ...p, unidade: e.target.value as Unidade, nome_sala: '' }))}
-                  className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400">
+                <select required value={form.unidade} disabled={!!unidadeFixa}
+                  onChange={e => setForm(p => ({ ...p, unidade: e.target.value as Unidade, nome_sala: '' }))}
+                  className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400 disabled:bg-nex-gray-50 disabled:text-nex-gray-500">
                   <option value="francisco_rocha">Francisco Rocha (FCO)</option>
                   <option value="nex_house">Nex House (NH)</option>
                 </select>
+                {unidadeFixa && (
+                  <p className="mt-1 text-[10px] text-nex-gray-400">Unidade fixa para {TIPO_LABEL[tab]}.</p>
+                )}
               </div>
             </div>
 
@@ -214,15 +246,17 @@ export default function RegistroReservasPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-heading text-nex-gray-500 mb-1">Sala *</label>
-                <select required value={form.nome_sala} onChange={e => setForm(p => ({ ...p, nome_sala: e.target.value }))}
-                  className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400">
-                  <option value="">Selecione…</option>
-                  {salas.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
+              {precisaSala && (
+                <div>
+                  <label className="block text-xs font-heading text-nex-gray-500 mb-1">Sala *</label>
+                  <select required value={form.nome_sala} onChange={e => setForm(p => ({ ...p, nome_sala: e.target.value }))}
+                    className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400">
+                    <option value="">Selecione…</option>
+                    {salas.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className={precisaSala ? '' : 'col-span-2'}>
                 <label className="block text-xs font-heading text-nex-gray-500 mb-1">Nº de Pessoas</label>
                 <input type="number" min={1} max={50} value={form.quantidade_pessoas} onChange={e => setForm(p => ({ ...p, quantidade_pessoas: e.target.value }))}
                   placeholder="Ex.: 4"
@@ -277,7 +311,7 @@ export default function RegistroReservasPage() {
                         ['Cliente', form.nome_cliente],
                         ['Data', preview.dataFormatada],
                         ['Horário', form.horario],
-                        ['Sala', form.nome_sala],
+                        ...(preview.precisaSala ? [['Sala', form.nome_sala]] : []),
                         ['Pessoas', form.quantidade_pessoas || '—'],
                         ['Unidade', preview.unidadeLabel],
                         ...(form.observacoes ? [['Observações', form.observacoes]] : []),
@@ -326,6 +360,8 @@ export default function RegistroReservasPage() {
               <option value="">Todos os tipos</option>
               <option value="primeira_vez">Primeira vez</option>
               <option value="quatro_horas">4 horas ou mais</option>
+              <option value="primeiro_uso_diaria">Primeiro Uso — Diária</option>
+              <option value="primeiro_uso_access_pass">Primeiro Uso — Access Pass</option>
             </select>
             <button onClick={carregar} className="flex items-center gap-1 text-xs text-nex-gray-400 hover:text-nex-black transition-colors">
               <RefreshCw className={cn('w-3 h-3', carregando && 'animate-spin')} />
@@ -378,12 +414,18 @@ export default function RegistroReservasPage() {
                       <Clock className="w-3 h-3 text-nex-gray-300" />{r.horario}
                     </td>
                     <td className="px-4 py-2.5 text-nex-gray-800 font-medium">{r.nome_cliente}</td>
-                    <td className="px-4 py-2.5 text-nex-gray-600">{r.nome_sala}</td>
+                    <td className="px-4 py-2.5 text-nex-gray-600">{r.nome_sala || '—'}</td>
                     <td className="px-4 py-2.5 text-nex-gray-600 text-center">{r.quantidade_pessoas ?? '—'}</td>
                     <td className="px-4 py-2.5">
-                      <span className={cn('inline-flex px-2 py-0.5 rounded-full text-[10px] font-heading font-semibold',
-                        r.tipo === 'primeira_vez' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700')}>
-                        {r.tipo === 'primeira_vez' ? '1ª vez' : '4h+'}
+                      <span className={cn('inline-flex px-2 py-0.5 rounded-full text-[10px] font-heading font-semibold whitespace-nowrap',
+                        r.tipo === 'primeira_vez' ? 'bg-blue-50 text-blue-700'
+                        : r.tipo === 'quatro_horas' ? 'bg-amber-50 text-amber-700'
+                        : r.tipo === 'primeiro_uso_diaria' ? 'bg-green-50 text-green-700'
+                        : 'bg-purple-50 text-purple-700')}>
+                        {r.tipo === 'primeira_vez' ? '1ª vez'
+                          : r.tipo === 'quatro_horas' ? '4h+'
+                          : r.tipo === 'primeiro_uso_diaria' ? '1º Uso · Diária'
+                          : '1º Uso · Access Pass'}
                       </span>
                     </td>
                     <td className="px-4 py-2.5 text-nex-gray-600 whitespace-nowrap">{UNIDADE_LABEL[r.unidade]}</td>

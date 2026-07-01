@@ -19,6 +19,29 @@ const UNIDADE_LABEL: Record<string, string> = {
 const TIPO_LABEL: Record<string, string> = {
   primeira_vez: 'Reunião — Primeira vez',
   quatro_horas: 'Reunião — 4 horas ou mais',
+  primeiro_uso_diaria: 'Primeiro Uso — Diária',
+  primeiro_uso_access_pass: 'Primeiro Uso — Access Pass',
+}
+
+// Tipos sem sala e com unidade fixa
+const NO_SALA_TIPOS = ['primeiro_uso_diaria', 'primeiro_uso_access_pass']
+const UNIDADE_FIXA: Record<string, string> = {
+  primeiro_uso_diaria: 'francisco_rocha',
+  primeiro_uso_access_pass: 'nex_house',
+}
+
+const ASSUNTO: Record<string, string> = {
+  primeira_vez: 'Time Comercial > Alerta de 1o Uso de Cliente',
+  quatro_horas: 'Time Comercial > Alerta Reunião 4h ou mais',
+  primeiro_uso_diaria: 'Time Comercial > Alerta de 1o Uso — Diária',
+  primeiro_uso_access_pass: 'Time Comercial > Alerta de 1o Uso — Access Pass',
+}
+
+const INTRO: Record<string, string> = {
+  primeira_vez: 'Uma nova reserva de sala foi registrada para um cliente <strong>de primeira vez</strong>. Fique de olho para garantir uma ótima experiência!',
+  quatro_horas: 'Uma nova reserva de sala foi registrada para uma sessão de <strong>4 horas ou mais</strong>. Atenção especial ao acolhimento!',
+  primeiro_uso_diaria: 'Um novo registro de <strong>Primeiro Uso — Diária</strong> foi realizado. Fique de olho para garantir uma ótima experiência!',
+  primeiro_uso_access_pass: 'Um novo registro de <strong>Primeiro Uso — Access Pass</strong> foi realizado. Fique de olho para garantir uma ótima experiência!',
 }
 
 function buildEmailHtml(dados: {
@@ -26,7 +49,7 @@ function buildEmailHtml(dados: {
   nome_cliente: string
   data: string
   horario: string
-  nome_sala: string
+  nome_sala: string | null
   quantidade_pessoas: number | null
   observacoes: string | null
   unidade: string
@@ -38,13 +61,8 @@ function buildEmailHtml(dados: {
   const tipoLabel = TIPO_LABEL[dados.tipo] ?? dados.tipo
   const unidadeLabel = UNIDADE_LABEL[dados.unidade] ?? dados.unidade
 
-  const assunto = dados.tipo === 'primeira_vez'
-    ? 'Time Comercial > Alerta de 1o Uso de Cliente'
-    : 'Time Comercial > Alerta Reunião 4h ou mais'
-
-  const intro = dados.tipo === 'primeira_vez'
-    ? 'Uma nova reserva de sala foi registrada para um cliente <strong>de primeira vez</strong>. Fique de olho para garantir uma ótima experiência!'
-    : 'Uma nova reserva de sala foi registrada para uma sessão de <strong>4 horas ou mais</strong>. Atenção especial ao acolhimento!'
+  const assunto = ASSUNTO[dados.tipo] ?? 'Time Comercial > Alerta de Registro'
+  const intro = INTRO[dados.tipo] ?? INTRO.primeira_vez
 
   const corpo = `
 <!DOCTYPE html>
@@ -80,10 +98,11 @@ function buildEmailHtml(dados: {
                 <td style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;border-top:1px solid #f0f0f0;">Horário</td>
                 <td style="padding:10px 16px;font-size:14px;color:#0a0a0a;border-top:1px solid #f0f0f0;">${dados.horario}</td>
               </tr>
+              ${dados.nome_sala ? `
               <tr style="background:#f9f9f9;">
                 <td style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;border-top:1px solid #f0f0f0;">Sala</td>
                 <td style="padding:10px 16px;font-size:14px;color:#0a0a0a;border-top:1px solid #f0f0f0;">${dados.nome_sala}</td>
-              </tr>
+              </tr>` : ''}
               <tr>
                 <td style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;border-top:1px solid #f0f0f0;">Pessoas</td>
                 <td style="padding:10px 16px;font-size:14px;color:#0a0a0a;border-top:1px solid #f0f0f0;">${dados.quantidade_pessoas ?? '—'}</td>
@@ -120,16 +139,21 @@ export async function POST(req: NextRequest) {
   if (!session.accessToken) return NextResponse.json({ error: 'Token Gmail não disponível. Faça login novamente.' }, { status: 401 })
 
   const body = await req.json()
-  const { tipo, nome_cliente, data, horario, nome_sala, quantidade_pessoas, observacoes, unidade } = body
+  const { tipo, nome_cliente, data, horario, nome_sala, quantidade_pessoas, observacoes } = body
 
-  if (!tipo || !nome_cliente || !data || !horario || !nome_sala || !unidade) {
+  const semSala = NO_SALA_TIPOS.includes(tipo)
+  // Unidade é fixa nos tipos de Primeiro Uso; caso contrário vem do formulário
+  const unidade = UNIDADE_FIXA[tipo] ?? body.unidade
+
+  if (!tipo || !nome_cliente || !data || !horario || !unidade || (!semSala && !nome_sala)) {
     return NextResponse.json({ error: 'Campos obrigatórios ausentes' }, { status: 400 })
   }
 
   const supabase = createServerClient()
 
   const { data: registro, error } = await supabase.from('registro_reservas').insert({
-    tipo, nome_cliente, data, horario, nome_sala,
+    tipo, nome_cliente, data, horario,
+    nome_sala: semSala ? null : nome_sala,
     quantidade_pessoas: quantidade_pessoas || null,
     observacoes: observacoes || null,
     unidade,
@@ -140,7 +164,8 @@ export async function POST(req: NextRequest) {
 
   const destinatarios = DESTINATARIOS[unidade] ?? []
   const { assunto, corpo } = buildEmailHtml({
-    tipo, nome_cliente, data, horario, nome_sala,
+    tipo, nome_cliente, data, horario,
+    nome_sala: semSala ? null : nome_sala,
     quantidade_pessoas: quantidade_pessoas || null,
     observacoes: observacoes || null,
     unidade,
