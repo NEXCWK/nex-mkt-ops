@@ -57,9 +57,10 @@ export async function apiGet(path: string, params: Record<string, string | numbe
   Object.entries(params).forEach(([k, v]) => qs.set(k, String(v)))
   const url = `${base}${path}${qs.toString() ? `?${qs}` : ''}`
 
+  // Autenticação confirmada: Authorization: Bearer. Mantemos fallback por segurança.
   const styles: AuthStyle[] = _authOk
     ? [_authOk]
-    : ['x-access-token', 'access-token', 'bearer', 'token', 'x-token', 'authorization-token']
+    : ['bearer', 'x-access-token', 'access-token', 'token', 'x-token', 'authorization-token']
   let last: RestCall = { url, authStyle: 'none', status: 0, contentType: '', body: '' }
 
   for (const style of styles) {
@@ -72,9 +73,12 @@ export async function apiGet(path: string, params: Record<string, string | numbe
     const text = await res.text()
     last = { url, authStyle: style, status: res.status, contentType, body: text.slice(0, 3000) }
 
-    if (res.status === 401 || res.status === 403) continue // tenta o próximo estilo de auth
+    // "No token provided" = formato de auth errado → tenta o próximo estilo.
+    // Qualquer outra resposta (inclusive 403 de plano) significa que o token foi aceito.
+    const semToken = res.status === 401 || /no token provided/i.test(text)
+    if (semToken) continue
 
-    if (res.ok) _authOk = style
+    _authOk = style // memoriza o estilo que o servidor aceitou
     let json: unknown = null
     try { json = JSON.parse(text) } catch { /* não-JSON */ }
     return { ok: res.ok, status: res.status, json, raw: last }
