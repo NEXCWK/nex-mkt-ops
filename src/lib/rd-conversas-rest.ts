@@ -83,22 +83,55 @@ export async function apiGet(path: string, params: Record<string, string | numbe
   return { ok: false, status: last.status, json: null, raw: last }
 }
 
-/** Probe: chama /messages/history com uma janela pequena e devolve a resposta crua. */
-export async function probeConversasRest(de: string, ate: string) {
-  const tentativas: RestCall[] = []
-  // testa nomes de parâmetros de data mais comuns
-  const paramVariants: Record<string, string>[] = [
-    { start: de, end: ate },
-    { startDate: de, endDate: ate },
-    { start_date: de, end_date: ate },
-    { from: de, to: ate },
-    { initialDate: de, finalDate: ate },
-    {},
+/**
+ * Probe abrangente de AUTENTICAÇÃO: testa o token em vários headers E na query
+ * string, tudo contra /messages/history?page=1&limit=1, e reporta o status de
+ * cada combinação. Revela em uma única chamada onde o token deve ir.
+ */
+export async function probeConversasRest(_de: string, _ate: string) {
+  const base = getConversasApiBase()
+  const token = getConversasToken()
+  const path = '/messages/history'
+
+  const headerCombos: { rotulo: string; headers: Record<string, string> }[] = [
+    { rotulo: 'header:x-access-token', headers: { 'x-access-token': token } },
+    { rotulo: 'header:access-token', headers: { 'access-token': token } },
+    { rotulo: 'header:Authorization Bearer', headers: { Authorization: `Bearer ${token}` } },
+    { rotulo: 'header:Authorization raw', headers: { Authorization: token } },
+    { rotulo: 'header:token', headers: { token } },
+    { rotulo: 'header:x-token', headers: { 'x-token': token } },
+    { rotulo: 'header:api-token', headers: { 'api-token': token } },
+    { rotulo: 'header:apitoken', headers: { apitoken: token } },
+    { rotulo: 'header:x-api-key', headers: { 'x-api-key': token } },
   ]
-  for (const variant of paramVariants) {
-    const { raw, ok } = await apiGet('/messages/history', { ...variant, page: 1, limit: 20 })
-    tentativas.push(raw)
-    if (ok) break
+
+  const queryCombos: { rotulo: string; qs: string }[] = [
+    { rotulo: 'query:access-token', qs: `access-token=${encodeURIComponent(token)}` },
+    { rotulo: 'query:token', qs: `token=${encodeURIComponent(token)}` },
+    { rotulo: 'query:access_token', qs: `access_token=${encodeURIComponent(token)}` },
+    { rotulo: 'query:apitoken', qs: `apitoken=${encodeURIComponent(token)}` },
+  ]
+
+  const resultados: { combo: string; status: number; body: string }[] = []
+
+  async function testar(rotulo: string, url: string, headers: Record<string, string>) {
+    try {
+      const res = await fetch(url, { method: 'GET', headers: { Accept: 'application/json', ...headers }, cache: 'no-store' })
+      const body = (await res.text()).slice(0, 400)
+      resultados.push({ combo: rotulo, status: res.status, body })
+    } catch (e) {
+      resultados.push({ combo: rotulo, status: 0, body: e instanceof Error ? e.message : 'erro' })
+    }
   }
-  return { base: getConversasApiBase(), authDetectado: _authOk, tentativas }
+
+  for (const c of headerCombos) {
+    await testar(c.rotulo, `${base}${path}?page=1&limit=1`, c.headers)
+  }
+  for (const c of queryCombos) {
+    await testar(c.rotulo, `${base}${path}?page=1&limit=1&${c.qs}`, {})
+  }
+
+  const vencedor = resultados.find(r => r.status !== 401 && r.status !== 403 && r.status !== 0)
+
+  return { base, vencedor: vencedor?.combo ?? null, resultados }
 }
