@@ -202,3 +202,39 @@ drop policy if exists "Service role full access" on avaliacoes_lotes;
 drop policy if exists "Service role full access" on avaliacoes_conversas;
 create policy "Service role full access" on avaliacoes_lotes for all using (true);
 create policy "Service role full access" on avaliacoes_conversas for all using (true);
+
+-- Modelos de referência para o Criador de LP e o Criador de Criativos (HTML/CSS/JS enviados pelo time)
+create table if not exists modelos_referencia (
+  id uuid primary key default uuid_generate_v4(),
+  contexto text check (contexto in ('lp', 'criativo')) not null,
+  nome text not null,
+  html text,
+  css text,
+  js text,
+  operador_email text not null,
+  created_at timestamptz default now()
+);
+
+-- Repositório/histórico de LPs e criativos escolhidos pelo usuário entre as opções geradas
+create table if not exists criacoes_historico (
+  id uuid primary key default uuid_generate_v4(),
+  contexto text check (contexto in ('lp', 'criativo')) not null,
+  produto text,
+  vigencia text,
+  desconto text,
+  titulo text,
+  descricao text,
+  conteudo jsonb not null,
+  operador_email text not null,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_modelos_referencia_contexto on modelos_referencia(contexto);
+create index if not exists idx_criacoes_historico_contexto on criacoes_historico(contexto);
+
+alter table modelos_referencia enable row level security;
+alter table criacoes_historico enable row level security;
+drop policy if exists "Service role full access" on modelos_referencia;
+drop policy if exists "Service role full access" on criacoes_historico;
+create policy "Service role full access" on modelos_referencia for all using (true);
+create policy "Service role full access" on criacoes_historico for all using (true);
