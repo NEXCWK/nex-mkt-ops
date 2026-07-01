@@ -27,15 +27,20 @@ export interface RestCall {
   body: string
 }
 
-// Estilos de autenticação a testar (o que funcionar é memorizado)
-type AuthStyle = 'bearer' | 'access-token' | 'token'
+// Estilos de autenticação a testar (o que funcionar é memorizado).
+// 'x-access-token' é o mais provável: a resposta {auth:false,"No token provided."}
+// é a assinatura do middleware JWT em Node que lê req.headers['x-access-token'].
+type AuthStyle = 'x-access-token' | 'access-token' | 'bearer' | 'token' | 'x-token' | 'authorization-token'
 let _authOk: AuthStyle | null = null
 
 function authHeaders(style: AuthStyle, token: string): Record<string, string> {
   switch (style) {
-    case 'bearer': return { Authorization: `Bearer ${token}` }
+    case 'x-access-token': return { 'x-access-token': token }
     case 'access-token': return { 'access-token': token }
-    case 'token': return { Authorization: token }
+    case 'bearer': return { Authorization: `Bearer ${token}` }
+    case 'token': return { token }
+    case 'x-token': return { 'x-token': token }
+    case 'authorization-token': return { Authorization: token }
   }
 }
 
@@ -52,7 +57,9 @@ export async function apiGet(path: string, params: Record<string, string | numbe
   Object.entries(params).forEach(([k, v]) => qs.set(k, String(v)))
   const url = `${base}${path}${qs.toString() ? `?${qs}` : ''}`
 
-  const styles: AuthStyle[] = _authOk ? [_authOk] : ['bearer', 'access-token', 'token']
+  const styles: AuthStyle[] = _authOk
+    ? [_authOk]
+    : ['x-access-token', 'access-token', 'bearer', 'token', 'x-token', 'authorization-token']
   let last: RestCall = { url, authStyle: 'none', status: 0, contentType: '', body: '' }
 
   for (const style of styles) {
