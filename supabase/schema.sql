@@ -238,3 +238,22 @@ drop policy if exists "Service role full access" on modelos_referencia;
 drop policy if exists "Service role full access" on criacoes_historico;
 create policy "Service role full access" on modelos_referencia for all using (true);
 create policy "Service role full access" on criacoes_historico for all using (true);
+
+-- Log das execuções automáticas (cron) de exportação + avaliação do RD Conversas
+create table if not exists avaliacao_cron_log (
+  id uuid primary key default uuid_generate_v4(),
+  tipo text default 'atendimento',
+  janela_de timestamptz,
+  janela_ate timestamptz,
+  total_conversas integer default 0,
+  lote_id uuid,
+  status text,       -- ok | vazio | erro
+  detalhe text,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_avaliacao_cron_log_created on avaliacao_cron_log(created_at desc);
+
+alter table avaliacao_cron_log enable row level security;
+drop policy if exists "Service role full access" on avaliacao_cron_log;
+create policy "Service role full access" on avaliacao_cron_log for all using (true);

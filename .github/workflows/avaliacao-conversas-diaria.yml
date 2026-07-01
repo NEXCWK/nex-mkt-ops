@@ -1,0 +1,27 @@
+name: Avaliação diária RD Conversas
+
+# Dispara todo dia às 23:00 UTC = 20:00 BRT (Brasil não usa horário de verão desde 2019).
+# O endpoint calcula a janela: da última execução bem-sucedida até agora (sem lacunas).
+on:
+  schedule:
+    - cron: '0 23 * * *'
+  workflow_dispatch: {} # permite disparar manualmente pela aba Actions
+
+jobs:
+  exportar-avaliar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar endpoint de exportação + avaliação
+        run: |
+          echo "Disparando avaliação diária do RD Conversas..."
+          code=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
+            --max-time 290 \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_BASE_URL }}/api/cron/avaliacao-conversas")
+          echo "HTTP $code"
+          cat /tmp/resp.json
+          echo ""
+          if [ "$code" != "200" ]; then
+            echo "Falha na execução (HTTP $code)"
+            exit 1
+          fi
