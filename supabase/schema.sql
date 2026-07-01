@@ -164,3 +164,41 @@ create policy "Service role full access" on registro_visitas for all using (true
 
 -- Bucket de storage para templates
 insert into storage.buckets (id, name, public) values ('templates', 'templates', false) on conflict do nothing;
+
+-- Avaliação de Atendimentos / Telefonemas: lotes importados (PDF, CSV, Excel ou texto colado)
+create table if not exists avaliacoes_lotes (
+  id uuid primary key default uuid_generate_v4(),
+  tipo text check (tipo in ('atendimento', 'telefonema')) not null,
+  nome_arquivo text,
+  total_conversas integer default 0,
+  nota_media numeric,
+  operador_email text not null,
+  created_at timestamptz default now()
+);
+
+-- Conversas/atendimentos individuais extraídos de cada lote, já atribuídos ao atendente
+create table if not exists avaliacoes_conversas (
+  id uuid primary key default uuid_generate_v4(),
+  lote_id uuid references avaliacoes_lotes(id) on delete cascade,
+  tipo text check (tipo in ('atendimento', 'telefonema')) not null,
+  atendente text,
+  data date,
+  nota numeric,
+  resumo text,
+  kpis jsonb,
+  pontos_atencao jsonb,
+  palavras_chave jsonb,
+  trecho text,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_avaliacoes_conversas_lote on avaliacoes_conversas(lote_id);
+create index if not exists idx_avaliacoes_conversas_atendente on avaliacoes_conversas(atendente);
+create index if not exists idx_avaliacoes_conversas_tipo_data on avaliacoes_conversas(tipo, data);
+
+alter table avaliacoes_lotes enable row level security;
+alter table avaliacoes_conversas enable row level security;
+drop policy if exists "Service role full access" on avaliacoes_lotes;
+drop policy if exists "Service role full access" on avaliacoes_conversas;
+create policy "Service role full access" on avaliacoes_lotes for all using (true);
+create policy "Service role full access" on avaliacoes_conversas for all using (true);
