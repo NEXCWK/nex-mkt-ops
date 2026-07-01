@@ -4,11 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SDR_KB_SEED } from '@/lib/sdr-kb-seed'
 import { cn } from '@/lib/utils'
-import { Send, Download, RotateCcw, Loader2, BookOpen } from 'lucide-react'
+import { Send, Download, RotateCcw, Loader2, BookOpen, Sparkles } from 'lucide-react'
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 
 const STORAGE_KEY = 'sdr-kb-md'
+const STORAGE_KEY_RESUMO = 'sdr-kb-resumo'
 
 export default function BaseConhecimentoPage() {
   const [markdown, setMarkdown] = useState(SDR_KB_SEED)
@@ -18,10 +19,38 @@ export default function BaseConhecimentoPage() {
   const [erro, setErro] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
+  const [painel, setPainel] = useState<'markdown' | 'resumo'>('markdown')
+  const [resumo, setResumo] = useState('')
+  const [gerandoResumo, setGerandoResumo] = useState(false)
+  const [erroResumo, setErroResumo] = useState<string | null>(null)
+
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
     if (saved) setMarkdown(saved)
+    const savedResumo = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_RESUMO) : null
+    if (savedResumo) setResumo(savedResumo)
   }, [])
+
+  async function gerarResumo() {
+    setGerandoResumo(true)
+    setErroResumo(null)
+    try {
+      const res = await fetch('/api/base-conhecimento/resumo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markdown }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`)
+      setResumo(json.resumo ?? '')
+      try { localStorage.setItem(STORAGE_KEY_RESUMO, json.resumo ?? '') } catch { /* ignore */ }
+      setPainel('resumo')
+    } catch (e) {
+      setErroResumo(e instanceof Error ? e.message : 'Falha ao gerar resumo')
+    } finally {
+      setGerandoResumo(false)
+    }
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -80,6 +109,11 @@ export default function BaseConhecimentoPage() {
         description="Edite a base de conhecimento do SDR via chat e baixe o arquivo .md atualizado."
         actions={
           <div className="flex items-center gap-3">
+            <button onClick={gerarResumo} disabled={gerandoResumo}
+              className="flex items-center gap-1.5 text-xs text-nex-gray-500 hover:text-nex-black transition-colors disabled:opacity-40">
+              {gerandoResumo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              Gerar Resumo
+            </button>
             <button onClick={resetar} className="flex items-center gap-1.5 text-xs text-nex-gray-400 hover:text-nex-black transition-colors">
               <RotateCcw className="w-3.5 h-3.5" /> Restaurar padrão
             </button>
@@ -136,17 +170,41 @@ export default function BaseConhecimentoPage() {
           </div>
         </div>
 
-        {/* Markdown atual */}
+        {/* Markdown / Resumo */}
         <div className="flex flex-col bg-white border border-nex-gray-200 rounded-xl overflow-hidden min-h-0">
-          <div className="border-b border-nex-gray-100 px-4 py-2 flex items-center justify-between">
-            <span className="text-xs font-heading font-semibold uppercase tracking-wide text-nex-gray-400">base-conhecimento-sdr.md</span>
+          <div className="border-b border-nex-gray-100 px-4 py-2 flex items-center gap-4">
+            <button onClick={() => setPainel('markdown')}
+              className={cn('text-xs font-heading font-semibold uppercase tracking-wide pb-1 border-b-2 transition-colors',
+                painel === 'markdown' ? 'text-nex-black border-nex-black' : 'text-nex-gray-400 border-transparent hover:text-nex-black')}>
+              base-conhecimento-sdr.md
+            </button>
+            <button onClick={() => setPainel('resumo')}
+              className={cn('text-xs font-heading font-semibold uppercase tracking-wide pb-1 border-b-2 transition-colors',
+                painel === 'resumo' ? 'text-nex-black border-nex-black' : 'text-nex-gray-400 border-transparent hover:text-nex-black')}>
+              Resumo do Script
+            </button>
           </div>
-          <textarea
-            value={markdown}
-            onChange={e => persistir(e.target.value)}
-            className="flex-1 resize-none p-4 text-[12px] font-mono leading-relaxed text-nex-gray-700 focus:outline-none"
-            spellCheck={false}
-          />
+          {painel === 'markdown' ? (
+            <textarea
+              value={markdown}
+              onChange={e => persistir(e.target.value)}
+              className="flex-1 resize-none p-4 text-[12px] font-mono leading-relaxed text-nex-gray-700 focus:outline-none"
+              spellCheck={false}
+            />
+          ) : (
+            <div className="flex-1 overflow-y-auto p-5">
+              {erroResumo && <p className="text-xs text-red-600 mb-3">{erroResumo}</p>}
+              {resumo ? (
+                <pre className="whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-nex-gray-800">{resumo}</pre>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center gap-2 text-center px-6">
+                  <p className="text-sm text-nex-gray-400 max-w-xs">
+                    Clique em &quot;Gerar Resumo&quot; para criar um resumo executivo dos principais pontos do script.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,6 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk'
 
 export const CLAUDE_MODEL = 'claude-opus-4-8'
+/** Modelo mais rápido/barato — usado em tarefas simples (ex.: resumos) para economizar tokens. */
+export const CLAUDE_HAIKU_MODEL = 'claude-haiku-4-5-20251001'
 
 /** Cliente Anthropic — lê ANTHROPIC_API_KEY das variáveis de ambiente (Railway). */
 export function getAnthropic(): Anthropic {
@@ -42,6 +44,26 @@ export async function askClaudeJSON<T = unknown>(opts: {
     .join('')
 
   return parseJSON<T>(text)
+}
+
+/** Chama o modelo Haiku (mais barato) pedindo texto simples, sem JSON. */
+export async function askHaikuText(opts: {
+  system: string
+  user: string
+  maxTokens?: number
+}): Promise<string> {
+  const client = getAnthropic()
+  const res = await client.messages.create({
+    model: CLAUDE_HAIKU_MODEL,
+    max_tokens: opts.maxTokens ?? 1500,
+    system: opts.system,
+    messages: [{ role: 'user', content: opts.user }],
+  })
+  return res.content
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    .map(b => b.text)
+    .join('')
+    .trim()
 }
 
 export function parseJSON<T>(raw: string): T {
