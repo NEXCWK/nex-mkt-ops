@@ -34,6 +34,12 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const modelo = (body.modelo ?? 'lsl') as ModeloLP
   const { produto, vigencia, desconto, instrucoes, heroImage, rdEmbed, videoEmbed } = body
+  // Campos opcionais que o usuário pode informar manualmente (sobrescrevem a IA)
+  const ov = (body.overrides ?? {}) as {
+    heroTitle?: string; heroSubtitle?: string; heroBody?: string
+    benefitsTitle?: string
+    benefits?: { title?: string; description?: string }[]
+  }
 
   if (!['lsl', 'vsl', 'squeeze'].includes(modelo)) {
     return NextResponse.json({ error: 'Modelo inválido' }, { status: 400 })
@@ -63,11 +69,21 @@ Responda em JSON:
   ]
 }`
 
+  const overridesBrief = [
+    ov.heroTitle ? `Título do hero (use EXATAMENTE): ${ov.heroTitle}` : null,
+    ov.heroSubtitle ? `Subtítulo do hero (use EXATAMENTE): ${ov.heroSubtitle}` : null,
+    ov.heroBody ? `Corpo do hero (use EXATAMENTE): ${ov.heroBody}` : null,
+    ov.benefitsTitle ? `Título da seção de benefícios (use EXATAMENTE): ${ov.benefitsTitle}` : null,
+    ...(ov.benefits ?? []).map((b, i) => (b.title || b.description)
+      ? `Benefício ${i + 1} (use EXATAMENTE)${b.title ? ` — título: ${b.title}` : ''}${b.description ? ` — descrição: ${b.description}` : ''}` : null),
+  ].filter(Boolean).join('\n')
+
   const brief = [
     `Produto: ${produto}`,
     vigencia ? `Vigência da ação comercial: ${vigencia}` : null,
     desconto ? `Desconto / condição especial: ${desconto}` : null,
     instrucoes ? `Instruções extras: ${instrucoes}` : null,
+    overridesBrief ? `\nCampos definidos pelo usuário (respeite-os ao alinhar o restante do copy):\n${overridesBrief}` : null,
   ].filter(Boolean).join('\n')
 
   try {
@@ -84,6 +100,25 @@ Responda em JSON:
         rd_embed: rdEmbed || undefined,
         video_embed: videoEmbed || undefined,
       }
+
+      // Overrides do usuário sobrescrevem a IA (texto exato)
+      if (ov.heroTitle) valores.hero_title = ov.heroTitle
+      if (ov.heroSubtitle) valores.hero_subtitle = ov.heroSubtitle
+      if (ov.heroBody) {
+        if (modelo === 'lsl') valores.hero_body_1 = ov.heroBody
+        else valores.hero_body = ov.heroBody
+      }
+      if (ov.benefitsTitle) valores.benefits_title = ov.benefitsTitle
+      if (ov.benefits && (modelo === 'lsl' || modelo === 'vsl')) {
+        const cards = [...(valores.benefit_cards ?? [])]
+        while (cards.length < 3) cards.push({ title: '', description: '' })
+        ov.benefits.slice(0, 3).forEach((b, idx) => {
+          if (b.title) cards[idx].title = b.title
+          if (b.description) cards[idx].description = b.description
+        })
+        valores.benefit_cards = cards
+      }
+
       return { nome: varr.nome || `Opção ${i + 1}`, html: renderLP(modelo, valores) }
     })
 

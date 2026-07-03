@@ -33,6 +33,22 @@ export default function CriadorLpPage() {
   const [rdEmbed, setRdEmbed] = useState('')
   const [instrucoes, setInstrucoes] = useState('')
 
+  // Campos opcionais de texto (sobrescrevem a IA quando preenchidos)
+  const [heroTitle, setHeroTitle] = useState('')
+  const [heroSubtitle, setHeroSubtitle] = useState('')
+  const [heroBody, setHeroBody] = useState('')
+  const [benefitsTitle, setBenefitsTitle] = useState('')
+  const [benefits, setBenefits] = useState([
+    { title: '', description: '' },
+    { title: '', description: '' },
+    { title: '', description: '' },
+  ])
+  const [mostrarOpcionais, setMostrarOpcionais] = useState(false)
+
+  function setBenefit(i: number, patch: Partial<{ title: string; description: string }>) {
+    setBenefits(prev => prev.map((b, idx) => (idx === i ? { ...b, ...patch } : b)))
+  }
+
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [variantes, setVariantes] = useState<Variante[] | null>(null)
@@ -49,7 +65,10 @@ export default function CriadorLpPage() {
       const res = await fetch('/api/criador-lp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ modelo, produto, vigencia, desconto, heroImage, videoEmbed, rdEmbed, instrucoes }),
+        body: JSON.stringify({
+          modelo, produto, vigencia, desconto, heroImage, videoEmbed, rdEmbed, instrucoes,
+          overrides: { heroTitle, heroSubtitle, heroBody, benefitsTitle, benefits },
+        }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`)
@@ -64,13 +83,28 @@ export default function CriadorLpPage() {
 
   const atual = variantes?.[ativa]
 
-  function baixarHtml() {
-    if (!atual) return
-    const blob = new Blob([atual.html], { type: 'text/html;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = `${produto.replace(/[^\w-]+/g, '-').toLowerCase() || 'landing-page'}.html`
-    a.click(); URL.revokeObjectURL(url)
+  const [baixandoHtml, setBaixandoHtml] = useState(false)
+  async function baixarHtml() {
+    if (!atual || baixandoHtml) return
+    setBaixandoHtml(true)
+    try {
+      // Busca a versão autossuficiente (CSS + fontes + logos embutidos) para o
+      // arquivo funcionar sozinho ao abrir direto no navegador.
+      const res = await fetch('/api/criador-lp/inline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html: atual.html }),
+      })
+      const json = await res.json()
+      const htmlFinal = res.ok && json.html ? json.html : atual.html
+      const blob = new Blob([htmlFinal], { type: 'text/html;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = `${produto.replace(/[^\w-]+/g, '-').toLowerCase() || 'landing-page'}.html`
+      a.click(); URL.revokeObjectURL(url)
+    } finally {
+      setBaixandoHtml(false)
+    }
   }
 
   async function baixarZip() {
@@ -199,6 +233,53 @@ export default function CriadorLpPage() {
                 className="w-full resize-y rounded-lg border border-nex-gray-200 px-3 py-2 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
             </div>
 
+            {/* Campos de texto opcionais (sobrescrevem a IA) */}
+            <div className="border border-nex-gray-100 rounded-lg">
+              <button type="button" onClick={() => setMostrarOpcionais(v => !v)}
+                className="w-full flex items-center justify-between px-3 py-2 text-xs font-heading font-medium text-nex-gray-600 hover:text-nex-black">
+                <span>Textos manuais (opcional) — hero e benefícios</span>
+                <span className="text-nex-gray-400">{mostrarOpcionais ? '−' : '+'}</span>
+              </button>
+              {mostrarOpcionais && (
+                <div className="px-3 pb-3 space-y-3 border-t border-nex-gray-100 pt-3">
+                  <p className="text-[11px] text-nex-gray-400">Preencha só o que quiser fixar. O que ficar vazio, a IA escreve.</p>
+                  <div>
+                    <label className="text-[11px] font-heading font-medium text-nex-gray-500 block mb-1">Título do Banner Hero</label>
+                    <input value={heroTitle} onChange={e => setHeroTitle(e.target.value)}
+                      className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-heading font-medium text-nex-gray-500 block mb-1">Subtítulo do Banner Hero</label>
+                    <input value={heroSubtitle} onChange={e => setHeroSubtitle(e.target.value)}
+                      className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-heading font-medium text-nex-gray-500 block mb-1">Corpo do texto do Banner Hero</label>
+                    <textarea value={heroBody} onChange={e => setHeroBody(e.target.value)} rows={2}
+                      className="w-full resize-y rounded-lg border border-nex-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
+                  </div>
+                  {modelo !== 'squeeze' && (
+                    <>
+                      <div>
+                        <label className="text-[11px] font-heading font-medium text-nex-gray-500 block mb-1">Título da Dobra 2 (benefícios)</label>
+                        <input value={benefitsTitle} onChange={e => setBenefitsTitle(e.target.value)}
+                          className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
+                      </div>
+                      {benefits.map((b, i) => (
+                        <div key={i} className="grid grid-cols-1 gap-1.5 border-l-2 border-nex-gray-100 pl-2">
+                          <span className="text-[10px] font-heading font-semibold uppercase tracking-wide text-nex-gray-400">Benefício {i + 1}</span>
+                          <input value={b.title} onChange={e => setBenefit(i, { title: e.target.value })} placeholder="Título"
+                            className="w-full rounded-lg border border-nex-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
+                          <input value={b.description} onChange={e => setBenefit(i, { description: e.target.value })} placeholder="Descrição"
+                            className="w-full rounded-lg border border-nex-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="text-xs font-heading font-medium text-nex-gray-500 block mb-1">Instruções extras (opcional)</label>
               <textarea value={instrucoes} onChange={e => setInstrucoes(e.target.value)} rows={3}
@@ -239,8 +320,8 @@ export default function CriadorLpPage() {
               </div>
               {atual && (
                 <div className="flex items-center gap-3">
-                  <button onClick={baixarHtml} className="flex items-center gap-1.5 text-xs text-nex-gray-500 hover:text-nex-black">
-                    <Download className="w-3.5 h-3.5" /> .html
+                  <button onClick={baixarHtml} disabled={baixandoHtml} className="flex items-center gap-1.5 text-xs text-nex-gray-500 hover:text-nex-black disabled:opacity-40">
+                    {baixandoHtml ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} .html
                   </button>
                   <button onClick={baixarZip} disabled={baixandoZip} className="flex items-center gap-1.5 text-xs text-nex-gray-500 hover:text-nex-black disabled:opacity-40">
                     {baixandoZip ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileArchive className="w-3.5 h-3.5" />} pacote .zip

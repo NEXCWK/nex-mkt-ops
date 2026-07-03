@@ -19,6 +19,10 @@ export const FOOTER_LEGAL_DEFAULT =
 
 export const URGENCY_DEFAULT = 'Condição especial por tempo limitado ou disponibilidade de salas.'
 
+// Imagem de hero padrão (banco de imagens gratuito) quando o usuário não informa uma
+export const DEFAULT_HERO_IMAGE =
+  'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80'
+
 export interface BenefitCard { title: string; description: string }
 
 export interface ValoresLP {
@@ -117,12 +121,10 @@ function formInner(v: ValoresLP, emailLabel = 'E-mail'): string {
           </form>`
 }
 
-/** Estilo do hero: injeta a imagem se houver; senão, fundo escuro neutro. */
+/** Estilo do hero: usa a imagem informada ou a padrão gratuita, com fundo escuro de segurança. */
 function heroStyle(seletor: string, heroImage?: string): string {
-  if (heroImage && heroImage.trim()) {
-    return `    ${seletor} { --hero-image: url('${heroImage.trim()}'); }`
-  }
-  return `    ${seletor}::before { background: #101010; }`
+  const img = heroImage && heroImage.trim() ? heroImage.trim() : DEFAULT_HERO_IMAGE
+  return `    ${seletor}::before { background-color: #101010; }\n    ${seletor} { --hero-image: url('${img}'); }`
 }
 
 function head(v: ValoresLP, heroSel: string): string {

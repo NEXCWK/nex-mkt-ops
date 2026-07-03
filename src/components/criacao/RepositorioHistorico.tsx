@@ -39,6 +39,21 @@ function baixarTexto(nome: string, texto: string, mime = 'text/plain;charset=utf
   URL.revokeObjectURL(url)
 }
 
+/** Baixa a LP como HTML autossuficiente (CSS + fontes + logos embutidos). */
+async function baixarLpHtml(nome: string, html: string) {
+  try {
+    const res = await fetch('/api/criador-lp/inline', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ html }),
+    })
+    const json = await res.json()
+    baixarTexto(nome, res.ok && json.html ? json.html : html, 'text/html;charset=utf-8')
+  } catch {
+    baixarTexto(nome, html, 'text/html;charset=utf-8')
+  }
+}
+
 export function RepositorioHistorico({ contexto }: { contexto: 'lp' | 'criativo' }) {
   const [itens, setItens] = useState<CriacaoRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -83,7 +98,7 @@ export function RepositorioHistorico({ contexto }: { contexto: 'lp' | 'criativo'
                 <button
                   onClick={() => {
                     const c = item.conteudo as unknown as LpConteudo
-                    baixarTexto(`lp-${item.id.slice(0, 8)}.html`, lpHtml(c), 'text/html;charset=utf-8')
+                    baixarLpHtml(`lp-${item.id.slice(0, 8)}.html`, lpHtml(c))
                   }}
                   className="flex items-center gap-1.5 text-xs text-nex-gray-500 hover:text-nex-black"
                 >
