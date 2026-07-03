@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{PAGE_TITLE}}</title>
+  <meta name="description" content="{{META_DESCRIPTION}}" />
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    .squeeze { --hero-image: url('./{{HERO_IMAGE}}'); }
+  </style>
+</head>
+<body>
+
+  <!-- ============ HEADER ============ -->
+  <header class="site-header">
+    <div class="container">
+      <img src="./logo-nex-white.png" alt="Nex" />
+      <a href="https://nex.work" target="_blank" rel="noopener" class="site-link">nex.work</a>
+    </div>
+  </header>
+
+  <!-- ============ SQUEEZE (dobra única) ============ -->
+  <section class="squeeze">
+
+    <!-- Faixa de urgência integrada -->
+    <div class="urgency-banner">
+      <p>{{URGENCY_TEXT}}</p>
+    </div>
+
+    <div class="container">
+      <div class="grid">
+
+        <div class="lead">
+          <span class="hero-tag">{{HERO_TAG}}</span>
+          <h1>{{HERO_TITLE}}</h1>
+          <p class="subtitle">{{HERO_SUBTITLE}}</p>
+          <p>{{HERO_BODY}}</p>
+          <ul>
+            <!-- REPETIR <li> para cada item de {{LEAD_BULLETS}} -->
+            <li>{{LEAD_BULLETS[i]}}</li>
+          </ul>
+        </div>
+
+        <div class="form-card">
+          <h3>{{FORM_CARD_TITLE}}</h3>
+          <p class="form-note">{{FORM_CARD_NOTE}}</p>
+
+          <!-- Se {{RD_STATION_EMBED}} preenchido, substitua todo o <form>...</form>. -->
+          <form action="#" method="post" onsubmit="event.preventDefault(); alert('Formulário de demonstração — substituir pelo embed do RD Station.');">
+            <div class="form-row">
+              <label for="nome">Nome completo</label>
+              <input id="nome" name="nome" type="text" required />
+            </div>
+            <div class="form-row">
+              <label for="email">E-mail</label>
+              <input id="email" name="email" type="email" required />
+            </div>
+            <div class="form-row">
+              <label for="whatsapp">WhatsApp</label>
+              <input id="whatsapp" name="whatsapp" type="tel" placeholder="(41) 90000-0000" required />
+            </div>
+            <div class="form-row">
+              <label for="empresa">Empresa</label>
+              <input id="empresa" name="empresa" type="text" required />
+            </div>
+            <div class="form-row">
+              <label for="cargo">Cargo</label>
+              <input id="cargo" name="cargo" type="text" required />
+            </div>
+            <div class="form-row">
+              <label for="observacoes">Observações</label>
+              <textarea id="observacoes" name="observacoes"></textarea>
+            </div>
+            <button class="btn btn-primary" type="submit">{{FORM_CTA}}</button>
+            <p class="disclaimer">
+              Ao enviar, você concorda em receber contato do time comercial Nex
+              por e-mail ou WhatsApp.
+            </p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="site-footer">
+    <div class="container">
+      <img src="./logo-nex-white.png" alt="Nex Coworking" />
+      <p>{{FOOTER_LEGAL}}</p>
+      <p class="foot-links">Acesse nosso site oficial: <a href="https://nex.work" target="_blank" rel="noopener">nex.work</a></p>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{PAGE_TITLE}}</title>
+  <meta name="description" content="{{META_DESCRIPTION}}" />
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    .hero { --hero-image: url('./{{HERO_IMAGE}}'); }
+  </style>
+</head>
+<body>
+
+  <!-- ============ HEADER ============ -->
+  <header class="site-header">
+    <div class="container">
+      <img src="./logo-nex-white.png" alt="Nex" />
+      <a href="https://nex.work" target="_blank" rel="noopener" class="site-link">nex.work</a>
+    </div>
+  </header>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-copy">
+        <span class="hero-tag">{{HERO_TAG}}</span>
+        <h1>{{HERO_TITLE}}</h1>
+        <p class="subtitle">{{HERO_SUBTITLE}}</p>
+        <p class="body">{{HERO_BODY}}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ VÍDEO (VSL) ============ -->
+  <section class="video-section">
+    <div class="container">
+      <div class="section-title">
+        <span class="eyebrow">{{VIDEO_EYEBROW}}</span>
+        <h2>{{VIDEO_TITLE}}</h2>
+        <p>{{VIDEO_INTRO}}</p>
+      </div>
+      <!-- Se {{VIDEO_EMBED}} preenchido, substitua todo o .video-wrap por:
+             <div class="video-wrap">{{VIDEO_EMBED}}</div>
+           (o iframe/video deve ter width:100%; height:100% para preencher).
+           Se vazio, mantenha o placeholder abaixo. -->
+      <div class="video-wrap" role="img" aria-label="Player de vídeo (placeholder)">
+        <div class="play" aria-hidden="true"></div>
+        <span class="label">Placeholder — substituir pelo embed do vídeo</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BENEFÍCIOS ============ -->
+  <section class="benefits">
+    <div class="container">
+      <div class="section-title">
+        <span class="eyebrow">{{BENEFITS_EYEBROW}}</span>
+        <h2>{{BENEFITS_TITLE}}</h2>
+      </div>
+      <div class="benefit-grid">
+        <div class="benefit-card">
+          <span class="num">01</span>
+          <h3>{{BENEFIT_CARDS[0].title}}</h3>
+          <p>{{BENEFIT_CARDS[0].description}}</p>
+        </div>
+        <div class="benefit-card">
+          <span class="num">02</span>
+          <h3>{{BENEFIT_CARDS[1].title}}</h3>
+          <p>{{BENEFIT_CARDS[1].description}}</p>
+        </div>
+        <div class="benefit-card">
+          <span class="num">03</span>
+          <h3>{{BENEFIT_CARDS[2].title}}</h3>
+          <p>{{BENEFIT_CARDS[2].description}}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAIXA DE URGÊNCIA ============ -->
+  <section class="urgency-banner">
+    <div class="container">
+      <p>{{URGENCY_TEXT}}</p>
+    </div>
+  </section>
+
+  <!-- ============ FORMULÁRIO ============ -->
+  <section class="form-section" id="formulario">
+    <div class="container">
+      <div class="grid">
+        <div class="lead">
+          <span class="eyebrow" style="display:block; color:var(--amber); font-weight:400; font-size:.8rem; letter-spacing:.12em; text-transform:uppercase;">{{FORM_EYEBROW}}</span>
+          <h2 style="margin-top:12px;">{{FORM_LEAD_TITLE}}</h2>
+          <p>{{FORM_LEAD_BODY}}</p>
+          <ul>
+            <!-- REPETIR <li> para cada item de {{FORM_BULLETS}} -->
+            <li>{{FORM_BULLETS[i]}}</li>
+          </ul>
+        </div>
+
+        <div class="form-card">
+          <h3>{{FORM_CARD_TITLE}}</h3>
+          <p class="form-note">{{FORM_CARD_NOTE}}</p>
+
+          <!-- Se {{RD_STATION_EMBED}} preenchido, substitua todo o <form>...</form>. -->
+          <form action="#" method="post" onsubmit="event.preventDefault(); alert('Formulário de demonstração — substituir pelo embed do RD Station.');">
+            <div class="form-row">
+              <label for="nome">Nome completo</label>
+              <input id="nome" name="nome" type="text" required />
+            </div>
+            <div class="form-row">
+              <label for="email">E-mail</label>
+              <input id="email" name="email" type="email" required />
+            </div>
+            <div class="form-row">
+              <label for="whatsapp">WhatsApp</label>
+              <input id="whatsapp" name="whatsapp" type="tel" placeholder="(41) 90000-0000" required />
+            </div>
+            <div class="form-row">
+              <label for="empresa">Empresa</label>
+              <input id="empresa" name="empresa" type="text" required />
+            </div>
+            <div class="form-row">
+              <label for="cargo">Cargo</label>
+              <input id="cargo" name="cargo" type="text" required />
+            </div>
+            <div class="form-row">
+              <label for="observacoes">Observações</label>
+              <textarea id="observacoes" name="observacoes"></textarea>
+            </div>
+            <button class="btn btn-primary" type="submit">{{FORM_CTA}}</button>
+            <p class="disclaimer">
+              Ao enviar, você concorda em receber contato do time comercial Nex
+              por e-mail ou WhatsApp.
+            </p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REGULAMENTO ============ -->
+  <section class="regulation">
+    <div class="container">
+      <div class="section-title">
+        <span class="eyebrow">{{REGULATION_EYEBROW}}</span>
+        <h2>{{REGULATION_TITLE}}</h2>
+        <p>{{REGULATION_INTRO}}</p>
+      </div>
+      <div class="regulation-content">
+        <ol>
+          <li>{{REGULATION_ITEMS[i]}}</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="site-footer">
+    <div class="container">
+      <img src="./logo-nex-white.png" alt="Nex Coworking" />
+      <p>{{FOOTER_LEGAL}}</p>
+      <p class="foot-links">Acesse nosso site oficial: <a href="https://nex.work" target="_blank" rel="noopener">nex.work</a></p>
+    </div>
+  </footer>
+
+</body>
+</html>

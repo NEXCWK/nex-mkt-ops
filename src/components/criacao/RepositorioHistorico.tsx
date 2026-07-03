@@ -14,9 +14,20 @@ interface CriacaoRow {
   created_at: string
 }
 
-interface LpConteudo { head: string; body: string; js: string }
+interface LpConteudo { html?: string; head?: string; body?: string; js?: string }
 interface Slide { titulo: string; legenda: string; html: string }
 interface CriativoConteudo { porFormato: Record<string, Slide[]> }
+
+/** HTML completo da LP (novo formato tem .html; antigo compõe head/body/js). */
+function lpHtml(c: LpConteudo): string {
+  if (c.html) return c.html
+  return `<!DOCTYPE html>\n<html lang="pt-BR">\n<head>\n${c.head ?? ''}\n</head>\n<body>\n${c.body ?? ''}\n<script>${c.js ?? ''}</script>\n</body>\n</html>`
+}
+
+/** Injeta <base> para a prévia resolver ./styles.css contra /lp-assets/. */
+function comBaseLp(html: string): string {
+  return html.replace(/<head>/i, '<head>\n  <base href="/lp-assets/" />')
+}
 
 function baixarTexto(nome: string, texto: string, mime = 'text/plain;charset=utf-8') {
   const blob = new Blob([texto], { type: mime })
@@ -72,8 +83,7 @@ export function RepositorioHistorico({ contexto }: { contexto: 'lp' | 'criativo'
                 <button
                   onClick={() => {
                     const c = item.conteudo as unknown as LpConteudo
-                    const doc = `<!DOCTYPE html>\n<html lang="pt-BR">\n<head>\n${c.head}\n</head>\n<body>\n${c.body}\n<script>${c.js ?? ''}</script>\n</body>\n</html>`
-                    baixarTexto(`lp-${item.id.slice(0, 8)}.html`, doc, 'text/html;charset=utf-8')
+                    baixarTexto(`lp-${item.id.slice(0, 8)}.html`, lpHtml(c), 'text/html;charset=utf-8')
                   }}
                   className="flex items-center gap-1.5 text-xs text-nex-gray-500 hover:text-nex-black"
                 >
@@ -96,7 +106,7 @@ export function RepositorioHistorico({ contexto }: { contexto: 'lp' | 'criativo'
               <div className="rounded-lg overflow-hidden border border-nex-gray-100 h-40">
                 <iframe
                   title={item.id}
-                  srcDoc={`<!DOCTYPE html><html><head>${(item.conteudo as unknown as LpConteudo).head}</head><body>${(item.conteudo as unknown as LpConteudo).body}</body></html>`}
+                  srcDoc={comBaseLp(lpHtml(item.conteudo as unknown as LpConteudo))}
                   className="w-full h-full border-0 pointer-events-none"
                   sandbox=""
                 />
