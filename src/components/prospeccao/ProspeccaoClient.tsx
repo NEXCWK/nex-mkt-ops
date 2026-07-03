@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Sparkles, Send, Search, Trash2, Mail, Loader2, Users, User, Check } from 'lucide-react'
+import { Sparkles, Send, Search, Trash2, Mail, Loader2, Users, User, Check, Save, FolderOpen, Download, Upload } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface Empresa {
@@ -20,6 +20,27 @@ export interface Empresa {
 const PRODUTOS_BDR = ['Salas de Reunião', 'Escritório Privativo', 'Diárias de Trabalho em Escritório']
 const PRODUTO_PARCERIAS = 'Escritório Virtual — Endereço Fiscal (indicação)'
 
+interface ListaSalva {
+  id: string
+  nome: string
+  regiao: string | null
+  nicho: string | null
+  produto: string | null
+  empresas: Omit<Empresa, 'selecionada'>[]
+  assunto: string | null
+  corpo: string | null
+  created_at: string
+}
+
+function csvDaLista(empresas: Omit<Empresa, 'selecionada'>[]): string {
+  const cols = ['empresa', 'contato', 'email', 'telefone', 'site', 'segmento', 'regiao', 'observacao']
+  const linhas = [cols.join(',')]
+  for (const e of empresas) {
+    linhas.push(cols.map(c => `"${String((e as Record<string, unknown>)[c] ?? '').replace(/"/g, '""')}"`).join(','))
+  }
+  return linhas.join('\n')
+}
+
 interface Props {
   tipo: 'bdr' | 'parcerias'
   titulo: string
@@ -35,6 +56,8 @@ function aplicarVariaveis(texto: string, e: Empresa): string {
 }
 
 export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPlaceholder }: Props) {
+  const [aba, setAba] = useState<'gerar' | 'salvas'>('gerar')
+
   const [regiao, setRegiao] = useState('Curitiba e região metropolitana')
   const [nicho, setNicho] = useState('')
   const [quantidade, setQuantidade] = useState(15)
@@ -45,6 +68,80 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
   const [empresas, setEmpresas] = useState<Empresa[]>([])
   const [assunto, setAssunto] = useState('')
   const [corpo, setCorpo] = useState('')
+
+  // Listas salvas
+  const [listasSalvas, setListasSalvas] = useState<ListaSalva[]>([])
+  const [carregandoListas, setCarregandoListas] = useState(false)
+  const [salvando, setSalvando] = useState(false)
+  const [nomeParaSalvar, setNomeParaSalvar] = useState('')
+  const [mostrarSalvar, setMostrarSalvar] = useState(false)
+
+  async function carregarListasSalvas() {
+    setCarregandoListas(true)
+    try {
+      const res = await fetch(`/api/prospeccao/listas?tipo=${tipo}`)
+      const json = await res.json()
+      setListasSalvas(json.listas ?? [])
+    } catch {
+      setListasSalvas([])
+    } finally {
+      setCarregandoListas(false)
+    }
+  }
+
+  useEffect(() => { if (aba === 'salvas') carregarListasSalvas() }, [aba]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function salvarLista() {
+    if (empresas.length === 0 || !nomeParaSalvar.trim() || salvando) return
+    setSalvando(true)
+    try {
+      const res = await fetch('/api/prospeccao/listas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo, nome: nomeParaSalvar.trim(), regiao, nicho, produto,
+          empresas: empresas.map(({ selecionada: _selecionada, ...e }) => e),
+          assunto, corpo,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`)
+      setMostrarSalvar(false)
+      setNomeParaSalvar('')
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha ao salvar a lista')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  function carregarLista(lista: ListaSalva) {
+    setEmpresas(lista.empresas.map(e => ({ ...e, selecionada: true })))
+    setAssunto(lista.assunto ?? '')
+    setCorpo(lista.corpo ?? '')
+    if (lista.regiao) setRegiao(lista.regiao)
+    if (lista.nicho) setNicho(lista.nicho)
+    if (lista.produto) setProduto(lista.produto)
+    setAba('gerar')
+  }
+
+  function exportarCsv(lista: ListaSalva) {
+    const csv = csvDaLista(lista.empresas)
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${lista.nome.replace(/[^\w-]+/g, '_')}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function excluirLista(id: string) {
+    try {
+      await fetch(`/api/prospeccao/listas?id=${id}`, { method: 'DELETE' })
+      setListasSalvas(prev => prev.filter(l => l.id !== id))
+    } catch { /* silent */ }
+  }
 
   const [modoEnvio, setModoEnvio] = useState<'massa' | 'individual'>('massa')
   const [enviando, setEnviando] = useState(false)
@@ -148,6 +245,58 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
     <div>
       <PageHeader title={titulo} description={descricao} />
 
+      {/* Tabs: Gerar Nova Lista / Listas Salvas */}
+      <div className="flex gap-2 mb-5">
+        <button onClick={() => setAba('gerar')}
+          className={cn('flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-heading font-medium border transition-colors',
+            aba === 'gerar' ? 'border-nex-black bg-nex-gray-50 text-nex-black' : 'border-nex-gray-200 text-nex-gray-500 hover:bg-nex-gray-50')}>
+          <Sparkles className="w-3.5 h-3.5" /> Gerar Nova Lista
+        </button>
+        <button onClick={() => setAba('salvas')}
+          className={cn('flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-heading font-medium border transition-colors',
+            aba === 'salvas' ? 'border-nex-black bg-nex-gray-50 text-nex-black' : 'border-nex-gray-200 text-nex-gray-500 hover:bg-nex-gray-50')}>
+          <FolderOpen className="w-3.5 h-3.5" /> Listas Salvas
+        </button>
+      </div>
+
+      {aba === 'salvas' ? (
+        <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
+          <div className="border-b border-nex-gray-100 px-5 py-3 flex items-center justify-between">
+            <span className="text-xs font-heading font-semibold uppercase tracking-wide text-nex-gray-400">Listas Salvas</span>
+            {carregandoListas && <Loader2 className="w-3.5 h-3.5 animate-spin text-nex-gray-300" />}
+          </div>
+          {listasSalvas.length === 0 ? (
+            <div className="py-10 text-center text-sm text-nex-gray-300">
+              {carregandoListas ? 'Carregando…' : 'Nenhuma lista salva ainda. Gere e salve uma lista na aba "Gerar Nova Lista".'}
+            </div>
+          ) : (
+            <div className="divide-y divide-nex-gray-50">
+              {listasSalvas.map(l => (
+                <div key={l.id} className="px-5 py-3 flex items-center justify-between gap-3 flex-wrap hover:bg-nex-gray-50 transition-colors">
+                  <div className="min-w-0">
+                    <p className="text-sm font-heading font-medium text-nex-gray-800">{l.nome}</p>
+                    <p className="text-[11px] text-nex-gray-400">
+                      {l.empresas.length} empresa(s) · {l.produto ?? l.nicho ?? '—'} · {new Date(l.created_at).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <button onClick={() => carregarLista(l)} className="flex items-center gap-1 text-xs text-nex-gray-500 hover:text-nex-black">
+                      <Upload className="w-3.5 h-3.5" /> Carregar
+                    </button>
+                    <button onClick={() => exportarCsv(l)} className="flex items-center gap-1 text-xs text-nex-gray-500 hover:text-nex-black">
+                      <Download className="w-3.5 h-3.5" /> Exportar CSV
+                    </button>
+                    <button onClick={() => excluirLista(l.id)} className="text-nex-gray-300 hover:text-red-500">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+      <>
       {/* 1. Critérios de busca */}
       <div className="bg-white border border-nex-gray-200 rounded-xl p-5 mb-5">
         <h3 className="text-sm font-heading font-semibold text-nex-black mb-3 flex items-center gap-1.5">
@@ -197,10 +346,26 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
       {/* 2. Lista de empresas */}
       {empresas.length > 0 && (
         <div className="bg-white border border-nex-gray-200 rounded-xl p-5 mb-5">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h3 className="text-sm font-heading font-semibold text-nex-black">
               Empresas encontradas ({empresas.length}) · {selecionadas.length} selecionada(s) com e-mail
             </h3>
+            {!mostrarSalvar ? (
+              <button onClick={() => { setMostrarSalvar(true); setNomeParaSalvar(nicho ? `${nicho} — ${new Date().toLocaleDateString('pt-BR')}` : '') }}
+                className="flex items-center gap-1.5 text-xs text-nex-gray-500 hover:text-nex-black">
+                <Save className="w-3.5 h-3.5" /> Salvar lista
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input value={nomeParaSalvar} onChange={e => setNomeParaSalvar(e.target.value)} placeholder="Nome da lista"
+                  className="rounded-md border border-nex-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
+                <button onClick={salvarLista} disabled={!nomeParaSalvar.trim() || salvando}
+                  className="flex items-center gap-1 text-xs bg-nex-black text-white px-3 py-1 rounded-md hover:bg-nex-gray-700 disabled:opacity-40">
+                  {salvando ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Confirmar
+                </button>
+                <button onClick={() => setMostrarSalvar(false)} className="text-xs text-nex-gray-400 hover:text-nex-black">Cancelar</button>
+              </div>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -327,6 +492,8 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
             </div>
           )}
         </div>
+      )}
+      </>
       )}
     </div>
   )

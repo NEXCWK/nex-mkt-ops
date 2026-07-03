@@ -257,3 +257,24 @@ create index if not exists idx_avaliacao_cron_log_created on avaliacao_cron_log(
 alter table avaliacao_cron_log enable row level security;
 drop policy if exists "Service role full access" on avaliacao_cron_log;
 create policy "Service role full access" on avaliacao_cron_log for all using (true);
+
+-- Listas de prospecção salvas (Sistema BDR e Sistema Parcerias)
+create table if not exists prospeccao_listas (
+  id uuid primary key default uuid_generate_v4(),
+  tipo text check (tipo in ('bdr', 'parcerias')) not null,
+  nome text not null,
+  regiao text,
+  nicho text,
+  produto text,
+  empresas jsonb not null default '[]'::jsonb,
+  assunto text,
+  corpo text,
+  operador_email text not null,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_prospeccao_listas_tipo on prospeccao_listas(tipo);
+
+alter table prospeccao_listas enable row level security;
+drop policy if exists "Service role full access" on prospeccao_listas;
+create policy "Service role full access" on prospeccao_listas for all using (true);
