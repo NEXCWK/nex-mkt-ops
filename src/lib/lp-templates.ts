@@ -92,7 +92,6 @@ function benefitCards(cards: BenefitCard[] | undefined): string {
 const HEADER = `  <header class="site-header">
     <div class="container">
       <img src="./logo-nex-white.png" alt="Nex" />
-      <a href="https://nex.work" target="_blank" rel="noopener" class="site-link">nex.work</a>
     </div>
   </header>`
 
