@@ -342,6 +342,8 @@ const CAMPOS_EV_BASE: Campo[] = [
 
 // Texto fixo da cláusula de renovação dos contratos de Escritório Virtual
 const EV_RENOVACAO_FIXA = 'automática, de acordo com o valor de tabela vigente'
+// Cláusula de renovação dos contratos OAB (desconto de 20% via parceria CAAPR/OABPR)
+const EV_RENOVACAO_OAB = 'automática, de acordo com o valor de tabela, 20% de desconto sobre o valor de tabela vigente de acordo com parceria CAAPR/OABPR, condição válida enquanto parceria vigente'
 
 const CAMPOS_EV_UNIDADE: Campo[] = [
   { nome: 'unidade_selector',  label: 'Unidade',              tipo: 'select', obrigatorio: true,
@@ -561,8 +563,20 @@ export default function NovoContratoPage() {
   // Auto-fill: valor_base EV
   useEffect(() => {
     if (!isEV || !formValues.modalidade_pagamento) return
+    const modalidade = formValues.modalidade_pagamento
+
+    // Caso especial: Endereço Fiscal Anual OAB (à vista) — valores fixos de parceria
+    if (isOAB && isFiscal && modalidade === 'Anual à vista') {
+      setFormValues(prev => ({
+        ...prev,
+        valor_base: 'R$ 1.199,00/Anual à Vista',
+        valor_adesao: 'R$ 899,00 referente à primeira adesão',
+      }))
+      return
+    }
+
     const tabela = isComercial ? EV_VALORES_COMERCIAL : EV_VALORES_FISCAL
-    let valor = tabela[formValues.modalidade_pagamento] ?? ''
+    let valor = tabela[modalidade] ?? ''
     if (isOAB && valor) valor = aplicarDescontoOAB(valor)
     setFormValues(prev => ({ ...prev, valor_base: valor }))
   }, [formValues.modalidade_pagamento, tipoDoc])
@@ -659,8 +673,9 @@ export default function NovoContratoPage() {
     if (isEV) {
       if (isFiscal) final.opcao = 'Endereço Fiscal.'
       if (isComercial) final.opcao = 'Endereço Comercial.'
-      // Cláusula de Renovação é sempre fixa nos contratos de Escritório Virtual
-      final.renovacao_texto = EV_RENOVACAO_FIXA
+      // Cláusula de Renovação é sempre fixa nos contratos de Escritório Virtual.
+      // Nos contratos OAB, aplica-se a cláusula da parceria CAAPR/OABPR (20% off).
+      final.renovacao_texto = isOAB ? EV_RENOVACAO_OAB : EV_RENOVACAO_FIXA
     }
     return final
   }
