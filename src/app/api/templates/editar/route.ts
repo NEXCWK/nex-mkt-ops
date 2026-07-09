@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { CLAUDE_MODEL } from '@/lib/anthropic'
+import { registrarUsoTokens } from '@/lib/uso-tokens'
 import { withNexVoice } from '@/lib/nex-voice'
 import { aplicarSubstituicao } from '@/lib/docx-replace'
 import PizZip from 'pizzip'
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest) {
   if (!session || !['gestor', 'admin'].includes(session.user.perfil ?? '')) {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
+  const operadorEmail = session.user.email
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY não configurada no ambiente.' }, { status: 500 })
   }
@@ -153,6 +155,13 @@ export async function POST(req: NextRequest) {
         messages,
       })
       respText = response.content.find(c => c.type === 'text')?.text ?? ''
+      void registrarUsoTokens({
+        funcionalidade: 'templates_editar',
+        modelo: CLAUDE_MODEL,
+        tokensInput: response.usage.input_tokens,
+        tokensOutput: response.usage.output_tokens,
+        operadorEmail,
+      })
     } catch (e) {
       return err(`Erro na API Claude: ${e instanceof Error ? e.message : 'desconhecido'}`)
     }

@@ -34,6 +34,8 @@ Responda em JSON:
       system: withNexVoice(system),
       user: `Conteúdo atual do arquivo:\n\n---\n${markdown ?? ''}\n---\n\nInstrução: ${instrucao}${contexto}`,
       maxTokens: 16000,
+      funcionalidade: 'base_conhecimento_chat',
+      operadorEmail: session.user.email,
     })
     return NextResponse.json(result)
   } catch (e) {

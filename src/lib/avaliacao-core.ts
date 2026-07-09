@@ -93,6 +93,8 @@ Responda em JSON:
     system,
     user: `Transcrições${nomeArquivo ? ` (fonte: ${nomeArquivo})` : ''}:\n\n${transcricoes}`,
     maxTokens: 16000,
+    funcionalidade: tipo === 'telefonema' ? 'avaliacao_telefonemas' : 'avaliacao_atendimentos',
+    operadorEmail,
   })
 
   const conversas = Array.isArray(result.conversas) ? result.conversas : []

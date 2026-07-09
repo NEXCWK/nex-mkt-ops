@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import Anthropic from '@anthropic-ai/sdk'
 import { CLAUDE_MODEL } from '@/lib/anthropic'
+import { registrarUsoTokens } from '@/lib/uso-tokens'
 import { NEX_VOICE } from '@/lib/nex-voice'
 import { SDR_KB_V2 } from '@/lib/sdr-kb-v2'
 
@@ -141,6 +142,14 @@ export async function POST(req: NextRequest) {
             controller.enqueue(encoder.encode(event.delta.text))
           }
         }
+        const finalMessage = await stream.finalMessage()
+        void registrarUsoTokens({
+          funcionalidade: 'gerador_scripts',
+          modelo: CLAUDE_MODEL,
+          tokensInput: finalMessage.usage.input_tokens,
+          tokensOutput: finalMessage.usage.output_tokens,
+          operadorEmail: session.user.email,
+        })
         controller.close()
       } catch (e) {
         controller.enqueue(encoder.encode(`\n\n[Erro: ${e instanceof Error ? e.message : 'falha na geração'}]`))

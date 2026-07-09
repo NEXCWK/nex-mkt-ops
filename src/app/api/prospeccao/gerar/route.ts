@@ -53,6 +53,8 @@ Formato do JSON:
       system: withNexVoice(system),
       user: `Gere a lista para o nicho "${nicho}" em "${regiao || 'Curitiba/PR'}" e o e-mail de prospecção.`,
       maxTokens: 8000,
+      funcionalidade: `prospeccao_${tipo === 'parcerias' ? 'parcerias' : 'bdr'}`,
+      operadorEmail: session.user.email,
     })
     return NextResponse.json(result)
   } catch (e) {

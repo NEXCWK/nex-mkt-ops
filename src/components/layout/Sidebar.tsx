@@ -26,6 +26,7 @@ import {
   CalendarCheck,
   UserCheck,
   Lightbulb,
+  Coins,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from 'next-auth/react'
@@ -78,6 +79,7 @@ const navSections = [
     items: [
       { href: '/templates',         label: 'Templates',                icon: Settings, roles: ['gestor', 'admin'] },
       { href: '/base-conhecimento', label: 'Base de Conhecimento SDR', icon: BookOpen, roles: ['gestor', 'admin'] },
+      { href: '/uso-tokens',        label: 'Uso de Tokens',            icon: Coins,    roles: ['gestor', 'admin'] },
       { href: '/usuarios',          label: 'Usuários',                 icon: Users,    roles: ['admin'] },
     ],
   },

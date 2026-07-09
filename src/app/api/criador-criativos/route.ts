@@ -76,6 +76,8 @@ Formato do JSON:
       system: withNexVoice(system),
       user: `${campos || '(nenhum campo estruturado informado — use boas práticas e um tema genérico de alto padrão do Nex)'}\n\nFormatos solicitados: ${formatosSelecionados.join(', ')}. Tipo: ${tipo}. ${tipo === 'carrossel' ? `Gere exatamente ${qtd} slides por formato.` : 'Gere 1 criativo por formato.'}`,
       maxTokens: 16000,
+      funcionalidade: 'criador_criativos',
+      operadorEmail: session.user.email,
     })
     return NextResponse.json(result)
   } catch (e) {

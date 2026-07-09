@@ -278,3 +278,22 @@ create index if not exists idx_prospeccao_listas_tipo on prospeccao_listas(tipo)
 alter table prospeccao_listas enable row level security;
 drop policy if exists "Service role full access" on prospeccao_listas;
 create policy "Service role full access" on prospeccao_listas for all using (true);
+
+-- Rastreamento de uso/custo de tokens da API Claude, por funcionalidade
+create table if not exists uso_tokens (
+  id uuid primary key default uuid_generate_v4(),
+  funcionalidade text not null,
+  modelo text not null,
+  tokens_input integer not null default 0,
+  tokens_output integer not null default 0,
+  custo_estimado_usd numeric(12, 6),
+  operador_email text,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_uso_tokens_funcionalidade on uso_tokens(funcionalidade);
+create index if not exists idx_uso_tokens_created on uso_tokens(created_at desc);
+
+alter table uso_tokens enable row level security;
+drop policy if exists "Service role full access" on uso_tokens;
+create policy "Service role full access" on uso_tokens for all using (true);

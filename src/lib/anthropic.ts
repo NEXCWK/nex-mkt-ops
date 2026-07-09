@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { registrarUsoTokens } from '@/lib/uso-tokens'
 
-export const CLAUDE_MODEL = 'claude-opus-4-8'
+export const CLAUDE_MODEL = 'claude-sonnet-5'
 /** Modelo mais rápido/barato — usado em tarefas simples (ex.: resumos) para economizar tokens. */
 export const CLAUDE_HAIKU_MODEL = 'claude-haiku-4-5-20251001'
 
@@ -24,6 +25,9 @@ export async function askClaudeJSON<T = unknown>(opts: {
   system: string
   user: string
   maxTokens?: number
+  /** Rótulo da funcionalidade (para rastreamento de custo/uso de tokens). */
+  funcionalidade?: string
+  operadorEmail?: string | null
 }): Promise<T> {
   const client = getAnthropic()
   const res = await client.messages.create({
@@ -38,6 +42,16 @@ export async function askClaudeJSON<T = unknown>(opts: {
     messages: [{ role: 'user', content: opts.user }],
   })
 
+  if (opts.funcionalidade) {
+    void registrarUsoTokens({
+      funcionalidade: opts.funcionalidade,
+      modelo: CLAUDE_MODEL,
+      tokensInput: res.usage.input_tokens,
+      tokensOutput: res.usage.output_tokens,
+      operadorEmail: opts.operadorEmail,
+    })
+  }
+
   const text = res.content
     .filter((b): b is Anthropic.TextBlock => b.type === 'text')
     .map(b => b.text)
@@ -51,14 +65,28 @@ export async function askHaikuText(opts: {
   system: string
   user: string
   maxTokens?: number
+  /** Rótulo da funcionalidade (para rastreamento de custo/uso de tokens). */
+  funcionalidade?: string
+  operadorEmail?: string | null
 }): Promise<string> {
   const client = getAnthropic()
   const res = await client.messages.create({
-    model: CLAUDE_HAIKU_MODEL,
+    model: CLAUDE_MODEL,
     max_tokens: opts.maxTokens ?? 1500,
     system: opts.system,
     messages: [{ role: 'user', content: opts.user }],
   })
+
+  if (opts.funcionalidade) {
+    void registrarUsoTokens({
+      funcionalidade: opts.funcionalidade,
+      modelo: CLAUDE_MODEL,
+      tokensInput: res.usage.input_tokens,
+      tokensOutput: res.usage.output_tokens,
+      operadorEmail: opts.operadorEmail,
+    })
+  }
+
   return res.content
     .filter((b): b is Anthropic.TextBlock => b.type === 'text')
     .map(b => b.text)

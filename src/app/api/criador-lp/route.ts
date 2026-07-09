@@ -91,6 +91,8 @@ Responda em JSON:
       system: withNexVoice(system),
       user: `Brief da landing page:\n${brief}`,
       maxTokens: 12000,
+      funcionalidade: 'criador_lp',
+      operadorEmail: session.user.email,
     })
 
     const variantes = (result.variantes ?? []).map((varr, i) => {

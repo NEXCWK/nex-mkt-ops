@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import Anthropic from '@anthropic-ai/sdk'
 import PizZip from 'pizzip'
 import { substituirTodas } from '@/lib/docx-replace'
+import { CLAUDE_MODEL } from '@/lib/anthropic'
+import { registrarUsoTokens } from '@/lib/uso-tokens'
 
 export const maxDuration = 300
 
@@ -211,12 +213,19 @@ export async function POST(req: NextRequest) {
   let respText: string
   try {
     const response = await client.messages.create({
-      model: 'claude-opus-4-8',
+      model: CLAUDE_MODEL,
       max_tokens: 8192,
       system: SYSTEM_PROMPT,
       messages,
     })
     respText = response.content.find(c => c.type === 'text')?.text ?? ''
+    void registrarUsoTokens({
+      funcionalidade: 'templates_parametrizar',
+      modelo: CLAUDE_MODEL,
+      tokensInput: response.usage.input_tokens,
+      tokensOutput: response.usage.output_tokens,
+      operadorEmail: session.user.email,
+    })
   } catch (e: any) {
     return NextResponse.json({ error: `Erro na API Claude: ${e?.message ?? 'desconhecido'}` }, { status: 500 })
   }

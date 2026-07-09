@@ -29,6 +29,8 @@ Regras estritas:
       system,
       user: `Resuma esta base de conhecimento:\n\n${markdown}`,
       maxTokens: 900,
+      funcionalidade: 'base_conhecimento_resumo',
+      operadorEmail: session.user.email,
     })
     return NextResponse.json({ resumo })
   } catch (e) {

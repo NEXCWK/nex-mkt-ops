@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import Anthropic from '@anthropic-ai/sdk'
+import { CLAUDE_MODEL } from '@/lib/anthropic'
+import { registrarUsoTokens } from '@/lib/uso-tokens'
 import { EMAIL_TEMPLATES, MARCADORES_DEF } from '@/app/(dashboard)/emails/novo/templates-data'
 import { TIPOS_CONTRATO, TIPOS_ADITIVO } from '@/types'
 
@@ -67,7 +69,7 @@ export async function POST(req: NextRequest) {
   const client = new Anthropic()
 
   const stream = client.messages.stream({
-    model: 'claude-opus-4-8',
+    model: CLAUDE_MODEL,
     max_tokens: 64000,
     thinking: { type: 'adaptive' },
     system: [
@@ -92,6 +94,14 @@ export async function POST(req: NextRequest) {
             controller.enqueue(encoder.encode(event.delta.text))
           }
         }
+        const finalMessage = await stream.finalMessage()
+        void registrarUsoTokens({
+          funcionalidade: 'assistente',
+          modelo: CLAUDE_MODEL,
+          tokensInput: finalMessage.usage.input_tokens,
+          tokensOutput: finalMessage.usage.output_tokens,
+          operadorEmail: session.user.email,
+        })
         controller.close()
       } catch (e: any) {
         controller.enqueue(encoder.encode(`\n\n[Erro: ${e?.message ?? 'falha na geração'}]`))
