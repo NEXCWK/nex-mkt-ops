@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { assertApiKey } from '@/lib/anthropic'
 import { extrairTextoDeArquivo } from '@/lib/parse-transcricoes'
+import { isAudioFile, transcreverAudio } from '@/lib/transcricao-audio'
 import { avaliarTranscricoes } from '@/lib/avaliacao-core'
 
 export const dynamic = 'force-dynamic'
@@ -26,8 +27,21 @@ export async function POST(req: NextRequest) {
     const file = form.get('arquivo') as File | null
     if (file) {
       const buffer = Buffer.from(await file.arrayBuffer())
-      transcricoes = await extrairTextoDeArquivo(buffer, file.name)
       nomeArquivo = file.name
+      if (isAudioFile(file.name)) {
+        // Ligação em áudio: transcreve para texto antes de avaliar
+        try {
+          const texto = await transcreverAudio(buffer, file.name)
+          const atendente = String(form.get('atendente') ?? '').trim()
+          transcricoes = atendente
+            ? `[Atendente: ${atendente}]\n${texto}`
+            : texto
+        } catch (e) {
+          return NextResponse.json({ error: e instanceof Error ? e.message : 'Falha ao transcrever o áudio' }, { status: 400 })
+        }
+      } else {
+        transcricoes = await extrairTextoDeArquivo(buffer, file.name)
+      }
     } else {
       transcricoes = String(form.get('transcricoes') ?? '')
     }

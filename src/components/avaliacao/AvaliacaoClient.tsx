@@ -34,9 +34,14 @@ interface Props {
   placeholder: string
 }
 
+const AUDIO_EXTS = ['mp3', 'm4a', 'wav', 'ogg', 'oga', 'opus', 'mpeg', 'mpga', 'webm', 'aac', 'flac']
+const ehAudio = (nome: string) => AUDIO_EXTS.includes(nome.toLowerCase().split('.').pop() ?? '')
+
 export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props) {
+  const permitirAudio = tipo === 'telefonema'
   const [aba, setAba] = useState<'enviar' | 'dashboard'>('enviar')
   const [arquivo, setArquivo] = useState<File | null>(null)
+  const [atendente, setAtendente] = useState('')
   const [transcricoes, setTranscricoes] = useState('')
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -54,6 +59,7 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
         const form = new FormData()
         form.append('tipo', tipo)
         form.append('arquivo', arquivo)
+        if (atendente.trim()) form.append('atendente', atendente.trim())
         res = await fetch('/api/avaliacao', { method: 'POST', body: form })
       } else {
         res = await fetch('/api/avaliacao', {
@@ -76,6 +82,7 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
     setResultado(null)
     setTranscricoes('')
     setArquivo(null)
+    setAtendente('')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -115,20 +122,51 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
             <div className="bg-white border border-nex-gray-200 rounded-xl p-5 space-y-4 max-w-3xl">
               <div>
                 <label className="text-sm font-heading font-medium text-nex-gray-700 block mb-1.5">
-                  Arquivo de transcrições (PDF, CSV ou Excel)
+                  {permitirAudio
+                    ? 'Arquivo da ligação (áudio .mp3) ou transcrição (PDF, CSV, Excel)'
+                    : 'Arquivo de transcrições (PDF, CSV ou Excel)'}
                 </label>
                 <label className="flex items-center gap-2 px-4 py-3 rounded-lg border border-dashed border-nex-gray-300 text-sm text-nex-gray-500 hover:border-nex-gray-400 cursor-pointer transition-colors">
                   <Upload className="w-4 h-4" />
-                  {arquivo ? arquivo.name : 'Clique para selecionar um arquivo (.pdf, .csv, .xlsx, .xls)'}
-                  <input ref={fileInputRef} type="file" accept=".pdf,.csv,.xlsx,.xls,.txt"
+                  {arquivo
+                    ? arquivo.name
+                    : permitirAudio
+                      ? 'Clique para selecionar (.mp3, .m4a, .wav, .ogg, .pdf, .csv, .xlsx)'
+                      : 'Clique para selecionar um arquivo (.pdf, .csv, .xlsx, .xls)'}
+                  <input ref={fileInputRef} type="file"
+                    accept={permitirAudio ? '.mp3,.m4a,.wav,.ogg,.oga,.opus,.webm,.aac,.flac,.pdf,.csv,.xlsx,.xls,.txt' : '.pdf,.csv,.xlsx,.xls,.txt'}
                     onChange={e => setArquivo(e.target.files?.[0] ?? null)}
                     className="hidden" />
                 </label>
-                <p className="text-[11px] text-nex-gray-300 mt-1">
-                  Não é preciso subir transcrições diariamente — pode enviar de uma vez o acumulado de vários dias.
-                  Cada atendimento deve trazer a identificação do atendente responsável.
-                </p>
+                {permitirAudio && arquivo && ehAudio(arquivo.name) ? (
+                  <p className="text-[11px] text-nex-gray-400 mt-1">
+                    O áudio será transcrito automaticamente para texto e depois avaliado. Limite de 25 MB por arquivo.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-nex-gray-300 mt-1">
+                    Não é preciso subir transcrições diariamente — pode enviar de uma vez o acumulado de vários dias.
+                    Cada atendimento deve trazer a identificação do atendente responsável.
+                  </p>
+                )}
               </div>
+
+              {permitirAudio && arquivo && ehAudio(arquivo.name) && (
+                <div>
+                  <label className="text-sm font-heading font-medium text-nex-gray-700 block mb-1.5">
+                    Atendente responsável pela ligação <span className="text-nex-gray-300 font-normal">(opcional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={atendente}
+                    onChange={e => setAtendente(e.target.value)}
+                    placeholder="Ex.: Maria Silva"
+                    className="w-full rounded-lg border border-nex-gray-200 bg-white px-3 py-2.5 text-sm placeholder:text-nex-gray-300 focus:outline-none focus:ring-1 focus:ring-nex-gray-400 transition-colors"
+                  />
+                  <p className="text-[11px] text-nex-gray-300 mt-1">
+                    Como o áudio não traz o nome escrito, informe o atendente para agrupar corretamente no dashboard.
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px bg-nex-gray-100" />
@@ -154,7 +192,9 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-nex-black text-white text-sm font-heading font-medium hover:bg-nex-gray-700 disabled:opacity-40 disabled:pointer-events-none transition-colors"
               >
                 <Sparkles className="w-4 h-4" />
-                {loading ? 'Analisando com IA…' : 'Analisar transcrições'}
+                {loading
+                  ? (arquivo && ehAudio(arquivo.name) ? 'Transcrevendo e analisando…' : 'Analisando com IA…')
+                  : 'Analisar transcrições'}
               </button>
             </div>
           )}
