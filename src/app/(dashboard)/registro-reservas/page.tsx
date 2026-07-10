@@ -21,6 +21,7 @@ interface Reserva {
   nome_cliente: string
   data: string
   horario: string
+  duracao: string | null
   nome_sala: string | null
   quantidade_pessoas: number | null
   observacoes: string | null
@@ -28,6 +29,8 @@ interface Reserva {
   operador_email: string
   created_at: string
 }
+
+const DURACOES = Array.from({ length: 12 }, (_, i) => `${i + 1}h`)
 
 const UNIDADE_LABEL: Record<Unidade, string> = {
   francisco_rocha: 'Francisco Rocha',
@@ -81,7 +84,7 @@ function introDoTipo(tipo: Tipo): string {
 
 function buildPreviewHtml(f: typeof EMPTY_FORM & { operador: string }) {
   const precisaSala = !NO_SALA_TIPOS.includes(f.tipo)
-  if (!f.nome_cliente || !f.data || !f.horario || !f.unidade || (precisaSala && !f.nome_sala)) return null
+  if (!f.nome_cliente || !f.data || !f.horario || !f.unidade || (precisaSala && !f.nome_sala) || (precisaSala && !f.duracao)) return null
   const dataFormatada = new Date(f.data + 'T12:00:00').toLocaleDateString('pt-BR', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   })
@@ -99,6 +102,7 @@ const EMPTY_FORM = {
   nome_cliente: '',
   data: hoje(),
   horario: '',
+  duracao: '',
   nome_sala: '',
   quantidade_pessoas: '',
   observacoes: '',
@@ -142,6 +146,7 @@ export default function RegistroReservasPage() {
       ...prev,
       tipo: tab,
       nome_sala: '',
+      duracao: '',
       unidade: UNIDADE_FIXA[tab] ?? prev.unidade,
     }))
   }, [tab])
@@ -152,7 +157,7 @@ export default function RegistroReservasPage() {
 
   async function registrar(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.nome_cliente || !form.data || !form.horario || (precisaSala && !form.nome_sala)) return
+    if (!form.nome_cliente || !form.data || !form.horario || (precisaSala && !form.nome_sala) || (precisaSala && !form.duracao)) return
     setLoading(true)
     setErro(null)
     setSucesso(false)
@@ -245,6 +250,17 @@ export default function RegistroReservasPage() {
               </div>
             </div>
 
+            {precisaSala && (
+              <div>
+                <label className="block text-xs font-heading text-nex-gray-500 mb-1">Duração *</label>
+                <select required value={form.duracao} onChange={e => setForm(p => ({ ...p, duracao: e.target.value }))}
+                  className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400">
+                  <option value="">Selecione…</option>
+                  {DURACOES.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               {precisaSala && (
                 <div>
@@ -311,6 +327,7 @@ export default function RegistroReservasPage() {
                         ['Cliente', form.nome_cliente],
                         ['Data', preview.dataFormatada],
                         ['Horário', form.horario],
+                        ...(preview.precisaSala ? [['Duração', form.duracao]] : []),
                         ...(preview.precisaSala ? [['Sala', form.nome_sala]] : []),
                         ['Pessoas', form.quantidade_pessoas || '—'],
                         ['Unidade', preview.unidadeLabel],
@@ -399,7 +416,7 @@ export default function RegistroReservasPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-nex-gray-100">
-                  {['Data', 'Horário', 'Cliente', 'Sala', 'Pessoas', 'Tipo', 'Unidade', 'Observações'].map(h => (
+                  {['Data', 'Horário', 'Duração', 'Cliente', 'Sala', 'Pessoas', 'Tipo', 'Unidade', 'Observações'].map(h => (
                     <th key={h} className="px-4 py-2.5 text-left text-[10px] font-heading font-semibold uppercase tracking-wide text-nex-gray-400 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -413,6 +430,7 @@ export default function RegistroReservasPage() {
                     <td className="px-4 py-2.5 text-nex-gray-800 whitespace-nowrap flex items-center gap-1">
                       <Clock className="w-3 h-3 text-nex-gray-300" />{r.horario}
                     </td>
+                    <td className="px-4 py-2.5 text-nex-gray-600 whitespace-nowrap">{r.duracao || '—'}</td>
                     <td className="px-4 py-2.5 text-nex-gray-800 font-medium">{r.nome_cliente}</td>
                     <td className="px-4 py-2.5 text-nex-gray-600">{r.nome_sala || '—'}</td>
                     <td className="px-4 py-2.5 text-nex-gray-600 text-center">{r.quantidade_pessoas ?? '—'}</td>

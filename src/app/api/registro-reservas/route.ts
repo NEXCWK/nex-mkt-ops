@@ -49,6 +49,7 @@ function buildEmailHtml(dados: {
   nome_cliente: string
   data: string
   horario: string
+  duracao: string | null
   nome_sala: string | null
   quantidade_pessoas: number | null
   observacoes: string | null
@@ -98,6 +99,11 @@ function buildEmailHtml(dados: {
                 <td style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;border-top:1px solid #f0f0f0;">Horário</td>
                 <td style="padding:10px 16px;font-size:14px;color:#0a0a0a;border-top:1px solid #f0f0f0;">${dados.horario}</td>
               </tr>
+              ${dados.duracao ? `
+              <tr style="background:#f9f9f9;">
+                <td style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;border-top:1px solid #f0f0f0;">Duração</td>
+                <td style="padding:10px 16px;font-size:14px;color:#0a0a0a;border-top:1px solid #f0f0f0;">${dados.duracao}</td>
+              </tr>` : ''}
               ${dados.nome_sala ? `
               <tr style="background:#f9f9f9;">
                 <td style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;border-top:1px solid #f0f0f0;">Sala</td>
@@ -139,13 +145,15 @@ export async function POST(req: NextRequest) {
   if (!session.accessToken) return NextResponse.json({ error: 'Token Gmail não disponível. Faça login novamente.' }, { status: 401 })
 
   const body = await req.json()
-  const { tipo, nome_cliente, data, horario, nome_sala, quantidade_pessoas, observacoes } = body
+  const { tipo, nome_cliente, data, horario, duracao, nome_sala, quantidade_pessoas, observacoes } = body
 
   const semSala = NO_SALA_TIPOS.includes(tipo)
+  // Duração (1h a 12h) só se aplica aos tipos de Reunião (com sala)
+  const precisaDuracao = !semSala
   // Unidade é fixa nos tipos de Primeiro Uso; caso contrário vem do formulário
   const unidade = UNIDADE_FIXA[tipo] ?? body.unidade
 
-  if (!tipo || !nome_cliente || !data || !horario || !unidade || (!semSala && !nome_sala)) {
+  if (!tipo || !nome_cliente || !data || !horario || !unidade || (!semSala && !nome_sala) || (precisaDuracao && !duracao)) {
     return NextResponse.json({ error: 'Campos obrigatórios ausentes' }, { status: 400 })
   }
 
@@ -153,6 +161,7 @@ export async function POST(req: NextRequest) {
 
   const { data: registro, error } = await supabase.from('registro_reservas').insert({
     tipo, nome_cliente, data, horario,
+    duracao: precisaDuracao ? duracao : null,
     nome_sala: semSala ? null : nome_sala,
     quantidade_pessoas: quantidade_pessoas || null,
     observacoes: observacoes || null,
@@ -165,6 +174,7 @@ export async function POST(req: NextRequest) {
   const destinatarios = DESTINATARIOS[unidade] ?? []
   const { assunto, corpo } = buildEmailHtml({
     tipo, nome_cliente, data, horario,
+    duracao: precisaDuracao ? duracao : null,
     nome_sala: semSala ? null : nome_sala,
     quantidade_pessoas: quantidade_pessoas || null,
     observacoes: observacoes || null,

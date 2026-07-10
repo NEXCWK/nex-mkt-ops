@@ -134,6 +134,7 @@ create table if not exists registro_reservas (
   nome_cliente text not null,
   data date not null,
   horario text not null,
+  duracao text,
   nome_sala text,
   quantidade_pessoas integer,
   observacoes text,
@@ -297,3 +298,6 @@ create index if not exists idx_uso_tokens_created on uso_tokens(created_at desc)
 alter table uso_tokens enable row level security;
 drop policy if exists "Service role full access" on uso_tokens;
 create policy "Service role full access" on uso_tokens for all using (true);
+
+-- Campo Duração (Registro de Reservas — Reunião: 1h a 12h)
+alter table registro_reservas add column if not exists duracao text;
