@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
       destinatarios: destinatarios as Destinatario[],
       assunto,
       corpo,
+      senderName: 'Nex Coworking <comercial@nex.work>',
     })
     return NextResponse.json(resultado)
   } catch (e) {

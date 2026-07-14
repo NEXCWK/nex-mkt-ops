@@ -193,6 +193,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          tipo,
           assunto,
           corpo,
           destinatarios: selecionadas.map(e => ({ email: e.email, nome: e.contato, empresa: e.empresa })),
@@ -223,6 +224,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          tipo,
           assunto: textoIndividual.assunto,
           corpo: textoIndividual.corpo,
           destinatarios: [{ email: e.email, nome: e.contato, empresa: e.empresa }],
@@ -464,7 +466,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
           </div>
           <p className="text-[11px] text-nex-gray-400 mb-3">
             Use as variáveis <code className="px-1 bg-nex-gray-100 rounded">{'{{nome}}'}</code> e{' '}
-            <code className="px-1 bg-nex-gray-100 rounded">{'{{empresa}}'}</code>. Envio via <strong>comercial@nexcoworking.com.br</strong>.
+            <code className="px-1 bg-nex-gray-100 rounded">{'{{empresa}}'}</code>. Envio via <strong>{tipo === 'parcerias' ? 'bruna@nex.work' : 'comercial@nex.work'}</strong>.
             {modoEnvio === 'individual' && ' No modo "Um a um", clique em "Ver e enviar" na tabela para revisar e editar cada e-mail antes de disparar.'}
           </p>
           <input value={assunto} onChange={e => setAssunto(e.target.value)} placeholder="Assunto do e-mail"

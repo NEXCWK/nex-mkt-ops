@@ -59,9 +59,18 @@ export default function CcoPage() {
   const contatos = useMemo(() => parseCSV(raw), [raw])
   const preview = contatos[0]
 
-  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    const ext = file.name.toLowerCase().split('.').pop()
+    if (ext === 'xlsx' || ext === 'xls') {
+      const XLSX = await import('xlsx')
+      const buffer = await file.arrayBuffer()
+      const wb = XLSX.read(buffer, { type: 'array' })
+      const sheet = wb.Sheets[wb.SheetNames[0]]
+      setRaw(XLSX.utils.sheet_to_csv(sheet))
+      return
+    }
     const reader = new FileReader()
     reader.onload = () => setRaw(String(reader.result ?? ''))
     reader.readAsText(file)
@@ -130,8 +139,8 @@ export default function CcoPage() {
               <Users className="w-4 h-4 text-nex-gray-400" /> Base de contatos
             </h3>
             <label className="flex items-center gap-1.5 text-xs text-nex-gray-500 hover:text-nex-black cursor-pointer">
-              <Upload className="w-3.5 h-3.5" /> Importar CSV
-              <input type="file" accept=".csv,text/csv,text/plain" onChange={onFile} className="hidden" />
+              <Upload className="w-3.5 h-3.5" /> Importar CSV ou Excel
+              <input type="file" accept=".csv,text/csv,text/plain,.xls,.xlsx" onChange={onFile} className="hidden" />
             </label>
           </div>
           <textarea
@@ -142,7 +151,7 @@ export default function CcoPage() {
             className="w-full resize-y rounded-lg border border-nex-gray-200 px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-nex-gray-400"
           />
           <p className="text-[11px] text-nex-gray-400 mt-2">
-            {contatos.length} contato(s) válido(s) detectado(s). Colunas: nome, email, empresa, produto (com ou sem cabeçalho).
+            {contatos.length} contato(s) válido(s) detectado(s). Colunas: nome, email, empresa, produto (com ou sem cabeçalho). Cole o texto, ou importe um arquivo .csv ou .xls/.xlsx acima.
           </p>
 
           {modoEnvio === 'individual' && contatos.length > 0 && (
@@ -202,7 +211,7 @@ export default function CcoPage() {
           <p className="text-[11px] text-nex-gray-400 mb-3">
             Variáveis: <code className="px-1 bg-nex-gray-100 rounded">{'{{nome}}'}</code>{' '}
             <code className="px-1 bg-nex-gray-100 rounded">{'{{empresa}}'}</code>{' '}
-            <code className="px-1 bg-nex-gray-100 rounded">{'{{produto}}'}</code>. Envio via <strong>comercial@nexcoworking.com.br</strong>.
+            <code className="px-1 bg-nex-gray-100 rounded">{'{{produto}}'}</code>. Envio via <strong>comercial@nex.work</strong>.
           </p>
           <input value={assunto} onChange={e => setAssunto(e.target.value)} placeholder="Assunto"
             className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
