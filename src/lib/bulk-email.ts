@@ -53,29 +53,34 @@ export async function enviarLote({
   const from = senderName || `${COMERCIAL_NAME} <${COMERCIAL_FROM}>`
 
   for (const d of destinatarios) {
-    if (!d.email || !d.email.includes('@')) {
+    // Envia sempre para o e-mail principal e, quando preenchido e válido, também para o secundário
+    // — cada endereço recebe seu PRÓPRIO e-mail individual (não um único e-mail com dois destinatários).
+    const destinos = [d.email, d.emailSecundario]
+      .filter((e): e is string => !!e && e.includes('@'))
+      .filter((e, i, arr) => arr.indexOf(e) === i)
+
+    if (destinos.length === 0) {
       falhas++
       erros.push(`E-mail inválido: ${d.email || '(vazio)'}`)
       continue
     }
-    // Envia sempre para o e-mail principal e, quando preenchido e válido, também para o secundário
-    const destinos = [d.email, d.emailSecundario]
-      .filter((e): e is string => !!e && e.includes('@'))
-      .filter((e, i, arr) => arr.indexOf(e) === i)
-    try {
-      await sendEmailViaGmail({
-        accessToken,
-        refreshToken,
-        to: destinos.join(', '),
-        cc: [],
-        subject: mergeVariaveis(assunto, d),
-        body: textoParaHtml(mergeVariaveis(corpo, d)),
-        senderName: from,
-      })
-      enviados++
-    } catch (e) {
-      falhas++
-      erros.push(`${d.email}: ${e instanceof Error ? e.message : 'erro'}`)
+
+    for (const destino of destinos) {
+      try {
+        await sendEmailViaGmail({
+          accessToken,
+          refreshToken,
+          to: destino,
+          cc: [],
+          subject: mergeVariaveis(assunto, d),
+          body: textoParaHtml(mergeVariaveis(corpo, d)),
+          senderName: from,
+        })
+        enviados++
+      } catch (e) {
+        falhas++
+        erros.push(`${destino}: ${e instanceof Error ? e.message : 'erro'}`)
+      }
     }
   }
 

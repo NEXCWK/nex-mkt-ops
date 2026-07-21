@@ -184,6 +184,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
   }
 
   const selecionadas = empresas.filter(e => e.selecionada && e.email.trim())
+  const totalEmailsMassa = selecionadas.reduce((s, e) => s + (e.email.trim() ? 1 : 0) + (e.emailSecundario?.trim() ? 1 : 0), 0)
 
   async function enviarMassa() {
     if (selecionadas.length === 0 || !assunto.trim() || !corpo.trim() || enviando) return
@@ -472,7 +473,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
           </div>
           <p className="text-[11px] text-nex-gray-400 mb-3">
             Use as variáveis <code className="px-1 bg-nex-gray-100 rounded">{'{{nome}}'}</code> e{' '}
-            <code className="px-1 bg-nex-gray-100 rounded">{'{{empresa}}'}</code>. Envio via <strong>comercial@nex.work</strong>, sempre para o e-mail principal e o secundário (quando preenchido).
+            <code className="px-1 bg-nex-gray-100 rounded">{'{{empresa}}'}</code>. Envio via <strong>comercial@nexcoworking.com.br</strong>, sempre um e-mail individual para o principal e outro para o secundário (quando preenchido).
             {modoEnvio === 'individual' && ' No modo "Um a um", clique em "Ver e enviar" na tabela para revisar e editar cada e-mail antes de disparar.'}
           </p>
           <input value={assunto} onChange={e => setAssunto(e.target.value)} placeholder="Assunto do e-mail"
@@ -494,7 +495,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
                 className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-heading font-medium transition-colors',
                   'bg-nex-black text-white hover:bg-nex-gray-700 disabled:opacity-40 disabled:pointer-events-none')}>
                 {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                {enviando ? 'Enviando…' : `Enviar para ${selecionadas.length} empresa(s)`}
+                {enviando ? 'Enviando…' : `Enviar para ${selecionadas.length} empresa(s) (${totalEmailsMassa} e-mail(s))`}
               </button>
               {statusEnvio && <span className="text-sm text-nex-gray-600">{statusEnvio}</span>}
             </div>

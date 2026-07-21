@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
   }
 
-  const senderName = 'Nex Coworking <comercial@nex.work>'
+  const senderName = 'Nex Coworking <comercial@nexcoworking.com.br>'
 
   try {
     const resultado = await enviarLote({
