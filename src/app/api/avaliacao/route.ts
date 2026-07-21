@@ -24,24 +24,27 @@ export async function POST(req: NextRequest) {
   if (contentType.includes('multipart/form-data')) {
     const form = await req.formData()
     tipo = (String(form.get('tipo') ?? 'atendimento') as 'atendimento' | 'telefonema')
-    const file = form.get('arquivo') as File | null
-    if (file) {
-      const buffer = Buffer.from(await file.arrayBuffer())
-      nomeArquivo = file.name
-      if (isAudioFile(file.name)) {
-        // Ligação em áudio: transcreve para texto antes de avaliar
-        try {
-          const texto = await transcreverAudio(buffer, file.name)
-          const atendente = String(form.get('atendente') ?? '').trim()
-          transcricoes = atendente
-            ? `[Atendente: ${atendente}]\n${texto}`
-            : texto
-        } catch (e) {
-          return NextResponse.json({ error: e instanceof Error ? e.message : 'Falha ao transcrever o áudio' }, { status: 400 })
+    const files = form.getAll('arquivo').filter((f): f is File => f instanceof File)
+    if (files.length > 0) {
+      const atendente = String(form.get('atendente') ?? '').trim()
+      const partes: string[] = []
+      for (const file of files) {
+        const buffer = Buffer.from(await file.arrayBuffer())
+        if (isAudioFile(file.name)) {
+          // Ligação em áudio: transcreve para texto antes de avaliar
+          try {
+            const texto = await transcreverAudio(buffer, file.name)
+            partes.push(atendente ? `[Atendente: ${atendente}]\n${texto}` : texto)
+          } catch (e) {
+            return NextResponse.json({ error: `${file.name}: ${e instanceof Error ? e.message : 'Falha ao transcrever o áudio'}` }, { status: 400 })
+          }
+        } else {
+          const texto = await extrairTextoDeArquivo(buffer, file.name)
+          partes.push(`--- Arquivo: ${file.name} ---\n${texto}`)
         }
-      } else {
-        transcricoes = await extrairTextoDeArquivo(buffer, file.name)
       }
+      transcricoes = partes.join('\n\n')
+      nomeArquivo = files.length === 1 ? files[0].name : `${files.length} arquivos (${files.map(f => f.name).join(', ')})`
     } else {
       transcricoes = String(form.get('transcricoes') ?? '')
     }

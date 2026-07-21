@@ -12,14 +12,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Token Gmail não disponível. Faça login com a conta comercial novamente.' }, { status: 401 })
   }
 
-  const { tipo, assunto, corpo, destinatarios } = await req.json()
+  const { assunto, corpo, destinatarios } = await req.json()
   if (!assunto || !corpo || !Array.isArray(destinatarios) || destinatarios.length === 0) {
     return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
   }
 
-  const senderName = tipo === 'parcerias'
-    ? 'Nex Coworking <bruna@nex.work>'
-    : 'Nex Coworking <comercial@nex.work>'
+  const senderName = 'Nex Coworking <comercial@nex.work>'
 
   try {
     const resultado = await enviarLote({

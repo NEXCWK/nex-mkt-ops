@@ -9,6 +9,7 @@ export interface Empresa {
   empresa: string
   contato: string
   email: string
+  emailSecundario: string
   telefone: string
   site: string
   segmento: string
@@ -33,7 +34,7 @@ interface ListaSalva {
 }
 
 function csvDaLista(empresas: Omit<Empresa, 'selecionada'>[]): string {
-  const cols = ['empresa', 'contato', 'email', 'telefone', 'site', 'segmento', 'regiao', 'observacao']
+  const cols = ['empresa', 'contato', 'email', 'emailSecundario', 'telefone', 'site', 'segmento', 'regiao', 'observacao']
   const linhas = [cols.join(',')]
   for (const e of empresas) {
     linhas.push(cols.map(c => `"${String((e as Record<string, unknown>)[c] ?? '').replace(/"/g, '""')}"`).join(','))
@@ -116,7 +117,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
   }
 
   function carregarLista(lista: ListaSalva) {
-    setEmpresas(lista.empresas.map(e => ({ ...e, selecionada: true })))
+    setEmpresas(lista.empresas.map(e => ({ ...e, emailSecundario: e.emailSecundario ?? '', selecionada: true })))
     setAssunto(lista.assunto ?? '')
     setCorpo(lista.corpo ?? '')
     if (lista.regiao) setRegiao(lista.regiao)
@@ -165,7 +166,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`)
-      setEmpresas((json.empresas ?? []).map((e: Omit<Empresa, 'selecionada'>) => ({ ...e, selecionada: true })))
+      setEmpresas((json.empresas ?? []).map((e: Omit<Empresa, 'selecionada'>) => ({ ...e, emailSecundario: e.emailSecundario ?? '', selecionada: true })))
       if (json.emailTemplate) {
         setAssunto(json.emailTemplate.assunto ?? '')
         setCorpo(json.emailTemplate.corpo ?? '')
@@ -196,7 +197,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
           tipo,
           assunto,
           corpo,
-          destinatarios: selecionadas.map(e => ({ email: e.email, nome: e.contato, empresa: e.empresa })),
+          destinatarios: selecionadas.map(e => ({ email: e.email, emailSecundario: e.emailSecundario, nome: e.contato, empresa: e.empresa })),
         }),
       })
       const json = await res.json()
@@ -227,7 +228,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
           tipo,
           assunto: textoIndividual.assunto,
           corpo: textoIndividual.corpo,
-          destinatarios: [{ email: e.email, nome: e.contato, empresa: e.empresa }],
+          destinatarios: [{ email: e.email, emailSecundario: e.emailSecundario, nome: e.contato, empresa: e.empresa }],
         }),
       })
       const json = await res.json()
@@ -376,7 +377,8 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
                   <th className="py-2 pr-2 w-8"></th>
                   <th className="py-2 pr-2">Empresa</th>
                   <th className="py-2 pr-2">Contato</th>
-                  <th className="py-2 pr-2">E-mail</th>
+                  <th className="py-2 pr-2">E-mail Principal</th>
+                  <th className="py-2 pr-2">E-mail Secundário</th>
                   <th className="py-2 pr-2">Segmento</th>
                   {modoEnvio === 'individual' && <th className="py-2 pr-2">Envio individual</th>}
                   <th className="py-2 pr-2 w-8"></th>
@@ -394,8 +396,12 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
                     </td>
                     <td className="py-2 pr-2 text-nex-gray-600">{e.contato || '—'}</td>
                     <td className="py-2 pr-2">
-                      <input value={e.email} onChange={ev => update(i, { email: ev.target.value })} placeholder="email@empresa.com"
-                        className="w-44 rounded border border-nex-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
+                      <input value={e.email} onChange={ev => update(i, { email: ev.target.value })} placeholder="pessoa@empresa.com"
+                        className="w-40 rounded border border-nex-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
+                    </td>
+                    <td className="py-2 pr-2">
+                      <input value={e.emailSecundario} onChange={ev => update(i, { emailSecundario: ev.target.value })} placeholder="contato@empresa.com"
+                        className="w-40 rounded border border-nex-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
                     </td>
                     <td className="py-2 pr-2 text-nex-gray-500 text-xs">{e.segmento}</td>
                     {modoEnvio === 'individual' && (
@@ -466,7 +472,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
           </div>
           <p className="text-[11px] text-nex-gray-400 mb-3">
             Use as variáveis <code className="px-1 bg-nex-gray-100 rounded">{'{{nome}}'}</code> e{' '}
-            <code className="px-1 bg-nex-gray-100 rounded">{'{{empresa}}'}</code>. Envio via <strong>{tipo === 'parcerias' ? 'bruna@nex.work' : 'comercial@nex.work'}</strong>.
+            <code className="px-1 bg-nex-gray-100 rounded">{'{{empresa}}'}</code>. Envio via <strong>comercial@nex.work</strong>, sempre para o e-mail principal e o secundário (quando preenchido).
             {modoEnvio === 'individual' && ' No modo "Um a um", clique em "Ver e enviar" na tabela para revisar e editar cada e-mail antes de disparar.'}
           </p>
           <input value={assunto} onChange={e => setAssunto(e.target.value)} placeholder="Assunto do e-mail"

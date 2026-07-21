@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { cn } from '@/lib/utils'
-import { Sparkles, Upload, RotateCcw, Loader2, LayoutDashboard, FileUp, ThumbsUp, AlertTriangle } from 'lucide-react'
+import { Sparkles, Upload, RotateCcw, Loader2, LayoutDashboard, FileUp, ThumbsUp, AlertTriangle, X } from 'lucide-react'
 import { DashboardAvaliacao } from './DashboardAvaliacao'
 
 interface Kpi { nome: string; nota: number; comentario: string }
@@ -40,7 +40,7 @@ const ehAudio = (nome: string) => AUDIO_EXTS.includes(nome.toLowerCase().split('
 export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props) {
   const permitirAudio = tipo === 'telefonema'
   const [aba, setAba] = useState<'enviar' | 'dashboard'>('enviar')
-  const [arquivo, setArquivo] = useState<File | null>(null)
+  const [arquivos, setArquivos] = useState<File[]>([])
   const [atendente, setAtendente] = useState('')
   const [transcricoes, setTranscricoes] = useState('')
   const [loading, setLoading] = useState(false)
@@ -48,17 +48,23 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
   const [resultado, setResultado] = useState<{ totalConversas: number; notaMedia: number; conversas: ConversaResultado[] } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const algumAudio = arquivos.some(a => ehAudio(a.name))
+
+  function removerArquivo(idx: number) {
+    setArquivos(prev => prev.filter((_, i) => i !== idx))
+  }
+
   async function avaliar() {
-    if ((!arquivo && !transcricoes.trim()) || loading) return
+    if ((arquivos.length === 0 && !transcricoes.trim()) || loading) return
     setLoading(true)
     setErro(null)
     setResultado(null)
     try {
       let res: Response
-      if (arquivo) {
+      if (arquivos.length > 0) {
         const form = new FormData()
         form.append('tipo', tipo)
-        form.append('arquivo', arquivo)
+        for (const arquivo of arquivos) form.append('arquivo', arquivo)
         if (atendente.trim()) form.append('atendente', atendente.trim())
         res = await fetch('/api/avaliacao', { method: 'POST', body: form })
       } else {
@@ -81,7 +87,7 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
   function novaAvaliacao() {
     setResultado(null)
     setTranscricoes('')
-    setArquivo(null)
+    setArquivos([])
     setAtendente('')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
@@ -123,34 +129,46 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
               <div>
                 <label className="text-sm font-heading font-medium text-nex-gray-700 block mb-1.5">
                   {permitirAudio
-                    ? 'Arquivo da ligação (áudio .mp3) ou transcrição (PDF, CSV, Excel)'
-                    : 'Arquivo de transcrições (PDF, CSV ou Excel)'}
+                    ? 'Arquivo(s) da ligação (áudio .mp3) ou transcrição (PDF, CSV, Excel)'
+                    : 'Arquivo(s) de transcrições (PDF, CSV ou Excel)'}
                 </label>
                 <label className="flex items-center gap-2 px-4 py-3 rounded-lg border border-dashed border-nex-gray-300 text-sm text-nex-gray-500 hover:border-nex-gray-400 cursor-pointer transition-colors">
                   <Upload className="w-4 h-4" />
-                  {arquivo
-                    ? arquivo.name
+                  {arquivos.length > 0
+                    ? `${arquivos.length} arquivo(s) selecionado(s)`
                     : permitirAudio
-                      ? 'Clique para selecionar (.mp3, .m4a, .wav, .ogg, .pdf, .csv, .xlsx)'
-                      : 'Clique para selecionar um arquivo (.pdf, .csv, .xlsx, .xls)'}
-                  <input ref={fileInputRef} type="file"
+                      ? 'Clique para selecionar um ou vários (.mp3, .m4a, .wav, .ogg, .pdf, .csv, .xlsx)'
+                      : 'Clique para selecionar um ou vários arquivos (.pdf, .csv, .xlsx, .xls)'}
+                  <input ref={fileInputRef} type="file" multiple
                     accept={permitirAudio ? '.mp3,.m4a,.wav,.ogg,.oga,.opus,.webm,.aac,.flac,.pdf,.csv,.xlsx,.xls,.txt' : '.pdf,.csv,.xlsx,.xls,.txt'}
-                    onChange={e => setArquivo(e.target.files?.[0] ?? null)}
+                    onChange={e => setArquivos(Array.from(e.target.files ?? []))}
                     className="hidden" />
                 </label>
-                {permitirAudio && arquivo && ehAudio(arquivo.name) ? (
+                {arquivos.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {arquivos.map((a, i) => (
+                      <li key={`${a.name}-${i}`} className="flex items-center justify-between gap-2 text-xs text-nex-gray-500 bg-nex-gray-50 rounded-md px-2.5 py-1.5">
+                        <span className="truncate">{a.name}</span>
+                        <button type="button" onClick={() => removerArquivo(i)} className="text-nex-gray-300 hover:text-red-500 flex-shrink-0">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {permitirAudio && algumAudio ? (
                   <p className="text-[11px] text-nex-gray-400 mt-1">
-                    O áudio será transcrito automaticamente para texto e depois avaliado. Limite de 25 MB por arquivo.
+                    Cada áudio será transcrito automaticamente para texto e depois avaliado. Limite de 25 MB por arquivo.
                   </p>
                 ) : (
                   <p className="text-[11px] text-nex-gray-300 mt-1">
-                    Não é preciso subir transcrições diariamente — pode enviar de uma vez o acumulado de vários dias.
+                    Não é preciso subir transcrições diariamente — pode enviar de uma vez o acumulado de vários dias, em um ou vários arquivos.
                     Cada atendimento deve trazer a identificação do atendente responsável.
                   </p>
                 )}
               </div>
 
-              {permitirAudio && arquivo && ehAudio(arquivo.name) && (
+              {permitirAudio && algumAudio && (
                 <div>
                   <label className="text-sm font-heading font-medium text-nex-gray-700 block mb-1.5">
                     Atendente responsável pela ligação <span className="text-nex-gray-300 font-normal">(opcional)</span>
@@ -164,6 +182,7 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
                   />
                   <p className="text-[11px] text-nex-gray-300 mt-1">
                     Como o áudio não traz o nome escrito, informe o atendente para agrupar corretamente no dashboard.
+                    Se enviar vários arquivos de uma vez, esse nome será aplicado a todas as ligações deste envio.
                   </p>
                 </div>
               )}
@@ -180,7 +199,7 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
                   onChange={e => setTranscricoes(e.target.value)}
                   rows={10}
                   placeholder={placeholder}
-                  disabled={!!arquivo}
+                  disabled={arquivos.length > 0}
                   className="w-full resize-y rounded-lg border border-nex-gray-200 bg-white px-3 py-2.5 text-sm placeholder:text-nex-gray-300 focus:outline-none focus:ring-1 focus:ring-nex-gray-400 transition-colors font-mono disabled:bg-nex-gray-50 disabled:text-nex-gray-300"
                 />
               </div>
@@ -188,12 +207,12 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
               {erro && <p className="text-sm text-red-600">{erro}</p>}
               <button
                 onClick={avaliar}
-                disabled={(!arquivo && !transcricoes.trim()) || loading}
+                disabled={(arquivos.length === 0 && !transcricoes.trim()) || loading}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-nex-black text-white text-sm font-heading font-medium hover:bg-nex-gray-700 disabled:opacity-40 disabled:pointer-events-none transition-colors"
               >
                 <Sparkles className="w-4 h-4" />
                 {loading
-                  ? (arquivo && ehAudio(arquivo.name) ? 'Transcrevendo e analisando…' : 'Analisando com IA…')
+                  ? (algumAudio ? 'Transcrevendo e analisando…' : 'Analisando com IA…')
                   : 'Analisar transcrições'}
               </button>
             </div>

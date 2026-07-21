@@ -6,6 +6,8 @@ export const COMERCIAL_NAME = process.env.COMERCIAL_FROM_NAME || 'Nex Coworking'
 
 export interface Destinatario {
   email: string
+  /** E-mail secundário/institucional da empresa — recebe cópia junto com o principal. */
+  emailSecundario?: string
   nome?: string
   empresa?: string
   [k: string]: string | undefined
@@ -56,11 +58,15 @@ export async function enviarLote({
       erros.push(`E-mail inválido: ${d.email || '(vazio)'}`)
       continue
     }
+    // Envia sempre para o e-mail principal e, quando preenchido e válido, também para o secundário
+    const destinos = [d.email, d.emailSecundario]
+      .filter((e): e is string => !!e && e.includes('@'))
+      .filter((e, i, arr) => arr.indexOf(e) === i)
     try {
       await sendEmailViaGmail({
         accessToken,
         refreshToken,
-        to: d.email,
+        to: destinos.join(', '),
         cc: [],
         subject: mergeVariaveis(assunto, d),
         body: textoParaHtml(mergeVariaveis(corpo, d)),

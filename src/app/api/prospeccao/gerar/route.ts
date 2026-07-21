@@ -31,20 +31,23 @@ export async function POST(req: NextRequest) {
 Tarefa: a partir do seu conhecimento de mercado e de dados públicos do Brasil (presença em Google, sites institucionais, perfis públicos, bases públicas e APIs gratuitas como ReceitaWS/BrasilAPI por CNPJ), monte uma lista de ${qtd} empresas REAIS e plausíveis para o nicho "${nicho}" na região "${regiao || 'Curitiba/PR'}".
 
 Regras importantes:
-- Priorize empresas que provavelmente existem nessa região e nicho. Quando não tiver certeza de um e-mail, deixe "email" como string vazia (a equipe completará) em vez de inventar um endereço falso.
+- Priorize empresas que provavelmente existem nessa região e nicho.
 - "contato" = nome de um responsável plausível (sócio, gerente comercial) ou cargo genérico se desconhecido.
-- Não invente dados sensíveis; e-mails/telefones só quando forem padrões públicos plausíveis (ex.: contato@dominio.com.br) — caso contrário, vazio.
+- Para CADA empresa, traga SEMPRE dois e-mails distintos quando possível:
+  - "email" (E-mail Principal) = e-mail plausível da PESSOA de contato (ex.: nome.sobrenome@dominio.com.br ou padrão comum do setor).
+  - "emailSecundario" (E-mail Secundário) = e-mail GENÉRICO/institucional da empresa, do tipo publicado no site dela (ex.: contato@dominio.com.br, comercial@dominio.com.br, atendimento@dominio.com.br).
+  - Não invente dados sensíveis; e-mails só quando forem padrões públicos plausíveis — caso não tenha certeza de nenhum dos dois, deixe o campo correspondente como string vazia (a equipe completará) em vez de inventar um endereço falso.
 - ${focoProduto}
 - O e-mail deve ser CURTO (no máximo 6 a 8 linhas), sem parágrafos longos.
 
 Formato do JSON:
 {
   "empresas": [
-    { "empresa": "", "contato": "", "email": "", "telefone": "", "site": "", "segmento": "", "regiao": "", "observacao": "por que é um bom alvo" }
+    { "empresa": "", "contato": "", "email": "", "emailSecundario": "", "telefone": "", "site": "", "segmento": "", "regiao": "", "observacao": "por que é um bom alvo" }
   ],
   "emailTemplate": {
     "assunto": "assunto curto e atrativo, pode usar {{empresa}}",
-    "corpo": "e-mail de prospecção curto e pronto, em PT-BR, com as variáveis {{nome}} e {{empresa}}, tom da marca Nex (próximo, direto, profissional), com CTA claro e assinatura 'Equipe Comercial Nex | comercial@nexcoworking.com.br'"
+    "corpo": "e-mail de prospecção curto e pronto, em PT-BR, com as variáveis {{nome}} e {{empresa}}, tom da marca Nex (próximo, direto, profissional), com CTA claro e assinatura 'Equipe Comercial Nex | comercial@nex.work'"
   }
 }`
 
