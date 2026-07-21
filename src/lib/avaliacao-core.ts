@@ -58,10 +58,10 @@ export async function avaliarTranscricoes(opts: {
 
   const system = `Você é um analista de qualidade (QA) sênior do Nex Coworking (Curitiba/PR), especialista em avaliação de ${canal}.
 
-Você recebe um arquivo de transcrições que pode conter UM OU MAIS atendimentos, de UM OU MAIS atendentes, em qualquer intervalo de datas. Cada atendimento traz a identificação do atendente responsável no próprio texto. Sua tarefa é:
+Você recebe um arquivo de transcrições que pode conter UM OU MAIS atendimentos, de UM OU MAIS atendentes, em qualquer intervalo de datas. O texto pode vir de exportações de PDF (RD Conversas/Tallos), CSV, Excel ou colado manualmente — nesses exports em PDF é comum que a ordem de extração do texto fique fora da ordem visual (ex.: várias linhas de "Nome | data, hora | canal" agrupadas antes das mensagens correspondentes). Interprete o conteúdo com flexibilidade mesmo quando a formatação estiver desalinhada. Quando o arquivo tiver marcadores "--- Arquivo: nome.ext ---", cada bloco entre marcadores é POR PADRÃO pelo menos uma conversa separada. Sua tarefa é:
 
 1. Separar o conteúdo em atendimentos/conversas individuais.
-2. Identificar o nome do atendente de cada conversa (procure por marcações como "Atendente:", assinatura, ou nome citado no início/fim da conversa).
+2. Identificar o nome do atendente de cada conversa (procure por marcações como "Atendente:", assinatura, nome citado no início/fim da conversa, ou o nome do remetente das mensagens que não é o cliente — ex.: "*Letícia:* ..." ou "Letícia | data, hora | whatsapp").
 3. Avaliar CADA conversa individualmente nos KPIs abaixo (nota de 0 a 10, uma casa decimal):
 ${kpis.map(k => `- ${k}`).join('\n')}
 4. Para cada conversa, extrair os principais pontos de atenção: objeções do cliente, pontos de atrito, ou pontos fortes, cada um com o TRECHO EXATO da transcrição de onde foi extraído (cite literalmente).
@@ -69,9 +69,10 @@ ${kpis.map(k => `- ${k}`).join('\n')}
 
 Regras:
 - Seja honesto nas notas: baseie-se apenas no que está na transcrição de cada conversa.
-- Se não conseguir identificar o atendente de uma conversa, use "Não identificado".
+- Se não conseguir identificar o atendente de uma conversa, use "Atendente não Reconhecido" — NUNCA descarte a conversa por não conseguir identificar o atendente.
 - Se não conseguir identificar a data, use null.
 - "trecho" no nível da conversa deve ser um recorte representativo (até ~400 caracteres) da conversa.
+- IMPORTANTE: NUNCA retorne uma lista "conversas" vazia. Se o conteúdo existir mas você não conseguir separá-lo claramente em múltiplas conversas, trate o arquivo inteiro (ou cada bloco "--- Arquivo: ... ---") como UMA ÚNICA conversa e avalie-a mesmo assim, usando "Atendente não Reconhecido" se necessário. Uma avaliação aproximada é sempre melhor do que nenhuma.
 
 Responda em JSON:
 {
@@ -97,10 +98,20 @@ Responda em JSON:
     operadorEmail,
   })
 
-  const conversas = Array.isArray(result.conversas) ? result.conversas : []
-  if (conversas.length === 0) {
-    throw new Error('Não foi possível identificar atendimentos nas transcrições')
-  }
+  const conversas = Array.isArray(result.conversas) && result.conversas.length > 0
+    ? result.conversas
+    // Rede de segurança: mesmo se a IA (contra as instruções) devolver vazio, ainda
+    // registramos o envio como uma conversa única em vez de bloquear o upload do usuário.
+    : [{
+        atendente: 'Atendente não Reconhecido',
+        data: null,
+        nota: 0,
+        resumo: 'Não foi possível separar automaticamente esta transcrição em conversas individuais.',
+        kpis: [],
+        pontos_atencao: [],
+        palavras_chave: [],
+        trecho: transcricoes.slice(0, 400),
+      }]
 
   const notaMedia = conversas.reduce((s, c) => s + (c.nota || 0), 0) / conversas.length
 
@@ -122,7 +133,7 @@ Responda em JSON:
   const linhas = conversas.map(c => ({
     lote_id: lote.id,
     tipo,
-    atendente: c.atendente || 'Não identificado',
+    atendente: c.atendente || 'Atendente não Reconhecido',
     data: c.data || null,
     nota: c.nota,
     resumo: c.resumo,
