@@ -33,6 +33,9 @@ export async function askClaudeJSON<T = unknown>(opts: {
   const res = await client.messages.create({
     model: CLAUDE_MODEL,
     max_tokens: opts.maxTokens ?? 8000,
+    // Extração/classificação estruturada não precisa de raciocínio estendido — desliga para reduzir latência
+    // (no Sonnet 5, omitir esse campo liga "adaptive thinking" por padrão, o que pode ultrapassar timeouts de proxy).
+    thinking: { type: 'disabled' },
     system: [
       {
         type: 'text',
@@ -73,6 +76,7 @@ export async function askHaikuText(opts: {
   const res = await client.messages.create({
     model: CLAUDE_MODEL,
     max_tokens: opts.maxTokens ?? 1500,
+    thinking: { type: 'disabled' },
     system: opts.system,
     messages: [{ role: 'user', content: opts.user }],
   })

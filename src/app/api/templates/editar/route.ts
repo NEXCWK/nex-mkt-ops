@@ -151,6 +151,7 @@ export async function POST(req: NextRequest) {
       const response = await client.messages.create({
         model: CLAUDE_MODEL,
         max_tokens: 8192,
+        thinking: { type: 'disabled' },
         system: withNexVoice(SYSTEM_PROMPT),
         messages,
       })

@@ -111,6 +111,7 @@ export async function POST(req: NextRequest) {
   const stream = client.messages.stream({
     model: CLAUDE_MODEL,
     max_tokens: 8000,
+    thinking: { type: 'disabled' },
     system: [{ type: 'text', text: buildSystem(modo), cache_control: { type: 'ephemeral' } }],
     messages: messages.map((m: { role: string; content: string }) => ({
       role: m.role === 'assistant' ? 'assistant' : 'user',

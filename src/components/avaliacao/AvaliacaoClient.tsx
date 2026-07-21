@@ -74,9 +74,18 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
           body: JSON.stringify({ tipo, transcricoes }),
         })
       }
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`)
-      setResultado(json)
+      const texto = await res.text()
+      let json: Record<string, unknown> = {}
+      try {
+        json = texto ? JSON.parse(texto) : {}
+      } catch {
+        throw new Error(
+          `O servidor demorou demais ou falhou ao responder (${res.status}). ` +
+          'Tente novamente com menos arquivos por vez, ou aguarde um instante.'
+        )
+      }
+      if (!res.ok) throw new Error((json.error as string) ?? `Erro ${res.status}`)
+      setResultado(json as unknown as { totalConversas: number; notaMedia: number; conversas: ConversaResultado[] })
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao avaliar')
     } finally {
