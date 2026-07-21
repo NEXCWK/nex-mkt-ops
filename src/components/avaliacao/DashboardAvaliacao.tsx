@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
-import { BarChart3, Loader2, RefreshCw, CalendarDays, AlertTriangle, MessageSquareQuote, X } from 'lucide-react'
+import { BarChart3, Loader2, RefreshCw, CalendarDays, AlertTriangle, MessageSquareQuote, X, Eraser } from 'lucide-react'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   LineChart, Line,
@@ -39,6 +39,8 @@ export function DashboardAvaliacao({ tipo }: { tipo: 'atendimento' | 'telefonema
   const [de, setDe] = useState('')
   const [ate, setAte] = useState('')
   const [modalTrecho, setModalTrecho] = useState<{ titulo: string; texto: string } | null>(null)
+  const [limpando, setLimpando] = useState(false)
+  const [msgLimpeza, setMsgLimpeza] = useState<string | null>(null)
 
   const carregar = async () => {
     setLoading(true)
@@ -58,6 +60,31 @@ export function DashboardAvaliacao({ tipo }: { tipo: 'atendimento' | 'telefonema
   }
 
   useEffect(() => { carregar() }, [tipo, atendenteFiltro, de, ate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function limparUltimoLoteSemInteracao() {
+    if (limpando) return
+    setLimpando(true)
+    setMsgLimpeza(null)
+    try {
+      const res = await fetch('/api/avaliacao/limpar-sem-interacao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`)
+      setMsgLimpeza(
+        json.removidas > 0
+          ? `${json.removidas} conversa(s) sem interação real removida(s) do último lote enviado.`
+          : 'Nenhuma conversa sem interação real encontrada no último lote enviado.'
+      )
+      carregar()
+    } catch (e) {
+      setMsgLimpeza(e instanceof Error ? e.message : 'Falha ao limpar o lote')
+    } finally {
+      setLimpando(false)
+    }
+  }
 
   const atendentes = useMemo(
     () => Array.from(new Set(conversas.map(c => c.atendente))).sort(),
@@ -135,10 +162,19 @@ export function DashboardAvaliacao({ tipo }: { tipo: 'atendimento' | 'telefonema
           <option value="">Todos os atendentes (visão geral)</option>
           {atendentes.map(a => <option key={a} value={a}>{a}</option>)}
         </select>
-        <button onClick={carregar} className="flex items-center gap-1 text-xs text-nex-gray-400 hover:text-nex-black transition-colors ml-auto">
+        <button onClick={limparUltimoLoteSemInteracao} disabled={limpando}
+          className="flex items-center gap-1 text-xs text-nex-gray-400 hover:text-nex-black transition-colors ml-auto disabled:opacity-40">
+          {limpando ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eraser className="w-3 h-3" />}
+          Limpar sem interação (último lote)
+        </button>
+        <button onClick={carregar} className="flex items-center gap-1 text-xs text-nex-gray-400 hover:text-nex-black transition-colors">
           <RefreshCw className={cn('w-3 h-3', loading && 'animate-spin')} /> Atualizar
         </button>
       </div>
+
+      {msgLimpeza && (
+        <p className="text-xs text-nex-gray-500 bg-nex-gray-50 border border-nex-gray-100 rounded-lg px-3 py-2">{msgLimpeza}</p>
+      )}
 
       {loading && conversas.length === 0 ? (
         <div className="flex items-center justify-center gap-2 py-16 text-nex-gray-400">
