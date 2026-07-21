@@ -67,17 +67,18 @@ Você recebe o conteúdo de UM arquivo/bloco por vez, que normalmente contém UM
 
 1. Se houver mais de uma conversa no conteúdo, separe em atendimentos individuais; caso contrário, trate como uma única conversa.
 2. Identificar o nome do atendente (procure por marcações como "Atendente:", assinatura, nome citado no início/fim da conversa, ou o nome do remetente das mensagens que não é o cliente — ex.: "*Letícia:* ..." ou "Letícia | data, hora | whatsapp").
-3. Avaliar CADA conversa individualmente nos KPIs abaixo (nota de 0 a 10, uma casa decimal):
+3. DESCARTAR conversas SEM NENHUMA INTERAÇÃO REAL: se o conteúdo mostrar apenas o(a) atendente encerrando/finalizando a conversa (ou uma mensagem automática de encerramento do sistema), sem nenhuma troca de mensagens relevante entre atendente e cliente, essa conversa NÃO deve entrar na lista "conversas" — não avalie, não pontue, não conte. É como se o atendimento não tivesse existido.
+4. Avaliar CADA conversa restante (com interação real) individualmente nos KPIs abaixo (nota de 0 a 10, uma casa decimal):
 ${kpis.map(k => `- ${k}`).join('\n')}
-4. Para cada conversa, extrair os principais pontos de atenção: objeções do cliente, pontos de atrito, ou pontos fortes, cada um com um TRECHO EXATO de onde foi extraído (cite literalmente, mas condense em UMA ÚNICA LINHA — sem quebras de linha dentro do trecho).
-5. Extrair de 3 a 8 palavras-chave relevantes do assunto tratado (evite palavras genéricas como "olá", "obrigado").
+5. Para cada conversa, extrair os principais pontos de atenção: objeções do cliente, pontos de atrito, ou pontos fortes, cada um com um TRECHO EXATO de onde foi extraído (cite literalmente, mas condense em UMA ÚNICA LINHA — sem quebras de linha dentro do trecho).
+6. Extrair de 3 a 8 palavras-chave relevantes do assunto tratado (evite palavras genéricas como "olá", "obrigado").
 
 Regras:
 - Seja honesto nas notas: baseie-se apenas no que está no conteúdo.
-- Se não conseguir identificar o atendente, use "Atendente não Reconhecido" — NUNCA descarte a conversa por não conseguir identificar o atendente.
+- Se não conseguir identificar o atendente de uma conversa COM interação real, use "Atendente não Reconhecido" — NUNCA descarte uma conversa com interação real só por não conseguir identificar o atendente (descarte APENAS conversas sem interação real, conforme a regra 3).
 - Se não conseguir identificar a data, use null.
 - "trecho" deve ser um recorte representativo (até ~400 caracteres), em uma única linha, sem quebras de linha.
-- IMPORTANTE: NUNCA retorne uma lista "conversas" vazia. Se não conseguir separar claramente em múltiplas conversas, trate o conteúdo inteiro como UMA ÚNICA conversa e avalie mesmo assim, usando "Atendente não Reconhecido" se necessário. Uma avaliação aproximada é sempre melhor do que nenhuma.
+- Se não conseguir separar claramente o conteúdo em múltiplas conversas (mas houver interação real), trate o conteúdo inteiro como UMA ÚNICA conversa e avalie mesmo assim, usando "Atendente não Reconhecido" se necessário — uma avaliação aproximada é sempre melhor do que nenhuma. Isso só se aplica quando HÁ interação real; se não houver, siga a regra 3 e retorne uma lista vazia.
 
 Responda em JSON:
 {
@@ -133,8 +134,9 @@ async function avaliarItem(item: ItemParaAvaliar, system: string, funcionalidade
       operadorEmail,
     }))
 
-    const conversas = Array.isArray(result.conversas) ? result.conversas : []
-    return conversas.length > 0 ? conversas : [conversaFallback(item)]
+    // Uma lista vazia aqui é uma resposta legítima (ex.: a conversa só teve encerramento
+    // automático, sem interação real, e foi corretamente descartada pela IA) — não é falha.
+    return Array.isArray(result.conversas) ? result.conversas : [conversaFallback(item)]
   } catch (e) {
     // Falha isolada em UM arquivo não deve derrubar o lote inteiro — os demais continuam normalmente.
     return [conversaFallback(item, e instanceof Error ? e.message : 'erro desconhecido')]
@@ -194,7 +196,7 @@ export async function avaliarTranscricoes(opts: {
   const porItem = await comConcorrenciaLimitada(itens, CONCORRENCIA, item => avaliarItem(item, system, funcionalidade, operadorEmail))
   const conversas = porItem.flat()
 
-  const notaMedia = conversas.reduce((s, c) => s + (c.nota || 0), 0) / conversas.length
+  const notaMedia = conversas.length > 0 ? conversas.reduce((s, c) => s + (c.nota || 0), 0) / conversas.length : 0
 
   const nomeArquivo = itens.length === 1
     ? itens[0].nomeArquivo
@@ -230,8 +232,10 @@ export async function avaliarTranscricoes(opts: {
     trecho: c.trecho ?? '',
   }))
 
-  const { error: erroConversas } = await supabase.from('avaliacoes_conversas').insert(linhas)
-  if (erroConversas) throw new Error(erroConversas.message)
+  if (linhas.length > 0) {
+    const { error: erroConversas } = await supabase.from('avaliacoes_conversas').insert(linhas)
+    if (erroConversas) throw new Error(erroConversas.message)
+  }
 
   return { loteId: lote.id, totalConversas: conversas.length, notaMedia, conversas: linhas }
 }

@@ -1,6 +1,15 @@
+import { getServerSession } from 'next-auth'
+import { redirect } from 'next/navigation'
+import { authOptions } from '@/lib/auth'
+import { podeAcessarAvaliacao } from '@/lib/acesso-restrito'
 import { AvaliacaoClient } from '@/components/avaliacao/AvaliacaoClient'
 
-export default function AvaliacaoAtendimentosPage() {
+export default async function AvaliacaoAtendimentosPage() {
+  const session = await getServerSession(authOptions)
+  if (!session || !podeAcessarAvaliacao(session.user.email)) {
+    redirect('/dashboard')
+  }
+
   return (
     <AvaliacaoClient
       tipo="atendimento"

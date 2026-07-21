@@ -240,7 +240,11 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
                   <p className={cn('text-3xl font-bold', notaText(resultado.notaMedia))}>{resultado.notaMedia.toFixed(1)}</p>
                 </div>
                 <p className="text-sm text-nex-gray-400 ml-auto">
-                  Dados salvos. Veja a análise completa na aba <button onClick={() => setAba('dashboard')} className="underline text-nex-black font-medium">Dashboard</button>.
+                  {resultado.totalConversas === 0
+                    ? 'Nenhum atendimento com interação real foi encontrado (apenas encerramentos automáticos) — nada foi contabilizado.'
+                    : (
+                      <>Dados salvos. Veja a análise completa na aba <button onClick={() => setAba('dashboard')} className="underline text-nex-black font-medium">Dashboard</button>.</>
+                    )}
                 </p>
               </div>
 

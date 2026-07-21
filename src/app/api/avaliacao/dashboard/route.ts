@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { podeAcessarAvaliacao } from '@/lib/acesso-restrito'
 import { createServerClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -8,6 +9,9 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  if (!podeAcessarAvaliacao(session.user.email)) {
+    return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
+  }
 
   const { searchParams } = new URL(req.url)
   const tipo = searchParams.get('tipo') ?? 'atendimento'
