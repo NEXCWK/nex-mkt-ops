@@ -1,18 +1,14 @@
-/** Extrai texto de arquivos de transcrição enviados (PDF, CSV, Excel ou texto puro). */
-
+/**
+ * Extrai texto de arquivos de transcrição enviados (CSV, Excel ou texto puro).
+ *
+ * PDFs NÃO passam por aqui: são enviados nativamente à IA (ver src/lib/avaliacao-core.ts),
+ * porque exports em PDF de conversas às vezes são páginas de imagem/print de tela — a
+ * extração de texto (pdf-parse) falha silenciosamente nesses casos, devolvendo um texto
+ * quase vazio sem sinalizar erro. Deixar a IA ler o PDF diretamente cobre tanto PDFs de
+ * texto quanto de imagem.
+ */
 export async function extrairTextoDeArquivo(buffer: Buffer, nomeArquivo: string): Promise<string> {
   const ext = nomeArquivo.toLowerCase().split('.').pop() ?? ''
-
-  if (ext === 'pdf') {
-    const { PDFParse } = await import('pdf-parse')
-    const parser = new PDFParse({ data: new Uint8Array(buffer) })
-    try {
-      const resultado = await parser.getText()
-      return resultado.text
-    } finally {
-      await parser.destroy()
-    }
-  }
 
   if (ext === 'xlsx' || ext === 'xls') {
     const XLSX = await import('xlsx')

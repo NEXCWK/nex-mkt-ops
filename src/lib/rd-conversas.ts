@@ -61,6 +61,8 @@ function dataMensagem(m: Mensagem): string {
  */
 export async function exportarTranscricoes(de: string, ate: string): Promise<{
   texto: string
+  /** Cada bloco é uma conversa individual (mesmo conteúdo de `texto`, já separado — evita 1 chamada de IA gigante). */
+  blocos: string[]
   totalConversas: number
   diagnostico: { status: number; paramUsado: Record<string, string> | null; totalMensagens: number; erro?: string }
 }> {
@@ -102,6 +104,7 @@ export async function exportarTranscricoes(de: string, ate: string): Promise<{
   if (mensagens.length === 0) {
     return {
       texto: '',
+      blocos: [],
       totalConversas: 0,
       diagnostico: {
         status: statusFinal,
@@ -135,6 +138,7 @@ export async function exportarTranscricoes(de: string, ate: string): Promise<{
 
   return {
     texto: blocos.join('\n\n---\n\n'),
+    blocos,
     totalConversas: blocos.length,
     diagnostico: { status: statusFinal, paramUsado, totalMensagens: mensagens.length },
   }

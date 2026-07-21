@@ -23,7 +23,8 @@ export function assertApiKey(): string | null {
  */
 export async function askClaudeJSON<T = unknown>(opts: {
   system: string
-  user: string
+  /** Texto simples, ou blocos de conteúdo (ex.: documento PDF nativo + texto) para entradas multimodais. */
+  user: string | Array<Anthropic.Messages.ContentBlockParam>
   maxTokens?: number
   /** Rótulo da funcionalidade (para rastreamento de custo/uso de tokens). */
   funcionalidade?: string
@@ -141,6 +142,53 @@ function escaparControlChars(txt: string): string {
   return out
 }
 
+/**
+ * Escapa aspas duplas "internas" (que a IA esqueceu de escapar como \") dentro
+ * de um valor string — causa comum do erro "Expected ',' or ']' after array
+ * element". Usa uma heurística de lookahead: uma aspas só é tratada como o
+ * FECHAMENTO da string se o próximo caractere não-espaço for um separador
+ * JSON válido (, } ] :) ou o fim do texto; caso contrário, é conteúdo da
+ * própria string e precisa ser escapada.
+ */
+function repararAspasInternas(txt: string): string {
+  let out = ''
+  let inString = false
+  let escaped = false
+  for (let i = 0; i < txt.length; i++) {
+    const ch = txt[i]
+    if (!inString) {
+      if (ch === '"') inString = true
+      out += ch
+      continue
+    }
+    if (escaped) {
+      out += ch
+      escaped = false
+      continue
+    }
+    if (ch === '\\') {
+      out += ch
+      escaped = true
+      continue
+    }
+    if (ch === '"') {
+      let j = i + 1
+      while (j < txt.length && /\s/.test(txt[j])) j++
+      const proximo = txt[j]
+      const fechaString = proximo === undefined || [',', '}', ']', ':'].includes(proximo)
+      if (fechaString) {
+        inString = false
+        out += ch
+      } else {
+        out += '\\"'
+      }
+      continue
+    }
+    out += ch
+  }
+  return out
+}
+
 export function parseJSON<T>(raw: string): T {
   let txt = raw.trim()
   // remove cercas ```json ... ```
@@ -155,18 +203,25 @@ export function parseJSON<T>(raw: string): T {
   const end = Math.max(lastObj, lastArr)
   if (start !== -1 && end !== -1) txt = txt.slice(start, end + 1)
 
-  try {
-    return JSON.parse(txt) as T
-  } catch (erroOriginal) {
-    // Tentativa de recuperação: quebras de linha cruas dentro de strings são a causa mais comum
+  // Tenta em ordem crescente de agressividade: estrito -> controle escapado -> + aspas internas escapadas
+  const tentativas = [
+    () => JSON.parse(txt) as T,
+    () => JSON.parse(escaparControlChars(txt)) as T,
+    () => JSON.parse(repararAspasInternas(escaparControlChars(txt))) as T,
+  ]
+
+  let erroOriginal: unknown
+  for (const tentativa of tentativas) {
     try {
-      return JSON.parse(escaparControlChars(txt)) as T
-    } catch {
-      throw new Error(
-        erroOriginal instanceof Error
-          ? `A IA devolveu um JSON malformado (${erroOriginal.message}). Tente novamente — se persistir, tente com menos arquivos por vez.`
-          : 'A IA devolveu uma resposta em formato inesperado. Tente novamente.'
-      )
+      return tentativa()
+    } catch (e) {
+      if (erroOriginal === undefined) erroOriginal = e
     }
   }
+
+  throw new Error(
+    erroOriginal instanceof Error
+      ? `A IA devolveu um JSON malformado (${erroOriginal.message}). Tente novamente — se persistir, tente com menos arquivos por vez.`
+      : 'A IA devolveu uma resposta em formato inesperado. Tente novamente.'
+  )
 }

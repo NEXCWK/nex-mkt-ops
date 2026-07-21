@@ -5,7 +5,7 @@ import { exportarTranscricoes } from '@/lib/rd-conversas'
 import { avaliarTranscricoes } from '@/lib/avaliacao-core'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 300
+export const maxDuration = 600
 
 /**
  * Execução automática (chamada pelo GitHub Actions cron, diariamente às 20h BRT).
@@ -57,9 +57,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { texto, totalConversas, diagnostico } = await exportarTranscricoes(de, ate)
+    const { blocos, totalConversas, diagnostico } = await exportarTranscricoes(de, ate)
 
-    if (!texto.trim() || totalConversas === 0) {
+    if (blocos.length === 0 || totalConversas === 0) {
       await supabase.from('avaliacao_cron_log').insert({
         janela_de: de, janela_ate: ate, total_conversas: 0, status: 'vazio',
         detalhe: diagnostico.erro ?? 'Nenhuma conversa com mensagens no período.',
@@ -67,11 +67,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ status: 'vazio', de, ate, diagnostico })
     }
 
+    const janela = `${de.slice(0, 16)} → ${ate.slice(0, 16)}`
     const resultado = await avaliarTranscricoes({
       tipo: 'atendimento',
-      transcricoes: texto,
+      // Um item por conversa (não um único bloco gigante) — evita estourar o limite de
+      // tokens de saída da IA quando a janela do dia tem muitas conversas.
+      itens: blocos.map((texto, i) => ({ nomeArquivo: `RD Conversas · ${janela} · conversa ${i + 1}`, texto })),
       operadorEmail: 'cron@nex.work',
-      nomeArquivo: `RD Conversas · ${de.slice(0, 16)} → ${ate.slice(0, 16)}`,
     })
 
     await supabase.from('avaliacao_cron_log').insert({

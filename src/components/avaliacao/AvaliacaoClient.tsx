@@ -173,6 +173,7 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
                   <p className="text-[11px] text-nex-gray-300 mt-1">
                     Não é preciso subir transcrições diariamente — pode enviar de uma vez o acumulado de vários dias, em um ou vários arquivos.
                     Cada atendimento deve trazer a identificação do atendente responsável.
+                    {arquivos.length > 10 && ' Lotes grandes (dezenas de arquivos) podem levar alguns minutos para processar — a página permanece nesta tela até concluir.'}
                   </p>
                 )}
               </div>
