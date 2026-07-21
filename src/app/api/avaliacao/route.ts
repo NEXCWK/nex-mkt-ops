@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { assertApiKey } from '@/lib/anthropic'
-import { podeAcessarAvaliacao } from '@/lib/acesso-restrito'
+import { podeAcessarDashboardAvaliacao } from '@/lib/acesso-restrito'
 import { extrairTextoDeArquivo } from '@/lib/parse-transcricoes'
 import { isAudioFile, transcreverAudio } from '@/lib/transcricao-audio'
 import { avaliarTranscricoes, type ItemParaAvaliar } from '@/lib/avaliacao-core'
@@ -15,9 +15,6 @@ export const maxDuration = 600
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-  if (!podeAcessarAvaliacao(session.user.email)) {
-    return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
-  }
 
   const apiErr = assertApiKey()
   if (apiErr) return NextResponse.json({ error: apiErr }, { status: 500 })
@@ -79,6 +76,13 @@ export async function POST(req: NextRequest) {
       itens,
       operadorEmail: session.user.email ?? '',
     })
+
+    // Notas, KPIs e análises são restritos ao dashboard (ver acesso-restrito.ts) —
+    // quem enviou mas não tem acesso ao dashboard recebe só a confirmação do envio.
+    if (!podeAcessarDashboardAvaliacao(session.user.email)) {
+      return NextResponse.json({ totalConversas: resultado.totalConversas })
+    }
+
     return NextResponse.json(resultado)
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Falha na avaliação' }, { status: 500 })

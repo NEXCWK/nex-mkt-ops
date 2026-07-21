@@ -1,10 +1,12 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { cn } from '@/lib/utils'
 import { Sparkles, Upload, RotateCcw, Loader2, LayoutDashboard, FileUp, ThumbsUp, AlertTriangle, X } from 'lucide-react'
 import { DashboardAvaliacao } from './DashboardAvaliacao'
+import { podeAcessarDashboardAvaliacao } from '@/lib/acesso-restrito'
 
 interface Kpi { nome: string; nota: number; comentario: string }
 interface PontoAtencao { tipo: 'objecao' | 'atrito' | 'ponto_forte'; texto: string; trecho: string }
@@ -18,6 +20,12 @@ interface ConversaResultado {
   kpis: Kpi[]
   pontos_atencao: PontoAtencao[]
   trecho: string
+}
+
+interface ResultadoEnvio {
+  totalConversas: number
+  notaMedia?: number
+  conversas?: ConversaResultado[]
 }
 
 function notaText(n: number): string {
@@ -39,13 +47,15 @@ const ehAudio = (nome: string) => AUDIO_EXTS.includes(nome.toLowerCase().split('
 
 export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props) {
   const permitirAudio = tipo === 'telefonema'
+  const { data: session } = useSession()
+  const podeVerAnalise = podeAcessarDashboardAvaliacao(session?.user?.email)
   const [aba, setAba] = useState<'enviar' | 'dashboard'>('enviar')
   const [arquivos, setArquivos] = useState<File[]>([])
   const [atendente, setAtendente] = useState('')
   const [transcricoes, setTranscricoes] = useState('')
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
-  const [resultado, setResultado] = useState<{ totalConversas: number; notaMedia: number; conversas: ConversaResultado[] } | null>(null)
+  const [resultado, setResultado] = useState<ResultadoEnvio | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const algumAudio = arquivos.some(a => ehAudio(a.name))
@@ -85,7 +95,7 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
         )
       }
       if (!res.ok) throw new Error((json.error as string) ?? `Erro ${res.status}`)
-      setResultado(json as unknown as { totalConversas: number; notaMedia: number; conversas: ConversaResultado[] })
+      setResultado(json as unknown as ResultadoEnvio)
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao avaliar')
     } finally {
@@ -115,21 +125,23 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
         }
       />
 
-      {/* Tabs: Enviar Transcrições / Dashboard */}
-      <div className="flex gap-2 mb-5">
-        <button onClick={() => setAba('enviar')}
-          className={cn('flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-heading font-medium border transition-colors',
-            aba === 'enviar' ? 'border-nex-black bg-nex-gray-50 text-nex-black' : 'border-nex-gray-200 text-nex-gray-500 hover:bg-nex-gray-50')}>
-          <FileUp className="w-3.5 h-3.5" /> Enviar Transcrições
-        </button>
-        <button onClick={() => setAba('dashboard')}
-          className={cn('flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-heading font-medium border transition-colors',
-            aba === 'dashboard' ? 'border-nex-black bg-nex-gray-50 text-nex-black' : 'border-nex-gray-200 text-nex-gray-500 hover:bg-nex-gray-50')}>
-          <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
-        </button>
-      </div>
+      {/* Tabs: Enviar Transcrições / Dashboard (Dashboard só para quem tem acesso à análise) */}
+      {podeVerAnalise && (
+        <div className="flex gap-2 mb-5">
+          <button onClick={() => setAba('enviar')}
+            className={cn('flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-heading font-medium border transition-colors',
+              aba === 'enviar' ? 'border-nex-black bg-nex-gray-50 text-nex-black' : 'border-nex-gray-200 text-nex-gray-500 hover:bg-nex-gray-50')}>
+            <FileUp className="w-3.5 h-3.5" /> Enviar Transcrições
+          </button>
+          <button onClick={() => setAba('dashboard')}
+            className={cn('flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-heading font-medium border transition-colors',
+              aba === 'dashboard' ? 'border-nex-black bg-nex-gray-50 text-nex-black' : 'border-nex-gray-200 text-nex-gray-500 hover:bg-nex-gray-50')}>
+            <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
+          </button>
+        </div>
+      )}
 
-      {aba === 'dashboard' ? (
+      {aba === 'dashboard' && podeVerAnalise ? (
         <DashboardAvaliacao tipo={tipo} />
       ) : (
         <>
@@ -228,7 +240,17 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
             </div>
           )}
 
-          {resultado && (
+          {resultado && !podeVerAnalise && (
+            <div className="bg-white border border-nex-gray-200 rounded-xl p-5 flex items-center gap-6">
+              <div>
+                <p className="text-[10px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400 mb-1">Atendimentos processados</p>
+                <p className="text-3xl font-bold text-nex-black">{resultado.totalConversas}</p>
+              </div>
+              <p className="text-sm text-nex-gray-400 ml-auto">Envio concluído com sucesso.</p>
+            </div>
+          )}
+
+          {resultado && podeVerAnalise && (
             <div className="space-y-5">
               <div className="bg-white border border-nex-gray-200 rounded-xl p-5 flex items-center gap-6">
                 <div>
@@ -237,7 +259,7 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
                 </div>
                 <div>
                   <p className="text-[10px] font-heading font-semibold uppercase tracking-widest text-nex-gray-400 mb-1">Nota média do lote</p>
-                  <p className={cn('text-3xl font-bold', notaText(resultado.notaMedia))}>{resultado.notaMedia.toFixed(1)}</p>
+                  <p className={cn('text-3xl font-bold', notaText(resultado.notaMedia ?? 0))}>{(resultado.notaMedia ?? 0).toFixed(1)}</p>
                 </div>
                 <p className="text-sm text-nex-gray-400 ml-auto">
                   {resultado.totalConversas === 0
@@ -249,7 +271,7 @@ export function AvaliacaoClient({ tipo, titulo, descricao, placeholder }: Props)
               </div>
 
               <div className="space-y-3">
-                {resultado.conversas.map((c, i) => (
+                {(resultado.conversas ?? []).map((c, i) => (
                   <div key={i} className="bg-white border border-nex-gray-200 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div>

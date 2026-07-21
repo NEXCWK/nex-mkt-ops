@@ -1,9 +1,11 @@
 /**
- * Restrição de acesso pontual: apenas este e-mail pode ver notas, dashboards e
- * análises do Avaliador de Atendimentos e do Avaliador de Telefonemas.
+ * Restrição de acesso pontual: apenas este e-mail pode ver o Dashboard/análise
+ * (notas, gráficos, KPIs) do Avaliador de Atendimentos e do Avaliador de
+ * Telefonemas. O envio de transcrições para avaliação continua liberado para
+ * todos os usuários — a restrição é só sobre visualizar os resultados agregados.
  */
-export const EMAIL_AVALIACAO_PERMITIDO = 'felipe@nex.work'
+export const EMAIL_DASHBOARD_AVALIACAO_PERMITIDO = 'felipe@nexcoworking.com.br'
 
-export function podeAcessarAvaliacao(email?: string | null): boolean {
-  return (email ?? '').toLowerCase() === EMAIL_AVALIACAO_PERMITIDO
+export function podeAcessarDashboardAvaliacao(email?: string | null): boolean {
+  return (email ?? '').toLowerCase() === EMAIL_DASHBOARD_AVALIACAO_PERMITIDO
 }

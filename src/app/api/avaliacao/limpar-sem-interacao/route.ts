@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { podeAcessarAvaliacao } from '@/lib/acesso-restrito'
+import { podeAcessarDashboardAvaliacao } from '@/lib/acesso-restrito'
 import { askClaudeJSON, assertApiKey } from '@/lib/anthropic'
 import { createServerClient } from '@/lib/supabase/server'
 
@@ -24,7 +24,7 @@ interface ConversaRow {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-  if (!podeAcessarAvaliacao(session.user.email)) {
+  if (!podeAcessarDashboardAvaliacao(session.user.email)) {
     return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
   }
 

@@ -1,15 +1,6 @@
-import { getServerSession } from 'next-auth'
-import { redirect } from 'next/navigation'
-import { authOptions } from '@/lib/auth'
-import { podeAcessarAvaliacao } from '@/lib/acesso-restrito'
 import { AvaliacaoClient } from '@/components/avaliacao/AvaliacaoClient'
 
-export default async function AvaliacaoTelefonemasPage() {
-  const session = await getServerSession(authOptions)
-  if (!session || !podeAcessarAvaliacao(session.user.email)) {
-    redirect('/dashboard')
-  }
-
+export default function AvaliacaoTelefonemasPage() {
   return (
     <AvaliacaoClient
       tipo="telefonema"

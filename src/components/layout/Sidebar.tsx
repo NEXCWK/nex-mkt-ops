@@ -30,7 +30,6 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from 'next-auth/react'
-import { podeAcessarAvaliacao } from '@/lib/acesso-restrito'
 
 const navSections = [
   {
@@ -54,8 +53,8 @@ const navSections = [
   {
     label: 'Qualidade',
     items: [
-      { href: '/avaliacao-atendimentos', label: 'Avaliação de Atendimentos', icon: MessageSquare, roles: ['operador', 'gestor', 'admin'], acessoRestrito: true },
-      { href: '/avaliacao-telefonemas',  label: 'Avaliador de Telefonemas',  icon: Phone,         roles: ['operador', 'gestor', 'admin'], acessoRestrito: true },
+      { href: '/avaliacao-atendimentos', label: 'Avaliação de Atendimentos', icon: MessageSquare, roles: ['operador', 'gestor', 'admin'] },
+      { href: '/avaliacao-telefonemas',  label: 'Avaliador de Telefonemas',  icon: Phone,         roles: ['operador', 'gestor', 'admin'] },
     ],
   },
   {
@@ -94,9 +93,7 @@ export function Sidebar() {
   const visibleSections = navSections
     .map(section => ({
       ...section,
-      items: section.items.filter(item =>
-        item.roles.includes(perfil) && (!('acessoRestrito' in item && item.acessoRestrito) || podeAcessarAvaliacao(session?.user?.email))
-      ),
+      items: section.items.filter(item => item.roles.includes(perfil)),
     }))
     .filter(section => section.items.length > 0)
 
