@@ -64,6 +64,60 @@ export async function askClaudeJSON<T = unknown>(opts: {
   return parseJSON<T>(text)
 }
 
+/**
+ * Igual a askClaudeJSON, mas habilita a ferramenta de busca na web nativa da
+ * Anthropic (executada pelos servidores da Anthropic dentro da própria
+ * chamada) — usada quando a tarefa exige dados REAIS e verificáveis (ex.:
+ * e-mails de empresas encontrados em sites/Google/LinkedIn), em vez de texto
+ * gerado a partir do conhecimento estático do modelo.
+ */
+export async function askClaudeJSONComBusca<T = unknown>(opts: {
+  system: string
+  user: string
+  maxTokens?: number
+  maxBuscas?: number
+  funcionalidade?: string
+  operadorEmail?: string | null
+}): Promise<T> {
+  const client = getAnthropic()
+  const res = await client.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: opts.maxTokens ?? 8000,
+    thinking: { type: 'disabled' },
+    tools: [
+      {
+        type: 'web_search_20250305',
+        name: 'web_search',
+        max_uses: opts.maxBuscas ?? 20,
+      },
+    ],
+    system: [
+      {
+        type: 'text',
+        text: opts.system + '\n\nResponda SEMPRE e EXCLUSIVAMENTE com um JSON válido, sem texto antes ou depois, sem cercas de markdown. Ao citar trechos literais de texto de várias linhas dentro de um valor string, escape corretamente as quebras de linha como \\n (nunca insira uma quebra de linha crua dentro de uma string JSON).',
+      },
+    ],
+    messages: [{ role: 'user', content: opts.user }],
+  })
+
+  if (opts.funcionalidade) {
+    void registrarUsoTokens({
+      funcionalidade: opts.funcionalidade,
+      modelo: CLAUDE_MODEL,
+      tokensInput: res.usage.input_tokens,
+      tokensOutput: res.usage.output_tokens,
+      operadorEmail: opts.operadorEmail,
+    })
+  }
+
+  const text = res.content
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    .map(b => b.text)
+    .join('')
+
+  return parseJSON<T>(text)
+}
+
 /** Chama o modelo Haiku (mais barato) pedindo texto simples, sem JSON. */
 export async function askHaikuText(opts: {
   system: string

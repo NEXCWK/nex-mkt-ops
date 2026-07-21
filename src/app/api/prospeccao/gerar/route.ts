@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { askClaudeJSON, assertApiKey } from '@/lib/anthropic'
+import { askClaudeJSONComBusca, assertApiKey } from '@/lib/anthropic'
 import { withNexVoice } from '@/lib/nex-voice'
 
 export const maxDuration = 300
@@ -28,34 +28,40 @@ export async function POST(req: NextRequest) {
 
   const system = `Você é um BDR (Business Development Representative) sênior do Nex Coworking (Curitiba/PR). Objetivo: ${objetivo}
 
-Tarefa: a partir do seu conhecimento de mercado e de dados públicos do Brasil (presença em Google, sites institucionais, perfis públicos, bases públicas e APIs gratuitas como ReceitaWS/BrasilAPI por CNPJ), monte uma lista de ${qtd} empresas REAIS e plausíveis para o nicho "${nicho}" na região "${regiao || 'Curitiba/PR'}".
+Tarefa: use a ferramenta de busca na web para encontrar ${qtd} empresas REAIS para o nicho "${nicho}" na região "${regiao || 'Curitiba/PR'}", cada uma com pelo menos um e-mail de contato REAL e VERIFICÁVEL.
 
-Regras importantes:
-- Priorize empresas que provavelmente existem nessa região e nicho.
-- "contato" = nome de um responsável plausível (sócio, gerente comercial) ou cargo genérico se desconhecido.
-- Para CADA empresa, traga SEMPRE dois e-mails distintos quando possível:
-  - "email" (E-mail Principal) = e-mail plausível da PESSOA de contato (ex.: nome.sobrenome@dominio.com.br ou padrão comum do setor).
-  - "emailSecundario" (E-mail Secundário) = e-mail GENÉRICO/institucional da empresa, do tipo publicado no site dela (ex.: contato@dominio.com.br, comercial@dominio.com.br, atendimento@dominio.com.br).
-  - Não invente dados sensíveis; e-mails só quando forem padrões públicos plausíveis — caso não tenha certeza de nenhum dos dois, deixe o campo correspondente como string vazia (a equipe completará) em vez de inventar um endereço falso.
+REGRA MAIS IMPORTANTE — NUNCA INVENTE, ADIVINHE OU DEDUZA E-MAILS:
+- Todo e-mail incluído no resultado precisa ter sido efetivamente ENCONTRADO por você durante a busca (visto literalmente em uma página real), nunca gerado por padrão (ex.: NUNCA monte "nome.sobrenome@dominio.com" só porque parece plausível).
+- Para cada empresa candidata, faça buscas na web cobrindo pelo menos estas três fontes antes de aceitar a empresa na lista:
+  1. Site institucional da empresa (páginas de contato/"fale conosco"/rodapé);
+  2. Ficha da empresa no Google (Google Meu Negócio/Google Maps/"Perfil da Empresa no Google");
+  3. Perfil da empresa (ou de um responsável/sócio) no LinkedIn.
+- Se, depois de pesquisar essas três fontes, você não encontrar NENHUM e-mail real publicado para uma empresa candidata, DESCARTE essa empresa por completo — não a inclua no resultado com campo vazio, e não invente um endereço. Em vez disso, continue buscando e substitua por outra empresa real do mesmo nicho/região que tenha e-mail encontrado.
+- Só pare de buscar substitutas quando atingir ${qtd} empresas com e-mail real confirmado, ou quando esgotar as buscas razoáveis (nesse caso, retorne quantas encontrar de fato, mesmo que menos que ${qtd} — NUNCA complete a lista com e-mails inventados só para bater a quantidade).
+- "contato" = nome real de um responsável (sócio, gerente comercial) SE encontrado nas fontes pesquisadas; caso contrário, deixe como cargo genérico (ex.: "Contato Comercial").
+- Para CADA empresa, preencha os e-mails encontrados:
+  - "email" (E-mail Principal) = e-mail real de uma PESSOA de contato, se encontrado; senão, use o e-mail institucional real encontrado.
+  - "emailSecundario" (E-mail Secundário) = outro e-mail real e distinto do principal (ex.: institucional/genérico do site, se o principal for de uma pessoa), quando encontrado. Se só houver um e-mail real, deixe "emailSecundario" como string vazia — NUNCA duplique ou invente um segundo.
 - ${focoProduto}
-- O e-mail deve ser CURTO (no máximo 6 a 8 linhas), sem parágrafos longos.
+- O e-mail (template) deve ser CURTO (no máximo 6 a 8 linhas), sem parágrafos longos.
 
-Formato do JSON:
+Formato do JSON (retorne SOMENTE isto, sem comentar o processo de busca):
 {
   "empresas": [
-    { "empresa": "", "contato": "", "email": "", "emailSecundario": "", "telefone": "", "site": "", "segmento": "", "regiao": "", "observacao": "por que é um bom alvo" }
+    { "empresa": "", "contato": "", "email": "", "emailSecundario": "", "telefone": "", "site": "", "segmento": "", "regiao": "", "observacao": "onde o e-mail foi encontrado (ex.: site institucional, Google Meu Negócio, LinkedIn)" }
   ],
   "emailTemplate": {
     "assunto": "assunto curto e atrativo, pode usar {{empresa}}",
-    "corpo": "e-mail de prospecção curto e pronto, em PT-BR, com as variáveis {{nome}} e {{empresa}}, tom da marca Nex (próximo, direto, profissional), com CTA claro e assinatura 'Equipe Comercial Nex | comercial@nex.work'"
+    "corpo": "e-mail de prospecção curto e pronto, em PT-BR, com as variáveis {{nome}} e {{empresa}}, tom da marca Nex (próximo, direto, profissional), com CTA claro e assinatura 'Equipe Comercial Nex | comercial@nexcoworking.com.br'"
   }
 }`
 
   try {
-    const result = await askClaudeJSON({
+    const result = await askClaudeJSONComBusca({
       system: withNexVoice(system),
-      user: `Gere a lista para o nicho "${nicho}" em "${regiao || 'Curitiba/PR'}" e o e-mail de prospecção.`,
+      user: `Encontre ${qtd} empresas REAIS (com e-mail real e verificado por busca na web) para o nicho "${nicho}" em "${regiao || 'Curitiba/PR'}" e gere o e-mail de prospecção. Não invente nenhum e-mail — descarte e substitua qualquer empresa sem e-mail real encontrado.`,
       maxTokens: 8000,
+      maxBuscas: 30,
       funcionalidade: `prospeccao_${tipo === 'parcerias' ? 'parcerias' : 'bdr'}`,
       operadorEmail: session.user.email,
     })
