@@ -64,14 +64,14 @@ Você recebe um arquivo de transcrições que pode conter UM OU MAIS atendimento
 2. Identificar o nome do atendente de cada conversa (procure por marcações como "Atendente:", assinatura, nome citado no início/fim da conversa, ou o nome do remetente das mensagens que não é o cliente — ex.: "*Letícia:* ..." ou "Letícia | data, hora | whatsapp").
 3. Avaliar CADA conversa individualmente nos KPIs abaixo (nota de 0 a 10, uma casa decimal):
 ${kpis.map(k => `- ${k}`).join('\n')}
-4. Para cada conversa, extrair os principais pontos de atenção: objeções do cliente, pontos de atrito, ou pontos fortes, cada um com o TRECHO EXATO da transcrição de onde foi extraído (cite literalmente).
+4. Para cada conversa, extrair os principais pontos de atenção: objeções do cliente, pontos de atrito, ou pontos fortes, cada um com um TRECHO EXATO da transcrição de onde foi extraído (cite literalmente, mas condense em UMA ÚNICA LINHA — sem quebras de linha dentro do trecho).
 5. Extrair de 3 a 8 palavras-chave relevantes do assunto tratado (evite palavras genéricas como "olá", "obrigado") de cada conversa.
 
 Regras:
 - Seja honesto nas notas: baseie-se apenas no que está na transcrição de cada conversa.
 - Se não conseguir identificar o atendente de uma conversa, use "Atendente não Reconhecido" — NUNCA descarte a conversa por não conseguir identificar o atendente.
 - Se não conseguir identificar a data, use null.
-- "trecho" no nível da conversa deve ser um recorte representativo (até ~400 caracteres) da conversa.
+- "trecho" no nível da conversa deve ser um recorte representativo (até ~400 caracteres), em uma única linha, sem quebras de linha.
 - IMPORTANTE: NUNCA retorne uma lista "conversas" vazia. Se o conteúdo existir mas você não conseguir separá-lo claramente em múltiplas conversas, trate o arquivo inteiro (ou cada bloco "--- Arquivo: ... ---") como UMA ÚNICA conversa e avalie-a mesmo assim, usando "Atendente não Reconhecido" se necessário. Uma avaliação aproximada é sempre melhor do que nenhuma.
 
 Responda em JSON:

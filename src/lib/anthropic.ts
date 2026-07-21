@@ -39,7 +39,7 @@ export async function askClaudeJSON<T = unknown>(opts: {
     system: [
       {
         type: 'text',
-        text: opts.system + '\n\nResponda SEMPRE e EXCLUSIVAMENTE com um JSON válido, sem texto antes ou depois, sem cercas de markdown.',
+        text: opts.system + '\n\nResponda SEMPRE e EXCLUSIVAMENTE com um JSON válido, sem texto antes ou depois, sem cercas de markdown. Ao citar trechos literais de texto de várias linhas dentro de um valor string, escape corretamente as quebras de linha como \\n (nunca insira uma quebra de linha crua dentro de uma string JSON).',
       },
     ],
     messages: [{ role: 'user', content: opts.user }],
@@ -98,6 +98,49 @@ export async function askHaikuText(opts: {
     .trim()
 }
 
+/**
+ * Escapa quebras de linha/tab/carriage-return "cruas" que aparecem DENTRO de
+ * strings JSON. É comum a IA citar trechos literais de transcrições
+ * multi-linha (ex.: campo "trecho") sem escapá-los corretamente como \n, o
+ * que deixa o JSON tecnicamente inválido mesmo com o conteúdo semanticamente
+ * correto. Percorre caractere a caractere rastreando se está dentro de uma
+ * string e se o caractere anterior foi um escape, para não mexer em
+ * espaçamento fora de strings.
+ */
+function escaparControlChars(txt: string): string {
+  let out = ''
+  let inString = false
+  let escaped = false
+  for (let i = 0; i < txt.length; i++) {
+    const ch = txt[i]
+    if (!inString) {
+      if (ch === '"') inString = true
+      out += ch
+      continue
+    }
+    if (escaped) {
+      out += ch
+      escaped = false
+      continue
+    }
+    if (ch === '\\') {
+      out += ch
+      escaped = true
+      continue
+    }
+    if (ch === '"') {
+      inString = false
+      out += ch
+      continue
+    }
+    if (ch === '\n') { out += '\\n'; continue }
+    if (ch === '\r') { out += '\\r'; continue }
+    if (ch === '\t') { out += '\\t'; continue }
+    out += ch
+  }
+  return out
+}
+
 export function parseJSON<T>(raw: string): T {
   let txt = raw.trim()
   // remove cercas ```json ... ```
@@ -111,5 +154,19 @@ export function parseJSON<T>(raw: string): T {
   const lastArr = txt.lastIndexOf(']')
   const end = Math.max(lastObj, lastArr)
   if (start !== -1 && end !== -1) txt = txt.slice(start, end + 1)
-  return JSON.parse(txt) as T
+
+  try {
+    return JSON.parse(txt) as T
+  } catch (erroOriginal) {
+    // Tentativa de recuperação: quebras de linha cruas dentro de strings são a causa mais comum
+    try {
+      return JSON.parse(escaparControlChars(txt)) as T
+    } catch {
+      throw new Error(
+        erroOriginal instanceof Error
+          ? `A IA devolveu um JSON malformado (${erroOriginal.message}). Tente novamente — se persistir, tente com menos arquivos por vez.`
+          : 'A IA devolveu uma resposta em formato inesperado. Tente novamente.'
+      )
+    }
+  }
 }
