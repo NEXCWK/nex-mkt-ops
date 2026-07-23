@@ -49,6 +49,8 @@ export interface ItemParaAvaliar {
   pdfBase64?: string
   /** Texto já disponível (CSV/Excel/áudio transcrito/colado manualmente). */
   texto?: string
+  /** Falha ocorrida ANTES da avaliação (ex.: transcrição de áudio falhou) — vira conversa-fallback sem chamar a IA. */
+  erro?: string
 }
 
 const MAX_TOKENS_POR_ITEM = 4000
@@ -115,6 +117,9 @@ function conversaFallback(item: ItemParaAvaliar, motivo?: string): ConversaIA {
 /** Avalia um único item (PDF nativo ou texto) via IA. Nunca lança — falhas viram uma conversa-fallback isolada. */
 async function avaliarItem(item: ItemParaAvaliar, system: string, funcionalidade: string, operadorEmail: string): Promise<ConversaIA[]> {
   try {
+    if (item.erro) {
+      return [conversaFallback(item, item.erro)]
+    }
     if (item.pdfBase64 && Buffer.byteLength(item.pdfBase64, 'base64') > LIMITE_PDF_BASE64_BYTES) {
       return [conversaFallback(item, 'arquivo PDF muito grande (acima de ~28 MB) — divida-o em partes menores')]
     }
@@ -161,7 +166,7 @@ async function comRetryTransiente<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 /** Executa `fn` sobre `items` com no máximo `limite` chamadas simultâneas. */
-async function comConcorrenciaLimitada<T, R>(items: T[], limite: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+export async function comConcorrenciaLimitada<T, R>(items: T[], limite: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const resultados: R[] = new Array(items.length)
   let cursor = 0
   async function worker() {

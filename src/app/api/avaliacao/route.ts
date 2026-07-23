@@ -5,7 +5,10 @@ import { assertApiKey } from '@/lib/anthropic'
 import { podeAcessarDashboardAvaliacao } from '@/lib/acesso-restrito'
 import { extrairTextoDeArquivo } from '@/lib/parse-transcricoes'
 import { isAudioFile, transcreverAudio } from '@/lib/transcricao-audio'
-import { avaliarTranscricoes, type ItemParaAvaliar } from '@/lib/avaliacao-core'
+import { avaliarTranscricoes, comConcorrenciaLimitada, type ItemParaAvaliar } from '@/lib/avaliacao-core'
+
+/** Chamadas simultâneas à API de transcrição (OpenAI) — mantém lotes de várias ligações dentro do tempo de uma requisição HTTP. */
+const CONCORRENCIA_TRANSCRICAO = 4
 
 export const dynamic = 'force-dynamic'
 // Lotes grandes (dezenas de arquivos) processam em paralelo, mas com margem extra
@@ -33,29 +36,35 @@ export async function POST(req: NextRequest) {
       const files = form.getAll('arquivo').filter((f): f is File => f instanceof File)
       if (files.length > 0) {
         const atendente = String(form.get('atendente') ?? '').trim()
-        for (const file of files) {
+
+        // Cada arquivo é processado isoladamente e em paralelo (com concorrência limitada) — a falha
+        // de UM arquivo (ex.: uma ligação com áudio corrompido) não deve derrubar o lote inteiro nem
+        // descartar os demais já transcritos/lidos com sucesso; ela vira uma conversa-fallback isolada
+        // (mesmo padrão de isolamento de falhas usado na avaliação via IA em avaliacao-core.ts).
+        const itensPorArquivo = await comConcorrenciaLimitada(files, CONCORRENCIA_TRANSCRICAO, async (file): Promise<ItemParaAvaliar> => {
           const buffer = Buffer.from(await file.arrayBuffer())
           const ext = file.name.toLowerCase().split('.').pop() ?? ''
           if (isAudioFile(file.name)) {
             // Ligação em áudio: transcreve para texto antes de avaliar
             try {
               const texto = await transcreverAudio(buffer, file.name)
-              itens.push({ nomeArquivo: file.name, texto: atendente ? `[Atendente: ${atendente}]\n${texto}` : texto })
+              return { nomeArquivo: file.name, texto: atendente ? `[Atendente: ${atendente}]\n${texto}` : texto }
             } catch (e) {
-              return NextResponse.json({ error: `${file.name}: ${e instanceof Error ? e.message : 'Falha ao transcrever o áudio'}` }, { status: 400 })
+              return { nomeArquivo: file.name, erro: e instanceof Error ? e.message : 'Falha ao transcrever o áudio' }
             }
           } else if (ext === 'pdf') {
             // PDF nativo: enviado direto à IA (lida com PDFs de imagem/scan — ver avaliacao-core.ts)
-            itens.push({ nomeArquivo: file.name, pdfBase64: buffer.toString('base64') })
+            return { nomeArquivo: file.name, pdfBase64: buffer.toString('base64') }
           } else {
             try {
               const texto = await extrairTextoDeArquivo(buffer, file.name)
-              itens.push({ nomeArquivo: file.name, texto })
+              return { nomeArquivo: file.name, texto }
             } catch (e) {
-              return NextResponse.json({ error: `Falha ao ler o arquivo "${file.name}": ${e instanceof Error ? e.message : 'formato inválido ou corrompido'}` }, { status: 400 })
+              return { nomeArquivo: file.name, erro: `Falha ao ler o arquivo: ${e instanceof Error ? e.message : 'formato inválido ou corrompido'}` }
             }
           }
-        }
+        })
+        itens.push(...itensPorArquivo)
       } else {
         const transcricoes = String(form.get('transcricoes') ?? '')
         if (transcricoes.trim()) itens.push({ nomeArquivo: 'Texto colado', texto: transcricoes })
