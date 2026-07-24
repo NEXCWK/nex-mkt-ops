@@ -29,10 +29,13 @@ export async function askClaudeJSON<T = unknown>(opts: {
   /** Rótulo da funcionalidade (para rastreamento de custo/uso de tokens). */
   funcionalidade?: string
   operadorEmail?: string | null
+  /** Sobrescreve o modelo padrão (ex.: CLAUDE_HAIKU_MODEL, para tarefas de maior volume/menor complexidade). */
+  model?: string
 }): Promise<T> {
   const client = getAnthropic()
+  const modelo = opts.model ?? CLAUDE_MODEL
   const res = await client.messages.create({
-    model: CLAUDE_MODEL,
+    model: modelo,
     max_tokens: opts.maxTokens ?? 8000,
     // Extração/classificação estruturada não precisa de raciocínio estendido — desliga para reduzir latência
     // (no Sonnet 5, omitir esse campo liga "adaptive thinking" por padrão, o que pode ultrapassar timeouts de proxy).
@@ -49,7 +52,7 @@ export async function askClaudeJSON<T = unknown>(opts: {
   if (opts.funcionalidade) {
     void registrarUsoTokens({
       funcionalidade: opts.funcionalidade,
-      modelo: CLAUDE_MODEL,
+      modelo,
       tokensInput: res.usage.input_tokens,
       tokensOutput: res.usage.output_tokens,
       operadorEmail: opts.operadorEmail,

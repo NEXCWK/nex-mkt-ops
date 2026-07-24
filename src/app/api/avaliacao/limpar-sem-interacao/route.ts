@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { podeAcessarDashboardAvaliacao } from '@/lib/acesso-restrito'
-import { askClaudeJSON, assertApiKey } from '@/lib/anthropic'
+import { askClaudeJSON, assertApiKey, CLAUDE_HAIKU_MODEL } from '@/lib/anthropic'
 import { createServerClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
       maxTokens: 4000,
       funcionalidade: 'avaliacao_limpar_sem_interacao',
       operadorEmail: session.user.email,
+      model: CLAUDE_HAIKU_MODEL,
     })
 
     const indices = new Set(Array.isArray(resultado.indices_sem_interacao) ? resultado.indices_sem_interacao : [])

@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { askClaudeJSON } from '@/lib/anthropic'
+import { askClaudeJSON, CLAUDE_HAIKU_MODEL } from '@/lib/anthropic'
 import { createServerClient } from '@/lib/supabase/server'
 
 export const KPIS_ATENDIMENTO = [
@@ -137,6 +137,9 @@ async function avaliarItem(item: ItemParaAvaliar, system: string, funcionalidade
       maxTokens: MAX_TOKENS_POR_ITEM,
       funcionalidade,
       operadorEmail,
+      // Haiku é suficiente para a extração/classificação estruturada desta tarefa e reduz bastante o custo
+      // em relação ao Sonnet, num recurso que processa alto volume de arquivos.
+      model: CLAUDE_HAIKU_MODEL,
     }))
 
     // Uma lista vazia aqui é uma resposta legítima (ex.: a conversa só teve encerramento
