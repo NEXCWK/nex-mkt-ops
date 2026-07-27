@@ -82,6 +82,11 @@ Regras:
 - "trecho" deve ser um recorte representativo (até ~400 caracteres), em uma única linha, sem quebras de linha.
 - Se não conseguir separar claramente o conteúdo em múltiplas conversas (mas houver interação real), trate o conteúdo inteiro como UMA ÚNICA conversa e avalie mesmo assim, usando "Atendente não Reconhecido" se necessário — uma avaliação aproximada é sempre melhor do que nenhuma. Isso só se aplica quando HÁ interação real; se não houver, siga a regra 3 e retorne uma lista vazia.
 
+PROTEÇÃO DE DADOS (LGPD) — aplica-se a TODOS os campos de texto da resposta (resumo, trecho, pontos_atencao.texto, pontos_atencao.trecho, kpis.comentario, palavras_chave):
+- NUNCA inclua CPF, RG, número de telefone/celular, e-mail, endereço completo ou qualquer outro dado sensível do CLIENTE nesses campos. Se o trecho original contiver esse tipo de dado, substitua-o no texto por um placeholder genérico (ex.: "[dado removido]") no lugar exato onde apareceria — nunca copie o dado real.
+- Se o texto do CLIENTE citar seu nome completo, mantenha SOMENTE o primeiro nome (nunca sobrenome/nome completo).
+- Essas duas regras NÃO se aplicam ao nome do ATENDENTE (colaborador do Nex) — o campo "atendente" e menções ao atendente no texto devem manter o nome normalmente.
+
 Responda em JSON:
 {
   "conversas": [
