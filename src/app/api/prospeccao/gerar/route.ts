@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { askClaudeJSONComBusca, assertApiKey } from '@/lib/anthropic'
+import { askClaudeJSONComBusca, assertApiKey, CLAUDE_HAIKU_MODEL } from '@/lib/anthropic'
 import { withNexVoice } from '@/lib/nex-voice'
 
 export const maxDuration = 300
@@ -64,6 +64,7 @@ Formato do JSON (retorne SOMENTE isto, sem comentar o processo de busca):
       maxBuscas: 30,
       funcionalidade: `prospeccao_${tipo === 'parcerias' ? 'parcerias' : 'bdr'}`,
       operadorEmail: session.user.email,
+      model: CLAUDE_HAIKU_MODEL,
     })
     return NextResponse.json(result)
   } catch (e) {

@@ -81,10 +81,13 @@ export async function askClaudeJSONComBusca<T = unknown>(opts: {
   maxBuscas?: number
   funcionalidade?: string
   operadorEmail?: string | null
+  /** Sobrescreve o modelo padrão (ex.: CLAUDE_HAIKU_MODEL, para reduzir custo). */
+  model?: string
 }): Promise<T> {
   const client = getAnthropic()
+  const modelo = opts.model ?? CLAUDE_MODEL
   const res = await client.messages.create({
-    model: CLAUDE_MODEL,
+    model: modelo,
     max_tokens: opts.maxTokens ?? 8000,
     thinking: { type: 'disabled' },
     tools: [
@@ -106,7 +109,7 @@ export async function askClaudeJSONComBusca<T = unknown>(opts: {
   if (opts.funcionalidade) {
     void registrarUsoTokens({
       funcionalidade: opts.funcionalidade,
-      modelo: CLAUDE_MODEL,
+      modelo,
       tokensInput: res.usage.input_tokens,
       tokensOutput: res.usage.output_tokens,
       operadorEmail: opts.operadorEmail,
