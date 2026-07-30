@@ -21,13 +21,16 @@ export function mergeVariaveis(texto: string, d: Destinatario): string {
   })
 }
 
-/** Converte texto simples (com quebras de linha) em HTML básico. */
-export function textoParaHtml(texto: string): string {
+/** Converte texto simples (com quebras de linha) em HTML básico, com rodapé de assinatura opcional. */
+export function textoParaHtml(texto: string, assinaturaUrl?: string | null): string {
   const esc = texto
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-  return `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#1A1A1A;">${esc.replace(/\n/g, '<br>')}</div>`
+  const rodape = assinaturaUrl
+    ? `<div style="margin-top:20px;"><img src="${assinaturaUrl}" alt="" style="max-width:320px;display:block;" /></div>`
+    : ''
+  return `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#1A1A1A;">${esc.replace(/\n/g, '<br>')}${rodape}</div>`
 }
 
 export interface EnviarLoteParams {
@@ -37,6 +40,8 @@ export interface EnviarLoteParams {
   assunto: string
   corpo: string
   senderName?: string
+  /** URL pública da imagem de assinatura (rodapé) do remetente selecionado, se houver. */
+  assinaturaUrl?: string | null
 }
 
 export async function enviarLote({
@@ -46,6 +51,7 @@ export async function enviarLote({
   assunto,
   corpo,
   senderName,
+  assinaturaUrl,
 }: EnviarLoteParams): Promise<{ enviados: number; falhas: number; erros: string[] }> {
   let enviados = 0
   let falhas = 0
@@ -73,7 +79,7 @@ export async function enviarLote({
           to: destino,
           cc: [],
           subject: mergeVariaveis(assunto, d),
-          body: textoParaHtml(mergeVariaveis(corpo, d)),
+          body: textoParaHtml(mergeVariaveis(corpo, d), assinaturaUrl),
           senderName: from,
         })
         enviados++

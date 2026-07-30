@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/layout/SectionCard'
 import { StatTile } from '@/components/layout/StatTile'
+import { RemetenteAssinatura } from '@/components/disparo/RemetenteAssinatura'
+import { BarraProgresso } from '@/components/disparo/BarraProgresso'
+import { REMETENTES_DISPARO } from '@/lib/remetentes'
 import { Sparkles, Send, Search, Trash2, Mail, Loader2, Users, User, Check, Save, FolderOpen, Download, Upload, Building2, AtSign, MailWarning, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -149,6 +152,8 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
   const [modoEnvio, setModoEnvio] = useState<'massa' | 'individual'>('massa')
   const [enviando, setEnviando] = useState(false)
   const [statusEnvio, setStatusEnvio] = useState<string | null>(null)
+  const [remetente, setRemetente] = useState(REMETENTES_DISPARO[0].email)
+  const [progressoEnvio, setProgressoEnvio] = useState<{ feito: number; total: number } | null>(null)
 
   // Envio individual: índice em edição e conjunto de já enviados
   const [editandoIdx, setEditandoIdx] = useState<number | null>(null)
@@ -192,25 +197,36 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
     if (selecionadas.length === 0 || !assunto.trim() || !corpo.trim() || enviando) return
     setEnviando(true)
     setStatusEnvio(null)
-    try {
-      const res = await fetch('/api/prospeccao/enviar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo,
-          assunto,
-          corpo,
-          destinatarios: selecionadas.map(e => ({ email: e.email, emailSecundario: e.emailSecundario, nome: e.contato, empresa: e.empresa })),
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`)
-      setStatusEnvio(`Enviados: ${json.enviados ?? 0} · Falhas: ${json.falhas ?? 0}`)
-    } catch (e) {
-      setStatusEnvio(e instanceof Error ? e.message : 'Falha no envio')
-    } finally {
-      setEnviando(false)
+    setProgressoEnvio({ feito: 0, total: selecionadas.length })
+    let enviados = 0
+    let falhas = 0
+    // Envia empresa por empresa (em vez de tudo numa única requisição) para poder
+    // mostrar o progresso do disparo em tempo real.
+    for (let i = 0; i < selecionadas.length; i++) {
+      const e = selecionadas[i]
+      try {
+        const res = await fetch('/api/prospeccao/enviar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo,
+            assunto,
+            corpo,
+            remetente,
+            destinatarios: [{ email: e.email, emailSecundario: e.emailSecundario, nome: e.contato, empresa: e.empresa }],
+          }),
+        })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`)
+        enviados += json.enviados ?? 0
+        falhas += json.falhas ?? 0
+      } catch {
+        falhas++
+      }
+      setProgressoEnvio({ feito: i + 1, total: selecionadas.length })
     }
+    setStatusEnvio(`Enviados: ${enviados} · Falhas: ${falhas}`)
+    setEnviando(false)
   }
 
   function abrirEdicaoIndividual(i: number) {
@@ -231,6 +247,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
           tipo,
           assunto: textoIndividual.assunto,
           corpo: textoIndividual.corpo,
+          remetente,
           destinatarios: [{ email: e.email, emailSecundario: e.emailSecundario, nome: e.contato, empresa: e.empresa }],
         }),
       })
@@ -483,7 +500,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
           step={3}
           icon={Mail}
           title="E-mail de prospecção"
-          subtitle={`Via comercial@nexcoworking.com.br · ${modoEnvio === 'massa' ? `${totalEmailsMassa} e-mail(s) a enviar` : 'revise e envie um a um'}`}
+          subtitle={modoEnvio === 'massa' ? `${totalEmailsMassa} e-mail(s) a enviar` : 'revise e envie um a um'}
           actions={
             <div className="flex gap-1 rounded-lg border border-nex-gray-200 p-0.5">
               <button onClick={() => setModoEnvio('massa')}
@@ -504,6 +521,11 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
             <code className="px-1 bg-nex-gray-100 rounded">{'{{empresa}}'}</code>. Sempre um e-mail individual para o principal e outro para o secundário (quando preenchido).
             {modoEnvio === 'individual' && ' No modo "Um a um", clique em "Ver e enviar" na tabela para revisar e editar cada e-mail antes de disparar.'}
           </p>
+
+          <div className="mb-4 pb-4 border-b border-nex-gray-100">
+            <RemetenteAssinatura remetente={remetente} onChangeRemetente={setRemetente} />
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
               <input value={assunto} onChange={e => setAssunto(e.target.value)} placeholder="Assunto do e-mail"
@@ -519,7 +541,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
                   <span className="text-[10px] font-heading font-semibold uppercase tracking-wide text-nex-gray-400">Prévia · {preview.empresa}</span>
                 </div>
                 <div className="px-3.5 py-2 border-b border-nex-gray-100 text-[11px] text-nex-gray-400 space-y-0.5">
-                  <p><span className="text-nex-gray-300">De:</span> comercial@nexcoworking.com.br</p>
+                  <p><span className="text-nex-gray-300">De:</span> {remetente}</p>
                   <p><span className="text-nex-gray-300">Para:</span> {preview.email || preview.emailSecundario || '—'}</p>
                 </div>
                 <div className="p-3.5">
@@ -531,7 +553,8 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
           </div>
 
           {modoEnvio === 'massa' && (
-            <div className="flex items-center gap-3 mt-5 pt-4 border-t border-nex-gray-100">
+            <div className="mt-5 pt-4 border-t border-nex-gray-100">
+            <div className="flex items-center gap-3">
               <button onClick={enviarMassa} disabled={selecionadas.length === 0 || !assunto.trim() || !corpo.trim() || enviando}
                 className={cn('flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-heading font-medium transition-colors shadow-sm',
                   'bg-nex-black text-white hover:bg-nex-gray-700 disabled:opacity-40 disabled:pointer-events-none')}>
@@ -541,6 +564,8 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
               {statusEnvio && (
                 <span className="text-sm text-nex-gray-600 px-3 py-1.5 rounded-lg bg-nex-gray-50 border border-nex-gray-100">{statusEnvio}</span>
               )}
+            </div>
+            {progressoEnvio && <BarraProgresso feito={progressoEnvio.feito} total={progressoEnvio.total} />}
             </div>
           )}
         </SectionCard>

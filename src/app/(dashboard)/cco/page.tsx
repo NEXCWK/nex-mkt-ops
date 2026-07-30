@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/layout/SectionCard'
 import { StatTile } from '@/components/layout/StatTile'
+import { RemetenteAssinatura } from '@/components/disparo/RemetenteAssinatura'
+import { BarraProgresso } from '@/components/disparo/BarraProgresso'
+import { REMETENTES_DISPARO } from '@/lib/remetentes'
 import { Send, Upload, Mail, Loader2, Users, User, Check, Building2, Tag, Plus, Pencil, Trash2, Save, Database, FolderOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -87,6 +90,8 @@ export default function CcoPage() {
   const [enviando, setEnviando] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [modoEnvio, setModoEnvio] = useState<'massa' | 'individual'>('massa')
+  const [remetente, setRemetente] = useState(REMETENTES_DISPARO[0].email)
+  const [progressoEnvio, setProgressoEnvio] = useState<{ feito: number; total: number } | null>(null)
   const [editandoEnvioId, setEditandoEnvioId] = useState<string | null>(null)
   const [textoIndividual, setTextoIndividual] = useState({ assunto: '', corpo: '' })
   const [enviadosIds, setEnviadosIds] = useState<Set<string>>(new Set())
@@ -231,20 +236,30 @@ export default function CcoPage() {
     if (selecionadosArr.length === 0 || !assunto.trim() || !corpo.trim() || enviando) return
     setEnviando(true)
     setStatus(null)
-    try {
-      const res = await fetch('/api/cco/enviar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assunto, corpo, destinatarios: selecionadosArr }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`)
-      setStatus(`Enviados: ${json.enviados ?? 0} · Falhas: ${json.falhas ?? 0}`)
-    } catch (e) {
-      setStatus(e instanceof Error ? e.message : 'Falha no envio')
-    } finally {
-      setEnviando(false)
+    setProgressoEnvio({ feito: 0, total: selecionadosArr.length })
+    let enviados = 0
+    let falhas = 0
+    // Envia contato por contato (em vez de tudo numa única requisição) para poder
+    // mostrar o progresso do disparo em tempo real.
+    for (let i = 0; i < selecionadosArr.length; i++) {
+      const c = selecionadosArr[i]
+      try {
+        const res = await fetch('/api/cco/enviar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assunto, corpo, remetente, destinatarios: [c] }),
+        })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`)
+        enviados += json.enviados ?? 0
+        falhas += json.falhas ?? 0
+      } catch {
+        falhas++
+      }
+      setProgressoEnvio({ feito: i + 1, total: selecionadosArr.length })
     }
+    setStatus(`Enviados: ${enviados} · Falhas: ${falhas}`)
+    setEnviando(false)
   }
 
   function abrirEdicaoIndividual(c: Contato) {
@@ -259,7 +274,7 @@ export default function CcoPage() {
       const res = await fetch('/api/cco/enviar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assunto: textoIndividual.assunto, corpo: textoIndividual.corpo, destinatarios: [c] }),
+        body: JSON.stringify({ assunto: textoIndividual.assunto, corpo: textoIndividual.corpo, remetente, destinatarios: [c] }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`)
@@ -524,7 +539,6 @@ export default function CcoPage() {
             step={2}
             icon={Mail}
             title="Mensagem"
-            subtitle="Envio via comercial@nex.work"
             actions={
               <div className="flex gap-1 rounded-lg border border-nex-gray-200 p-0.5">
                 <button onClick={() => setModoEnvio('massa')}
@@ -546,6 +560,11 @@ export default function CcoPage() {
               <code className="px-1 bg-nex-gray-100 rounded">{'{{whatsapp}}'}</code>{' '}
               <code className="px-1 bg-nex-gray-100 rounded">{'{{produto}}'}</code>
             </p>
+
+            <div className="mb-4 pb-4 border-b border-nex-gray-100">
+              <RemetenteAssinatura remetente={remetente} onChangeRemetente={setRemetente} />
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
                 <input value={assunto} onChange={e => setAssunto(e.target.value)} placeholder="Assunto"
@@ -559,6 +578,9 @@ export default function CcoPage() {
                     <Mail className="w-3.5 h-3.5 text-nex-gray-400" />
                     <span className="text-[10px] font-heading font-semibold uppercase tracking-wide text-nex-gray-400">Prévia · {preview.email}</span>
                   </div>
+                  <div className="px-3.5 py-2 border-b border-nex-gray-100 text-[11px] text-nex-gray-400">
+                    <span className="text-nex-gray-300">De:</span> {remetente}
+                  </div>
                   <div className="p-3.5">
                     <p className="text-sm font-heading font-medium text-nex-gray-800 mb-2">{aplicar(assunto, preview)}</p>
                     <p className="text-sm text-nex-gray-600 whitespace-pre-wrap">{aplicar(corpo, preview)}</p>
@@ -568,13 +590,16 @@ export default function CcoPage() {
             </div>
 
             {modoEnvio === 'massa' && (
-              <div className="flex items-center gap-3 mt-5 pt-4 border-t border-nex-gray-100">
+              <div className="mt-5 pt-4 border-t border-nex-gray-100">
+              <div className="flex items-center gap-3">
                 <button onClick={enviar} disabled={selecionadosArr.length === 0 || !assunto.trim() || !corpo.trim() || enviando}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-nex-black text-white text-sm font-heading font-medium hover:bg-nex-gray-700 disabled:opacity-40 disabled:pointer-events-none transition-colors shadow-sm">
                   {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   {enviando ? 'Enviando…' : `Disparar para ${selecionadosArr.length} contato(s)`}
                 </button>
                 {status && <span className="text-sm text-nex-gray-600 px-3 py-1.5 rounded-lg bg-nex-gray-50 border border-nex-gray-100">{status}</span>}
+              </div>
+              {progressoEnvio && <BarraProgresso feito={progressoEnvio.feito} total={progressoEnvio.total} />}
               </div>
             )}
           </SectionCard>

@@ -326,3 +326,18 @@ create table if not exists cco_contatos (
 alter table cco_contatos enable row level security;
 drop policy if exists "Service role full access" on cco_contatos;
 create policy "Service role full access" on cco_contatos for all using (true);
+
+-- Assinatura de e-mail (imagem, rodapé) por remetente de disparo — usada pelos
+-- disparos em massa do Sistema BDR, Sistema Parcerias e Sistema CCO. Uma por
+-- remetente (comercial@nex.work, felipe@nex.work, bruna@nex.work), reaproveitada
+-- automaticamente em cada novo disparo até ser substituída/removida.
+create table if not exists disparo_assinaturas (
+  remetente text primary key,
+  url text not null,
+  atualizado_por text references usuarios(email) on delete set null,
+  updated_at timestamptz default now()
+);
+
+alter table disparo_assinaturas enable row level security;
+drop policy if exists "Service role full access" on disparo_assinaturas;
+create policy "Service role full access" on disparo_assinaturas for all using (true);
