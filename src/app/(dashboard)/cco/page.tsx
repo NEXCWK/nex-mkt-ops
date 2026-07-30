@@ -8,11 +8,16 @@ import { Send, Upload, Mail, Loader2, Users, User, Check, Building2, Tag } from 
 import { cn } from '@/lib/utils'
 
 interface Contato {
+  empresa: string
   nome: string
   email: string
-  empresa: string
+  whatsapp: string
   produto: string
 }
+
+// Ordem oficial das colunas (com ou sem cabeçalho, cole texto ou planilha): empresa, nome, e-mail, whatsapp, produto.
+// Campo em branco não desloca os demais — mantém a posição vazia entre as vírgulas (ou a célula vazia na planilha).
+const COLUNAS_CCO = ['empresa', 'nome', 'email', 'whatsapp', 'produto'] as const
 
 function parseCSV(texto: string): Contato[] {
   const linhas = texto.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
@@ -20,20 +25,22 @@ function parseCSV(texto: string): Contato[] {
   // detecta separador
   const sep = (linhas[0].includes(';') && !linhas[0].includes(',')) ? ';' : (linhas[0].match(/;/g)?.length ?? 0) > (linhas[0].match(/,/g)?.length ?? 0) ? ';' : ','
   const header = linhas[0].toLowerCase()
-  const temHeader = /nome|email|e-mail|empresa|produto/.test(header)
-  const cols = temHeader ? linhas[0].split(sep).map(c => c.trim().toLowerCase()) : ['nome', 'email', 'empresa', 'produto']
+  const temHeader = /nome|email|e-mail|empresa|produto|whatsapp/.test(header)
+  const cols = temHeader ? linhas[0].split(sep).map(c => c.trim().toLowerCase()) : [...COLUNAS_CCO]
+  const idxEmpresa = cols.findIndex(c => c.includes('empresa'))
   const idxNome = cols.findIndex(c => c.includes('nome'))
   const idxEmail = cols.findIndex(c => c.includes('email') || c.includes('e-mail'))
-  const idxEmpresa = cols.findIndex(c => c.includes('empresa'))
+  const idxWhatsapp = cols.findIndex(c => c.includes('whatsapp') || c.includes('whats'))
   const idxProduto = cols.findIndex(c => c.includes('produto'))
   const dados = temHeader ? linhas.slice(1) : linhas
   return dados.map(linha => {
     const p = linha.split(sep).map(c => c.trim())
     return {
-      nome: idxNome >= 0 ? p[idxNome] ?? '' : p[0] ?? '',
-      email: idxEmail >= 0 ? p[idxEmail] ?? '' : p[1] ?? '',
-      empresa: idxEmpresa >= 0 ? p[idxEmpresa] ?? '' : p[2] ?? '',
-      produto: idxProduto >= 0 ? p[idxProduto] ?? '' : p[3] ?? '',
+      empresa: idxEmpresa >= 0 ? p[idxEmpresa] ?? '' : p[0] ?? '',
+      nome: idxNome >= 0 ? p[idxNome] ?? '' : p[1] ?? '',
+      email: idxEmail >= 0 ? p[idxEmail] ?? '' : p[2] ?? '',
+      whatsapp: idxWhatsapp >= 0 ? p[idxWhatsapp] ?? '' : p[3] ?? '',
+      produto: idxProduto >= 0 ? p[idxProduto] ?? '' : p[4] ?? '',
     }
   }).filter(c => c.email.includes('@'))
 }
@@ -42,6 +49,7 @@ function aplicar(texto: string, c: Contato): string {
   return texto
     .replace(/\{\{\s*nome\s*\}\}/gi, c.nome || '')
     .replace(/\{\{\s*empresa\s*\}\}/gi, c.empresa || '')
+    .replace(/\{\{\s*whatsapp\s*\}\}/gi, c.whatsapp || '')
     .replace(/\{\{\s*produto\s*\}\}/gi, c.produto || '')
 }
 
@@ -160,11 +168,11 @@ export default function CcoPage() {
             value={raw}
             onChange={e => setRaw(e.target.value)}
             rows={12}
-            placeholder={'nome,email,empresa,produto\nJoão Silva,joao@empresa.com,Empresa X,Escritório Privativo\nMaria,maria@abc.com,ABC Ltda,Sala de Reunião'}
+            placeholder={'empresa,nome,email,whatsapp,produto\nEmpresa X,João Silva,joao@empresa.com,(41) 99999-0000,Escritório Privativo\nABC Ltda,Maria,maria@abc.com,,Sala de Reunião'}
             className="w-full resize-y rounded-lg border border-nex-gray-200 px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-nex-gray-400"
           />
           <p className="text-[11px] text-nex-gray-400 mt-2">
-            Colunas: nome, email, empresa, produto (com ou sem cabeçalho). Cole o texto, ou importe um arquivo .csv ou .xls/.xlsx acima.
+            Colunas (nessa ordem, com ou sem cabeçalho): empresa, nome, e-mail, whatsapp, produto. Um campo em branco fica só com a posição vazia entre as vírgulas — não desloca os demais (e, na planilha, é a célula daquela coluna que fica vazia). Cole o texto, ou importe um arquivo .csv ou .xls/.xlsx acima.
           </p>
 
           {modoEnvio === 'individual' && contatos.length > 0 && (
@@ -187,7 +195,7 @@ export default function CcoPage() {
                           </span>
                           <div>
                             <div className="font-medium text-nex-gray-800">{c.empresa || c.nome}</div>
-                            <div className="text-nex-gray-400">{c.nome} · {c.email}</div>
+                            <div className="text-nex-gray-400">{c.nome} · {c.email}{c.whatsapp && ` · ${c.whatsapp}`}</div>
                           </div>
                         </div>
                       </td>
@@ -235,6 +243,7 @@ export default function CcoPage() {
           <p className="text-[11px] text-nex-gray-400 mb-3">
             Variáveis: <code className="px-1 bg-nex-gray-100 rounded">{'{{nome}}'}</code>{' '}
             <code className="px-1 bg-nex-gray-100 rounded">{'{{empresa}}'}</code>{' '}
+            <code className="px-1 bg-nex-gray-100 rounded">{'{{whatsapp}}'}</code>{' '}
             <code className="px-1 bg-nex-gray-100 rounded">{'{{produto}}'}</code>
           </p>
           <input value={assunto} onChange={e => setAssunto(e.target.value)} placeholder="Assunto"
