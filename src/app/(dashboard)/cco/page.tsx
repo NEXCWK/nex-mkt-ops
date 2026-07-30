@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Send, Upload, Mail, Loader2, Users, User, Check } from 'lucide-react'
+import { SectionCard } from '@/components/layout/SectionCard'
+import { StatTile } from '@/components/layout/StatTile'
+import { Send, Upload, Mail, Loader2, Users, User, Check, Building2, Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Contato {
@@ -131,18 +133,29 @@ export default function CcoPage() {
     <div>
       <PageHeader title="Sistema CCO" description="Disparo de e-mails para a base fixa de clientes, com contato periódico por empresa, cliente e produto." />
 
+      {contatos.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          <StatTile icon={Users} label="Contatos válidos" value={contatos.length} />
+          <StatTile icon={Building2} label="Empresas distintas" value={new Set(contatos.map(c => c.empresa).filter(Boolean)).size} />
+          <StatTile icon={Tag} label="Produtos distintos" value={new Set(contatos.map(c => c.produto).filter(Boolean)).size} />
+          <StatTile icon={Mail} label="Modo de envio" value={modoEnvio === 'massa' ? 'Em massa' : 'Um a um'} />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Base */}
-        <div className="bg-white border border-nex-gray-200 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-heading font-semibold text-nex-black flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-nex-gray-400" /> Base de contatos
-            </h3>
+        <SectionCard
+          step={1}
+          icon={Users}
+          title="Base de contatos"
+          subtitle={contatos.length > 0 ? `${contatos.length} contato(s) detectado(s)` : 'Cole a lista ou importe um arquivo'}
+          actions={
             <label className="flex items-center gap-1.5 text-xs text-nex-gray-500 hover:text-nex-black cursor-pointer">
               <Upload className="w-3.5 h-3.5" /> Importar CSV ou Excel
               <input type="file" accept=".csv,text/csv,text/plain,.xls,.xlsx" onChange={onFile} className="hidden" />
             </label>
-          </div>
+          }
+        >
           <textarea
             value={raw}
             onChange={e => setRaw(e.target.value)}
@@ -151,7 +164,7 @@ export default function CcoPage() {
             className="w-full resize-y rounded-lg border border-nex-gray-200 px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-nex-gray-400"
           />
           <p className="text-[11px] text-nex-gray-400 mt-2">
-            {contatos.length} contato(s) válido(s) detectado(s). Colunas: nome, email, empresa, produto (com ou sem cabeçalho). Cole o texto, ou importe um arquivo .csv ou .xls/.xlsx acima.
+            Colunas: nome, email, empresa, produto (com ou sem cabeçalho). Cole o texto, ou importe um arquivo .csv ou .xls/.xlsx acima.
           </p>
 
           {modoEnvio === 'individual' && contatos.length > 0 && (
@@ -166,12 +179,21 @@ export default function CcoPage() {
                 </thead>
                 <tbody>
                   {contatos.map((c, i) => (
-                    <tr key={i} className="border-t border-nex-gray-50">
+                    <tr key={i} className="border-t border-nex-gray-50 hover:bg-nex-gray-50/60 transition-colors">
                       <td className="py-1.5 pr-2">
-                        <div className="font-medium text-nex-gray-800">{c.empresa || c.nome}</div>
-                        <div className="text-nex-gray-400">{c.nome} · {c.email}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-nex-gray-100 text-nex-gray-600 text-[10px] font-heading font-semibold flex items-center justify-center">
+                            {(c.empresa || c.nome || '?').charAt(0).toUpperCase()}
+                          </span>
+                          <div>
+                            <div className="font-medium text-nex-gray-800">{c.empresa || c.nome}</div>
+                            <div className="text-nex-gray-400">{c.nome} · {c.email}</div>
+                          </div>
+                        </div>
                       </td>
-                      <td className="py-1.5 pr-2 text-nex-gray-500">{c.produto || '—'}</td>
+                      <td className="py-1.5 pr-2">
+                        {c.produto ? <span className="inline-block bg-nex-gray-100 text-nex-gray-600 rounded-full px-2 py-0.5">{c.produto}</span> : <span className="text-nex-gray-300">—</span>}
+                      </td>
                       <td className="py-1.5">
                         {enviadosIdx.has(i) ? (
                           <span className="flex items-center gap-1 text-green-600"><Check className="w-3 h-3" /> Enviado</span>
@@ -187,14 +209,15 @@ export default function CcoPage() {
               </table>
             </div>
           )}
-        </div>
+        </SectionCard>
 
         {/* E-mail */}
-        <div className="bg-white border border-nex-gray-200 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
-            <h3 className="text-sm font-heading font-semibold text-nex-black flex items-center gap-1.5">
-              <Mail className="w-4 h-4 text-nex-gray-400" /> Mensagem
-            </h3>
+        <SectionCard
+          step={2}
+          icon={Mail}
+          title="Mensagem"
+          subtitle="Envio via comercial@nex.work"
+          actions={
             <div className="flex gap-1 rounded-lg border border-nex-gray-200 p-0.5">
               <button onClick={() => setModoEnvio('massa')}
                 className={cn('flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-heading font-medium transition-colors',
@@ -207,25 +230,36 @@ export default function CcoPage() {
                 <User className="w-3.5 h-3.5" /> Um a um
               </button>
             </div>
-          </div>
+          }
+        >
           <p className="text-[11px] text-nex-gray-400 mb-3">
             Variáveis: <code className="px-1 bg-nex-gray-100 rounded">{'{{nome}}'}</code>{' '}
             <code className="px-1 bg-nex-gray-100 rounded">{'{{empresa}}'}</code>{' '}
-            <code className="px-1 bg-nex-gray-100 rounded">{'{{produto}}'}</code>. Envio via <strong>comercial@nex.work</strong>.
+            <code className="px-1 bg-nex-gray-100 rounded">{'{{produto}}'}</code>
           </p>
           <input value={assunto} onChange={e => setAssunto(e.target.value)} placeholder="Assunto"
             className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
           <textarea value={corpo} onChange={e => setCorpo(e.target.value)} rows={9} placeholder="Olá {{nome}}, sobre o seu {{produto}} na {{empresa}}…"
             className="w-full resize-y rounded-lg border border-nex-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
-        </div>
+
+          {preview && (
+            <div className="mt-3 rounded-lg border border-nex-gray-200 overflow-hidden">
+              <div className="bg-nex-gray-50 px-3.5 py-2 border-b border-nex-gray-200 flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-nex-gray-400" />
+                <span className="text-[10px] font-heading font-semibold uppercase tracking-wide text-nex-gray-400">Prévia · {preview.email}</span>
+              </div>
+              <div className="p-3.5">
+                <p className="text-sm font-heading font-medium text-nex-gray-800 mb-2">{aplicar(assunto, preview)}</p>
+                <p className="text-sm text-nex-gray-600 whitespace-pre-wrap">{aplicar(corpo, preview)}</p>
+              </div>
+            </div>
+          )}
+        </SectionCard>
       </div>
 
       {/* Painel de edição individual */}
       {editandoIdx !== null && (
-        <div className="mt-5 bg-white border border-nex-gray-200 rounded-xl p-5">
-          <h3 className="text-sm font-heading font-semibold text-nex-black mb-3 flex items-center gap-1.5">
-            <User className="w-4 h-4 text-nex-gray-400" /> Enviar para {contatos[editandoIdx]?.empresa || contatos[editandoIdx]?.nome}
-          </h3>
+        <SectionCard icon={User} title={`Enviar para ${contatos[editandoIdx]?.empresa || contatos[editandoIdx]?.nome}`} className="mt-5">
           <input value={textoIndividual.assunto} onChange={e => setTextoIndividual(p => ({ ...p, assunto: e.target.value }))}
             className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
           <textarea value={textoIndividual.corpo} onChange={e => setTextoIndividual(p => ({ ...p, corpo: e.target.value }))}
@@ -238,25 +272,17 @@ export default function CcoPage() {
             </button>
             <button onClick={() => setEditandoIdx(null)} className="text-sm text-nex-gray-500 hover:text-nex-black">Cancelar</button>
           </div>
-        </div>
-      )}
-
-      {preview && (
-        <div className="mt-5 p-4 rounded-xl bg-nex-gray-50 border border-nex-gray-100 max-w-3xl">
-          <p className="text-[11px] uppercase tracking-wide text-nex-gray-400 mb-1">Prévia ({preview.email})</p>
-          <p className="text-sm font-heading font-medium text-nex-gray-800 mb-1">{aplicar(assunto, preview)}</p>
-          <p className="text-sm text-nex-gray-600 whitespace-pre-wrap">{aplicar(corpo, preview)}</p>
-        </div>
+        </SectionCard>
       )}
 
       {modoEnvio === 'massa' && (
         <div className="flex items-center gap-3 mt-5">
           <button onClick={enviar} disabled={contatos.length === 0 || !assunto.trim() || !corpo.trim() || enviando}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-nex-black text-white text-sm font-heading font-medium hover:bg-nex-gray-700 disabled:opacity-40 disabled:pointer-events-none transition-colors">
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-nex-black text-white text-sm font-heading font-medium hover:bg-nex-gray-700 disabled:opacity-40 disabled:pointer-events-none transition-colors shadow-sm">
             {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             {enviando ? 'Enviando…' : `Disparar para ${contatos.length} contato(s)`}
           </button>
-          {status && <span className="text-sm text-nex-gray-600">{status}</span>}
+          {status && <span className="text-sm text-nex-gray-600 px-3 py-1.5 rounded-lg bg-nex-gray-50 border border-nex-gray-100">{status}</span>}
         </div>
       )}
     </div>

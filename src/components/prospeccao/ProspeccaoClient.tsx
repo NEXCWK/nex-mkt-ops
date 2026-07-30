@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Sparkles, Send, Search, Trash2, Mail, Loader2, Users, User, Check, Save, FolderOpen, Download, Upload } from 'lucide-react'
+import { SectionCard } from '@/components/layout/SectionCard'
+import { StatTile } from '@/components/layout/StatTile'
+import { Sparkles, Send, Search, Trash2, Mail, Loader2, Users, User, Check, Save, FolderOpen, Download, Upload, Building2, AtSign, MailWarning, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface Empresa {
@@ -264,48 +266,51 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
       </div>
 
       {aba === 'salvas' ? (
-        <div className="bg-white border border-nex-gray-200 rounded-xl overflow-hidden">
-          <div className="border-b border-nex-gray-100 px-5 py-3 flex items-center justify-between">
-            <span className="text-xs font-heading font-semibold uppercase tracking-wide text-nex-gray-400">Listas Salvas</span>
-            {carregandoListas && <Loader2 className="w-3.5 h-3.5 animate-spin text-nex-gray-300" />}
-          </div>
+        <SectionCard
+          icon={FolderOpen}
+          title="Listas salvas"
+          subtitle={listasSalvas.length > 0 ? `${listasSalvas.length} lista(s) guardada(s)` : undefined}
+          actions={carregandoListas ? <Loader2 className="w-3.5 h-3.5 animate-spin text-nex-gray-300" /> : undefined}
+        >
           {listasSalvas.length === 0 ? (
             <div className="py-10 text-center text-sm text-nex-gray-300">
               {carregandoListas ? 'Carregando…' : 'Nenhuma lista salva ainda. Gere e salve uma lista na aba "Gerar Nova Lista".'}
             </div>
           ) : (
-            <div className="divide-y divide-nex-gray-50">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {listasSalvas.map(l => (
-                <div key={l.id} className="px-5 py-3 flex items-center justify-between gap-3 flex-wrap hover:bg-nex-gray-50 transition-colors">
-                  <div className="min-w-0">
-                    <p className="text-sm font-heading font-medium text-nex-gray-800">{l.nome}</p>
-                    <p className="text-[11px] text-nex-gray-400">
-                      {l.empresas.length} empresa(s) · {l.produto ?? l.nicho ?? '—'} · {new Date(l.created_at).toLocaleDateString('pt-BR')}
-                    </p>
+                <div key={l.id} className="group border border-nex-gray-200 rounded-lg px-4 py-3 hover:border-nex-gray-300 hover:bg-nex-gray-50/60 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-heading font-medium text-nex-gray-800 truncate">{l.nome}</p>
+                      <p className="text-[11px] text-nex-gray-400 mt-0.5">
+                        {l.produto ?? l.nicho ?? '—'} · {new Date(l.created_at).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <span className="flex-shrink-0 text-[10px] font-heading font-semibold uppercase tracking-wide bg-nex-gray-100 text-nex-gray-500 rounded-full px-2 py-0.5">
+                      {l.empresas.length} empresa{l.empresas.length === 1 ? '' : 's'}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-4 mt-2.5 pt-2.5 border-t border-nex-gray-100">
                     <button onClick={() => carregarLista(l)} className="flex items-center gap-1 text-xs text-nex-gray-500 hover:text-nex-black">
                       <Upload className="w-3.5 h-3.5" /> Carregar
                     </button>
                     <button onClick={() => exportarCsv(l)} className="flex items-center gap-1 text-xs text-nex-gray-500 hover:text-nex-black">
                       <Download className="w-3.5 h-3.5" /> Exportar CSV
                     </button>
-                    <button onClick={() => excluirLista(l.id)} className="text-nex-gray-300 hover:text-red-500">
-                      <Trash2 className="w-3.5 h-3.5" />
+                    <button onClick={() => excluirLista(l.id)} className="flex items-center gap-1 text-xs text-nex-gray-300 hover:text-red-500 ml-auto">
+                      <Trash2 className="w-3.5 h-3.5" /> Excluir
                     </button>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </SectionCard>
       ) : (
       <>
       {/* 1. Critérios de busca */}
-      <div className="bg-white border border-nex-gray-200 rounded-xl p-5 mb-5">
-        <h3 className="text-sm font-heading font-semibold text-nex-black mb-3 flex items-center gap-1.5">
-          <Search className="w-4 h-4 text-nex-gray-400" /> Critérios de prospecção
-        </h3>
+      <SectionCard step={1} icon={Search} title="Critérios de prospecção" subtitle="Defina o público-alvo — a IA busca empresas reais na web e só traz e-mails verificados" className="mb-5">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div>
             <label className="text-xs font-heading font-medium text-nex-gray-500 block mb-1">Região</label>
@@ -337,76 +342,99 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
         </div>
         {erro && <p className="text-sm text-red-600 mt-3">{erro}</p>}
         <button onClick={gerar} disabled={!nicho.trim() || loadingGerar}
-          className="mt-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-nex-black text-white text-sm font-heading font-medium hover:bg-nex-gray-700 disabled:opacity-40 disabled:pointer-events-none transition-colors">
+          className="mt-4 flex items-center gap-2 px-4 py-2.5 rounded-lg bg-nex-black text-white text-sm font-heading font-medium hover:bg-nex-gray-700 disabled:opacity-40 disabled:pointer-events-none transition-colors shadow-sm">
           {loadingGerar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-          {loadingGerar ? 'Buscando empresas…' : 'Gerar lista de empresas'}
+          {loadingGerar ? 'Buscando empresas na web…' : 'Gerar lista de empresas'}
         </button>
-        <p className="text-[11px] text-nex-gray-300 mt-2">
-          A lista é gerada por IA a partir de conhecimento de mercado e dados públicos (Google, bases públicas e APIs gratuitas do Brasil).
-          Valide e-mails e contatos antes do envio — registros podem precisar de conferência.
-        </p>
-      </div>
+        <div className="flex items-start gap-2 mt-3 px-3 py-2.5 rounded-lg bg-nex-yellow/10 border border-nex-yellow/30">
+          <Info className="w-3.5 h-3.5 text-nex-gray-500 flex-shrink-0 mt-0.5" />
+          <p className="text-[11px] text-nex-gray-500">
+            A lista é gerada por IA com busca real na web (site institucional, Google e LinkedIn) — só entram e-mails efetivamente encontrados.
+            Ainda assim, valide os contatos antes do envio.
+          </p>
+        </div>
+      </SectionCard>
 
       {/* 2. Lista de empresas */}
       {empresas.length > 0 && (
-        <div className="bg-white border border-nex-gray-200 rounded-xl p-5 mb-5">
-          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <h3 className="text-sm font-heading font-semibold text-nex-black">
-              Empresas encontradas ({empresas.length}) · {selecionadas.length} selecionada(s) com e-mail
-            </h3>
-            {!mostrarSalvar ? (
-              <button onClick={() => { setMostrarSalvar(true); setNomeParaSalvar(nicho ? `${nicho} — ${new Date().toLocaleDateString('pt-BR')}` : '') }}
-                className="flex items-center gap-1.5 text-xs text-nex-gray-500 hover:text-nex-black">
-                <Save className="w-3.5 h-3.5" /> Salvar lista
+        <>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          <StatTile icon={Building2} label="Empresas encontradas" value={empresas.length} />
+          <StatTile icon={Check} label="Selecionadas c/ e-mail" value={selecionadas.length} tone="success" />
+          <StatTile icon={MailWarning} label="Sem e-mail" value={empresas.length - selecionadas.length} tone={empresas.length - selecionadas.length > 0 ? 'warning' : 'default'} />
+          <StatTile icon={AtSign} label="E-mails a enviar" value={totalEmailsMassa} />
+        </div>
+        <SectionCard
+          step={2}
+          icon={Users}
+          title="Empresas encontradas"
+          subtitle={`${empresas.length} no total · ${selecionadas.length} selecionada(s) com e-mail`}
+          className="mb-5"
+          actions={!mostrarSalvar ? (
+            <button onClick={() => { setMostrarSalvar(true); setNomeParaSalvar(nicho ? `${nicho} — ${new Date().toLocaleDateString('pt-BR')}` : '') }}
+              className="flex items-center gap-1.5 text-xs text-nex-gray-500 hover:text-nex-black">
+              <Save className="w-3.5 h-3.5" /> Salvar lista
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input value={nomeParaSalvar} onChange={e => setNomeParaSalvar(e.target.value)} placeholder="Nome da lista"
+                className="rounded-md border border-nex-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
+              <button onClick={salvarLista} disabled={!nomeParaSalvar.trim() || salvando}
+                className="flex items-center gap-1 text-xs bg-nex-black text-white px-3 py-1 rounded-md hover:bg-nex-gray-700 disabled:opacity-40">
+                {salvando ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Confirmar
               </button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <input value={nomeParaSalvar} onChange={e => setNomeParaSalvar(e.target.value)} placeholder="Nome da lista"
-                  className="rounded-md border border-nex-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
-                <button onClick={salvarLista} disabled={!nomeParaSalvar.trim() || salvando}
-                  className="flex items-center gap-1 text-xs bg-nex-black text-white px-3 py-1 rounded-md hover:bg-nex-gray-700 disabled:opacity-40">
-                  {salvando ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Confirmar
-                </button>
-                <button onClick={() => setMostrarSalvar(false)} className="text-xs text-nex-gray-400 hover:text-nex-black">Cancelar</button>
-              </div>
-            )}
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+              <button onClick={() => setMostrarSalvar(false)} className="text-xs text-nex-gray-400 hover:text-nex-black">Cancelar</button>
+            </div>
+          )}
+        >
+          <div className="overflow-x-auto -mx-5 -mb-5">
+            <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-nex-gray-400 border-b border-nex-gray-100">
-                  <th className="py-2 pr-2 w-8"></th>
+                <tr className="text-left text-[10px] font-heading font-semibold uppercase tracking-wide text-nex-gray-400 bg-nex-gray-50 border-y border-nex-gray-100">
+                  <th className="py-2 pl-5 pr-2 w-8"></th>
                   <th className="py-2 pr-2">Empresa</th>
                   <th className="py-2 pr-2">Contato</th>
                   <th className="py-2 pr-2">E-mail Principal</th>
                   <th className="py-2 pr-2">E-mail Secundário</th>
                   <th className="py-2 pr-2">Segmento</th>
                   {modoEnvio === 'individual' && <th className="py-2 pr-2">Envio individual</th>}
-                  <th className="py-2 pr-2 w-8"></th>
+                  <th className="py-2 pr-5 w-8"></th>
                 </tr>
               </thead>
               <tbody>
                 {empresas.map((e, i) => (
-                  <tr key={i} className="border-b border-nex-gray-50 align-top">
-                    <td className="py-2 pr-2">
+                  <tr key={i} className={cn('border-b border-nex-gray-50 align-top transition-colors hover:bg-nex-gray-50/60', !e.email.trim() && 'bg-red-50/30')}>
+                    <td className="py-2.5 pl-5 pr-2">
                       <input type="checkbox" checked={e.selecionada} onChange={ev => update(i, { selecionada: ev.target.checked })} />
                     </td>
-                    <td className="py-2 pr-2">
-                      <div className="font-heading font-medium text-nex-gray-800">{e.empresa}</div>
-                      <div className="text-[11px] text-nex-gray-400">{e.regiao} {e.site && `· ${e.site}`}</div>
+                    <td className="py-2.5 pr-2">
+                      <div className="flex items-center gap-2">
+                        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-nex-gray-100 text-nex-gray-600 text-xs font-heading font-semibold flex items-center justify-center">
+                          {(e.empresa || '?').charAt(0).toUpperCase()}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="font-heading font-medium text-nex-gray-800 truncate">{e.empresa}</div>
+                          <div className="text-[11px] text-nex-gray-400 truncate">{e.regiao} {e.site && `· ${e.site}`}</div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="py-2 pr-2 text-nex-gray-600">{e.contato || '—'}</td>
-                    <td className="py-2 pr-2">
+                    <td className="py-2.5 pr-2 text-nex-gray-600">{e.contato || '—'}</td>
+                    <td className="py-2.5 pr-2">
                       <input value={e.email} onChange={ev => update(i, { email: ev.target.value })} placeholder="pessoa@empresa.com"
-                        className="w-40 rounded border border-nex-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
+                        className={cn('w-40 rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-nex-gray-400',
+                          e.email.trim() ? 'border-nex-gray-200' : 'border-red-200 placeholder:text-red-300')} />
                     </td>
-                    <td className="py-2 pr-2">
+                    <td className="py-2.5 pr-2">
                       <input value={e.emailSecundario} onChange={ev => update(i, { emailSecundario: ev.target.value })} placeholder="contato@empresa.com"
                         className="w-40 rounded border border-nex-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
                     </td>
-                    <td className="py-2 pr-2 text-nex-gray-500 text-xs">{e.segmento}</td>
+                    <td className="py-2.5 pr-2">
+                      {e.segmento ? (
+                        <span className="inline-block text-[11px] bg-nex-gray-100 text-nex-gray-600 rounded-full px-2 py-0.5">{e.segmento}</span>
+                      ) : <span className="text-nex-gray-300 text-xs">—</span>}
+                    </td>
                     {modoEnvio === 'individual' && (
-                      <td className="py-2 pr-2">
+                      <td className="py-2.5 pr-2">
                         {enviadosIdx.has(i) ? (
                           <span className="flex items-center gap-1 text-xs text-green-600"><Check className="w-3.5 h-3.5" /> Enviado</span>
                         ) : (
@@ -417,7 +445,7 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
                         )}
                       </td>
                     )}
-                    <td className="py-2">
+                    <td className="py-2.5 pr-5">
                       <button onClick={() => setEmpresas(prev => prev.filter((_, idx) => idx !== i))} className="text-nex-gray-300 hover:text-red-500">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -427,15 +455,13 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
               </tbody>
             </table>
           </div>
-        </div>
+        </SectionCard>
+        </>
       )}
 
       {/* Painel de edição individual */}
       {editandoIdx !== null && (
-        <div className="bg-white border border-nex-gray-200 rounded-xl p-5 mb-5">
-          <h3 className="text-sm font-heading font-semibold text-nex-black mb-3 flex items-center gap-1.5">
-            <User className="w-4 h-4 text-nex-gray-400" /> Enviar para {empresas[editandoIdx]?.empresa}
-          </h3>
+        <SectionCard icon={User} title={`Enviar para ${empresas[editandoIdx]?.empresa}`} className="mb-5">
           <input value={textoIndividual.assunto} onChange={e => setTextoIndividual(p => ({ ...p, assunto: e.target.value }))}
             className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
           <textarea value={textoIndividual.corpo} onChange={e => setTextoIndividual(p => ({ ...p, corpo: e.target.value }))}
@@ -448,16 +474,17 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
             </button>
             <button onClick={() => setEditandoIdx(null)} className="text-sm text-nex-gray-500 hover:text-nex-black">Cancelar</button>
           </div>
-        </div>
+        </SectionCard>
       )}
 
       {/* 3. E-mail */}
       {empresas.length > 0 && (
-        <div className="bg-white border border-nex-gray-200 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
-            <h3 className="text-sm font-heading font-semibold text-nex-black flex items-center gap-1.5">
-              <Mail className="w-4 h-4 text-nex-gray-400" /> E-mail de prospecção
-            </h3>
+        <SectionCard
+          step={3}
+          icon={Mail}
+          title="E-mail de prospecção"
+          subtitle={`Via comercial@nexcoworking.com.br · ${modoEnvio === 'massa' ? `${totalEmailsMassa} e-mail(s) a enviar` : 'revise e envie um a um'}`}
+          actions={
             <div className="flex gap-1 rounded-lg border border-nex-gray-200 p-0.5">
               <button onClick={() => setModoEnvio('massa')}
                 className={cn('flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-heading font-medium transition-colors',
@@ -470,37 +497,53 @@ export function ProspeccaoClient({ tipo, titulo, descricao, nichoLabel, nichoPla
                 <User className="w-3.5 h-3.5" /> Um a um
               </button>
             </div>
-          </div>
+          }
+        >
           <p className="text-[11px] text-nex-gray-400 mb-3">
             Use as variáveis <code className="px-1 bg-nex-gray-100 rounded">{'{{nome}}'}</code> e{' '}
-            <code className="px-1 bg-nex-gray-100 rounded">{'{{empresa}}'}</code>. Envio via <strong>comercial@nexcoworking.com.br</strong>, sempre um e-mail individual para o principal e outro para o secundário (quando preenchido).
+            <code className="px-1 bg-nex-gray-100 rounded">{'{{empresa}}'}</code>. Sempre um e-mail individual para o principal e outro para o secundário (quando preenchido).
             {modoEnvio === 'individual' && ' No modo "Um a um", clique em "Ver e enviar" na tabela para revisar e editar cada e-mail antes de disparar.'}
           </p>
-          <input value={assunto} onChange={e => setAssunto(e.target.value)} placeholder="Assunto do e-mail"
-            className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
-          <textarea value={corpo} onChange={e => setCorpo(e.target.value)} rows={10} placeholder="Olá {{nome}}, tudo bem? Notamos que a {{empresa}}…"
-            className="w-full resize-y rounded-lg border border-nex-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
-
-          {preview && (
-            <div className="mt-3 p-3 rounded-lg bg-nex-gray-50 border border-nex-gray-100">
-              <p className="text-[11px] uppercase tracking-wide text-nex-gray-400 mb-1">Prévia ({preview.empresa})</p>
-              <p className="text-sm font-heading font-medium text-nex-gray-800 mb-1">{aplicarVariaveis(assunto, preview)}</p>
-              <p className="text-sm text-nex-gray-600 whitespace-pre-wrap">{aplicarVariaveis(corpo, preview)}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <input value={assunto} onChange={e => setAssunto(e.target.value)} placeholder="Assunto do e-mail"
+                className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
+              <textarea value={corpo} onChange={e => setCorpo(e.target.value)} rows={11} placeholder="Olá {{nome}}, tudo bem? Notamos que a {{empresa}}…"
+                className="w-full resize-y rounded-lg border border-nex-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400" />
             </div>
-          )}
+
+            {preview && (
+              <div className="rounded-lg border border-nex-gray-200 overflow-hidden self-start">
+                <div className="bg-nex-gray-50 px-3.5 py-2 border-b border-nex-gray-200 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-nex-gray-400" />
+                  <span className="text-[10px] font-heading font-semibold uppercase tracking-wide text-nex-gray-400">Prévia · {preview.empresa}</span>
+                </div>
+                <div className="px-3.5 py-2 border-b border-nex-gray-100 text-[11px] text-nex-gray-400 space-y-0.5">
+                  <p><span className="text-nex-gray-300">De:</span> comercial@nexcoworking.com.br</p>
+                  <p><span className="text-nex-gray-300">Para:</span> {preview.email || preview.emailSecundario || '—'}</p>
+                </div>
+                <div className="p-3.5">
+                  <p className="text-sm font-heading font-medium text-nex-gray-800 mb-2">{aplicarVariaveis(assunto, preview)}</p>
+                  <p className="text-sm text-nex-gray-600 whitespace-pre-wrap">{aplicarVariaveis(corpo, preview)}</p>
+                </div>
+              </div>
+            )}
+          </div>
 
           {modoEnvio === 'massa' && (
-            <div className="flex items-center gap-3 mt-4">
+            <div className="flex items-center gap-3 mt-5 pt-4 border-t border-nex-gray-100">
               <button onClick={enviarMassa} disabled={selecionadas.length === 0 || !assunto.trim() || !corpo.trim() || enviando}
-                className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-heading font-medium transition-colors',
+                className={cn('flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-heading font-medium transition-colors shadow-sm',
                   'bg-nex-black text-white hover:bg-nex-gray-700 disabled:opacity-40 disabled:pointer-events-none')}>
                 {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {enviando ? 'Enviando…' : `Enviar para ${selecionadas.length} empresa(s) (${totalEmailsMassa} e-mail(s))`}
               </button>
-              {statusEnvio && <span className="text-sm text-nex-gray-600">{statusEnvio}</span>}
+              {statusEnvio && (
+                <span className="text-sm text-nex-gray-600 px-3 py-1.5 rounded-lg bg-nex-gray-50 border border-nex-gray-100">{statusEnvio}</span>
+              )}
             </div>
           )}
-        </div>
+        </SectionCard>
       )}
       </>
       )}
