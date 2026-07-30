@@ -305,3 +305,24 @@ create policy "Service role full access" on uso_tokens for all using (true);
 
 -- Campo Duração (Registro de Reservas — Reunião: 1h a 12h)
 alter table registro_reservas add column if not exists duracao text;
+
+-- Base de contatos do Sistema CCO — armazenada e gerenciada pela tela; o envio de
+-- e-mail é uma ação separada e posterior, feita só quando necessário, sobre os
+-- contatos já cadastrados (em vez de enviar direto ao importar).
+-- E-mail é sempre normalizado em minúsculas antes de salvar (ver /api/cco/contatos),
+-- para a constraint única funcionar de forma previsível e simples no upsert.
+create table if not exists cco_contatos (
+  id uuid primary key default uuid_generate_v4(),
+  empresa text,
+  nome text,
+  email text not null unique,
+  whatsapp text,
+  produto text,
+  criado_por text references usuarios(email) on delete set null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table cco_contatos enable row level security;
+drop policy if exists "Service role full access" on cco_contatos;
+create policy "Service role full access" on cco_contatos for all using (true);
