@@ -31,6 +31,27 @@ const CAMPOS_EXTENSO: Record<string, string[]> = {
   termo_diaria_reuniao: ['data_evento'],
 }
 
+// Campos que são categorias/seleções (não dados de identificação do cliente) e por
+// isso NÃO entram em maiúsculas — ficam como o texto definido nas opções do formulário.
+const CAMPOS_SEM_MAIUSCULA = new Set([
+  'vigencia_label', 'modalidade_pagamento', 'unidade_selector', 'genero_coworker',
+  'vinculo_representante', 'modalidade_ev',
+])
+
+/**
+ * Padroniza os dados do cliente (nome, endereço, e-mail, telefone, etc.) em
+ * MAIÚSCULAS no documento final, independente de como foram digitados no
+ * formulário — convenção comum em qualificações de contrato. Não afeta datas
+ * ISO (formatadas à parte) nem campos de categoria/seleção (CAMPOS_SEM_MAIUSCULA).
+ */
+function paraMaiusculas(campos: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(campos)) {
+    out[k] = (typeof v === 'string' && !ISO_DATE.test(v) && !CAMPOS_SEM_MAIUSCULA.has(k)) ? v.toUpperCase() : v
+  }
+  return out
+}
+
 function composeQualificacaoPfParaPj(c: Record<string, string>): string {
   const isFem = c.genero_coworker !== 'Masculino'
   const nascidoA   = isFem ? 'nascida'             : 'nascido'
@@ -81,8 +102,9 @@ export function formatarCamposParaDocumento(
   campos: Record<string, string>
 ): Record<string, string> {
   const extenso = CAMPOS_EXTENSO[tipo] ?? []
+  const camposMaiusculos = paraMaiusculas(campos)
   const out: Record<string, string> = {}
-  for (const [k, v] of Object.entries(campos)) {
+  for (const [k, v] of Object.entries(camposMaiusculos)) {
     if (typeof v === 'string' && ISO_DATE.test(v)) {
       if (k === 'data_assinatura') {
         out[k] = formatDateAssinaturaLocal(v)
@@ -96,7 +118,7 @@ export function formatarCamposParaDocumento(
     }
   }
   if (tipo === 'aditivo_ev_pf_para_pj') {
-    out.qualificacao_coworker_pf = composeQualificacaoPfParaPj(campos)
+    out.qualificacao_coworker_pf = composeQualificacaoPfParaPj(camposMaiusculos)
   }
   return out
 }
