@@ -67,7 +67,7 @@ export default async function TemplatesPage() {
         </TabsList>
 
         <TabsContent value="documentos">
-          <DocumentosTable docs={docs as any} />
+          <DocumentosTable docs={docs as any} isAdmin={isAdmin} />
         </TabsContent>
 
         <TabsContent value="emails">

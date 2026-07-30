@@ -32,8 +32,12 @@ create table if not exists templates_documentos (
   campos_json jsonb default '[]'::jsonb,
   versao integer default 1,
   criado_por text references usuarios(email) on delete set null,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  -- Data da última (re)importação do arquivo a partir de _template-source/ (só se aplica aos
+  -- modelos padrão do sistema — templates criados via IA/upload manual ficam null aqui).
+  reimportado_em timestamptz
 );
+alter table templates_documentos add column if not exists reimportado_em timestamptz;
 
 -- Templates de e-mail
 create table if not exists templates_email (

@@ -3,27 +3,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
 import { lerExcluidos, desmarcarExcluido } from '@/lib/templates-blocklist'
+import { TEMPLATES_SISTEMA } from '@/lib/templates-sistema'
 import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
-const TEMPLATES = [
-  { tipo: 'escritorio_privativo_nex_house',       nome: 'Escritório Privativo — Nex House',            arquivo: 'escritorio_privativo_nex_house.docx' },
-  { tipo: 'escritorio_privativo_francisco_rocha', nome: 'Escritório Privativo — Francisco Rocha',       arquivo: 'escritorio_privativo_francisco_rocha.docx' },
-  { tipo: 'nex_house_atrium',                     nome: 'Nex House — Atrium',                          arquivo: 'nex_house_atrium.docx' },
-  { tipo: 'nex_house_gallery',                    nome: 'Nex House — Gallery',                         arquivo: 'nex_house_gallery.docx' },
-  { tipo: 'nex_house_atrium_anual',               nome: 'Nex House — Assinatura Atrium Anual',          arquivo: 'nex_house_atrium_anual.docx' },
-  { tipo: 'nex_house_gallery_anual',              nome: 'Nex House — Assinatura Gallery Anual',         arquivo: 'nex_house_gallery_anual.docx' },
-  { tipo: 'termo_eventos',                        nome: 'Termo Compromisso — Eventos (Externo)',        arquivo: 'termo_eventos.docx' },
-  { tipo: 'termo_eventos_residentes',             nome: 'Termo Compromisso — Eventos (Residentes)',     arquivo: 'termo_eventos_residentes.docx' },
-  { tipo: 'termo_diaria_reuniao',                 nome: 'Termo Compromisso — Diária e Reunião',         arquivo: 'termo_diaria_reuniao.docx' },
-  { tipo: 'escritorio_virtual_fiscal',            nome: 'Escritório Virtual — Endereço Fiscal',         arquivo: 'escritorio_virtual_fiscal.docx' },
-  { tipo: 'escritorio_virtual_fiscal_oab',        nome: 'Escritório Virtual — Endereço Fiscal OAB',     arquivo: 'escritorio_virtual_fiscal_oab.docx' },
-  { tipo: 'escritorio_virtual_comercial',         nome: 'Escritório Virtual — Endereço Comercial',      arquivo: 'escritorio_virtual_comercial.docx' },
-  { tipo: 'escritorio_virtual_comercial_oab',     nome: 'Escritório Virtual — Endereço Comercial OAB',  arquivo: 'escritorio_virtual_comercial_oab.docx' },
-  { tipo: 'aditivo_ev_pf_para_pj',               nome: 'Aditivo EV — Troca de Polo PF → PJ',           arquivo: 'aditivo_ev_pf_para_pj.docx' },
-  { tipo: 'aditivo_ev_pj_para_pj',               nome: 'Aditivo EV — Troca de Polo PJ → PJ',           arquivo: 'aditivo_ev_pj_para_pj.docx' },
-  { tipo: 'aditivo_ev_alteracao_endereco',        nome: 'Aditivo EV — Troca de Endereço',               arquivo: 'aditivo_ev_alteracao_endereco.docx' },
-]
+const TEMPLATES = TEMPLATES_SISTEMA
 
 export async function POST(req: NextRequest) {
   const bearerToken = req.headers.get('authorization')?.replace('Bearer ', '')
@@ -41,6 +25,12 @@ export async function POST(req: NextRequest) {
   // ?force=true reimporta todos; padrão importa só os que ainda não existem
   const force = req.nextUrl.searchParams.get('force') === 'true'
 
+  // ?tipos=a,b,c reimporta SOMENTE os tipos informados (independente de já
+  // estarem importados ou excluídos) — usado pelo botão "Reimportar" por
+  // linha/seleção na aba Templates, sem afetar os demais.
+  const tiposParam = req.nextUrl.searchParams.get('tipos')
+  const tiposSelecionados = tiposParam ? new Set(tiposParam.split(',').map(t => t.trim()).filter(Boolean)) : null
+
   const supabase = createServerClient()
   const results: { tipo: string; status: string; detail?: string }[] = []
   const sourceDir = resolve(process.cwd(), '_template-source')
@@ -57,6 +47,9 @@ export async function POST(req: NextRequest) {
   const excluidos = new Set(await lerExcluidos(supabase))
 
   for (const t of TEMPLATES) {
+    // ?tipos=... restringe a reimportação a uma seleção específica — os demais nem entram no loop.
+    if (tiposSelecionados && !tiposSelecionados.has(t.tipo)) continue
+
     const filePath = resolve(sourceDir, t.arquivo)
 
     if (!existsSync(filePath)) {
@@ -64,14 +57,17 @@ export async function POST(req: NextRequest) {
       continue
     }
 
-    // excluído manualmente → não reimporta (use "Reimportar Todos" para forçar)
-    if (!force && excluidos.has(t.tipo)) {
+    // seleção explícita de tipos → sempre força, igual a "force" (é uma reimportação deliberada)
+    const forcarEste = force || tiposSelecionados !== null
+
+    // excluído manualmente → não reimporta (use "Reimportar Todos" ou selecione o tipo para forçar)
+    if (!forcarEste && excluidos.has(t.tipo)) {
       results.push({ tipo: t.tipo, status: 'skipped', detail: 'excluído manualmente' })
       continue
     }
 
     // já importado e com arquivo registrado → pula (a menos que force)
-    if (!force && jaImportados.has(t.tipo) && jaImportados.get(t.tipo)) {
+    if (!forcarEste && jaImportados.has(t.tipo) && jaImportados.get(t.tipo)) {
       results.push({ tipo: t.tipo, status: 'skipped', detail: 'já importado' })
       continue
     }
@@ -93,7 +89,10 @@ export async function POST(req: NextRequest) {
 
     const { error: dbError } = await supabase
       .from('templates_documentos')
-      .upsert({ tipo: t.tipo, nome: t.nome, arquivo_url: storagePath, versao: 1 }, { onConflict: 'tipo' })
+      .upsert(
+        { tipo: t.tipo, nome: t.nome, arquivo_url: storagePath, versao: 1, reimportado_em: new Date().toISOString() },
+        { onConflict: 'tipo' }
+      )
 
     // Reimportado com sucesso (ex: via "Reimportar Todos") → remove da blocklist
     if (!dbError && excluidos.has(t.tipo)) await desmarcarExcluido(supabase, t.tipo)
@@ -105,8 +104,9 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  const totalConsiderado = tiposSelecionados ? tiposSelecionados.size : TEMPLATES.length
   const ok = results.filter(r => r.status === 'ok').length
   const skipped = results.filter(r => r.status === 'skipped').length
 
-  return NextResponse.json({ ok, skipped, total: TEMPLATES.length, results })
+  return NextResponse.json({ ok, skipped, total: totalConsiderado, results })
 }
