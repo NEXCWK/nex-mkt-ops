@@ -422,6 +422,7 @@ const _ADITIVO_PJ_PARA_PJ: Campo[] = [
   { nome: 'fantasia_interveniente',      label: 'Nome Fantasia da Nova PJ',            tipo: 'text',   obrigatorio: false },
   { nome: 'endereco_interveniente',      label: 'Endereço da Nova PJ',                tipo: 'text',   obrigatorio: true },
   { nome: 'complemento_interveniente',   label: 'Complemento da Nova PJ',             tipo: 'text',   obrigatorio: false },
+  { nome: 'cep_interveniente',           label: 'CEP da Nova PJ',                     tipo: 'text',   obrigatorio: true },
   { nome: 'cel_interveniente',           label: 'Celular da Nova PJ',                 tipo: 'text',   obrigatorio: true },
   { nome: 'data_assinatura',             label: 'Data de Assinatura do Aditivo',       tipo: 'date',   obrigatorio: true },
 ]
