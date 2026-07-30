@@ -341,3 +341,22 @@ create table if not exists disparo_assinaturas (
 alter table disparo_assinaturas enable row level security;
 drop policy if exists "Service role full access" on disparo_assinaturas;
 create policy "Service role full access" on disparo_assinaturas for all using (true);
+
+-- Habilita Supabase Realtime para registro_reservas e registro_visitas — usado
+-- pelo Dashboard Integrado para atualizar as métricas assim que um registro é
+-- criado/alterado em qualquer uma dessas telas, sem precisar de F5.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'registro_reservas'
+  ) then
+    alter publication supabase_realtime add table registro_reservas;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'registro_visitas'
+  ) then
+    alter publication supabase_realtime add table registro_visitas;
+  end if;
+end $$;

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Mail, ArrowRight } from 'lucide-react'
+import { FileText, Mail, ArrowRight, Gauge } from 'lucide-react'
 
 async function getDashboardData() {
   const supabase = createServerClient()
@@ -170,6 +170,26 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="mt-6">
+        <CardContent className="p-5 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-nex-yellow/20 flex items-center justify-center flex-shrink-0">
+              <Gauge className="h-5 w-5 text-nex-black" />
+            </div>
+            <div>
+              <p className="text-sm font-heading font-semibold text-nex-black">Dashboard Integrado</p>
+              <p className="text-xs text-nex-gray-500">Oportunidades, Visitas Agendadas e Registro de Reservas em um só lugar, atualizado em tempo real.</p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard-integrado"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-nex-black text-white text-sm font-heading font-medium hover:bg-nex-gray-700 transition-colors flex-shrink-0"
+          >
+            Ver dashboard <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   )
 }

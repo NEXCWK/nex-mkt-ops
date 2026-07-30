@@ -27,6 +27,7 @@ import {
   UserCheck,
   Lightbulb,
   Coins,
+  Gauge,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from 'next-auth/react'
@@ -81,6 +82,7 @@ const navSections = [
       { href: '/base-conhecimento', label: 'Base de Conhecimento SDR', icon: BookOpen, roles: ['gestor', 'admin'] },
       { href: '/uso-tokens',        label: 'Uso de Tokens',            icon: Coins,    roles: ['gestor', 'admin'] },
       { href: '/usuarios',          label: 'Usuários',                 icon: Users,    roles: ['admin'] },
+      { href: '/dashboard-integrado', label: 'Dashboard Integrado',    icon: Gauge,    roles: ['operador', 'gestor', 'admin'] },
     ],
   },
 ]
