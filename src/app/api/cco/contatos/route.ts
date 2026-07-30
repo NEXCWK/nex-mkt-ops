@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       ? [body.contato]
       : []
 
-  const linhas = lista
+  const linhasComDuplicatas = lista
     .map(c => ({
       empresa: (c.empresa ?? '').trim() || null,
       nome: (c.nome ?? '').trim() || null,
@@ -52,6 +52,13 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     }))
     .filter(c => c.email.includes('@'))
+
+  // Um único upsert com o mesmo e-mail repetido no lote faz o Postgres reclamar
+  // ("ON CONFLICT DO UPDATE command cannot affect row a second time") — mantém
+  // só a última ocorrência de cada e-mail dentro do próprio lote importado.
+  const porEmail = new Map<string, (typeof linhasComDuplicatas)[number]>()
+  for (const linha of linhasComDuplicatas) porEmail.set(linha.email, linha)
+  const linhas = Array.from(porEmail.values())
 
   if (linhas.length === 0) {
     return NextResponse.json({ error: 'Nenhum contato válido informado (e-mail é obrigatório)' }, { status: 400 })
