@@ -12,6 +12,9 @@ export const REMETENTES_DISPARO: RemetenteDisparo[] = [
   { email: 'comercial@nex.work', nome: 'Comercial' },
   { email: 'felipe@nex.work', nome: 'Felipe' },
   { email: 'bruna@nex.work', nome: 'Bruna' },
+  { email: 'comercial@nexcoworking.com.br', nome: 'Comercial' },
+  { email: 'felipe@nexcoworking.com.br', nome: 'Felipe' },
+  { email: 'bruna@nexcoworking.com.br', nome: 'Bruna' },
 ]
 
 const MAPA_REMETENTES = new Map(REMETENTES_DISPARO.map(r => [r.email, r]))
