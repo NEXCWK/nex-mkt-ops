@@ -45,10 +45,20 @@ interface OutrasMetricas {
 function hoje() { return new Date().toISOString().slice(0, 10) }
 function inicioMes() { return new Date().toISOString().slice(0, 8) + '01' }
 function inicioAno() { return `${new Date().getFullYear()}-01-01` }
+function inicioMesPassado() {
+  const d = new Date()
+  return new Date(d.getFullYear(), d.getMonth() - 1, 1).toISOString().slice(0, 10)
+}
+function fimMesPassado() {
+  const d = new Date()
+  // Dia 0 do mês atual = último dia do mês anterior
+  return new Date(d.getFullYear(), d.getMonth(), 0).toISOString().slice(0, 10)
+}
 
 const PRESETS = [
   { label: 'Hoje', de: hoje, ate: hoje },
   { label: 'Este mês', de: inicioMes, ate: hoje },
+  { label: 'Mês Passado', de: inicioMesPassado, ate: fimMesPassado },
   { label: 'Este ano', de: inicioAno, ate: hoje },
 ]
 
