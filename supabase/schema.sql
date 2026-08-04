@@ -157,8 +157,12 @@ create table if not exists registro_visitas (
   unidade text check (unidade in ('nex_house', 'francisco_rocha')),
   compareceu boolean default false,
   operador_email text not null,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  quantidade_pessoas text,
+  observacoes text
 );
+alter table registro_visitas add column if not exists quantidade_pessoas text;
+alter table registro_visitas add column if not exists observacoes text;
 
 alter table registro_reservas enable row level security;
 alter table registro_visitas enable row level security;

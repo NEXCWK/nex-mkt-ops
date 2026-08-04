@@ -24,6 +24,8 @@ function buildEmailHtml(dados: {
   produto_interesse: string
   unidade: string
   operador: string
+  quantidade_pessoas?: string
+  observacoes?: string
 }): { assunto: string; corpo: string } {
   const dataFormatada = new Date(dados.data + 'T12:00:00').toLocaleDateString('pt-BR', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
@@ -70,6 +72,16 @@ function buildEmailHtml(dados: {
                 <td style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;border-top:1px solid #f0f0f0;">Unidade</td>
                 <td style="padding:10px 16px;font-size:14px;color:#0a0a0a;border-top:1px solid #f0f0f0;">${unidadeLabel}</td>
               </tr>
+              ${dados.quantidade_pessoas ? `
+              <tr>
+                <td style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;border-top:1px solid #f0f0f0;">Quantidade de Pessoas</td>
+                <td style="padding:10px 16px;font-size:14px;color:#0a0a0a;border-top:1px solid #f0f0f0;">${dados.quantidade_pessoas}</td>
+              </tr>` : ''}
+              ${dados.observacoes ? `
+              <tr style="background:#f9f9f9;">
+                <td style="padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;border-top:1px solid #f0f0f0;">Observações</td>
+                <td style="padding:10px 16px;font-size:14px;color:#0a0a0a;border-top:1px solid #f0f0f0;white-space:pre-wrap;">${dados.observacoes}</td>
+              </tr>` : ''}
             </table>
           </td>
         </tr>
@@ -93,7 +105,7 @@ export async function POST(req: NextRequest) {
   if (!session.accessToken) return NextResponse.json({ error: 'Token Gmail não disponível. Faça login novamente.' }, { status: 401 })
 
   const body = await req.json()
-  const { nome_lead, data, hora, produto_interesse, unidade } = body
+  const { nome_lead, data, hora, produto_interesse, unidade, quantidade_pessoas, observacoes } = body
 
   if (!nome_lead || !data || !hora || !produto_interesse || !unidade) {
     return NextResponse.json({ error: 'Campos obrigatórios ausentes' }, { status: 400 })
@@ -106,6 +118,8 @@ export async function POST(req: NextRequest) {
 
   const { data: registro, error } = await supabase.from('registro_visitas').insert({
     nome_lead, data, hora, produto_interesse, unidade,
+    quantidade_pessoas: quantidade_pessoas || null,
+    observacoes: observacoes || null,
     compareceu: false,
     operador_email: session.user.email,
   }).select().single()
@@ -114,6 +128,7 @@ export async function POST(req: NextRequest) {
 
   const { assunto, corpo } = buildEmailHtml({
     nome_lead, data, hora, produto_interesse, unidade,
+    quantidade_pessoas, observacoes,
     operador: session.user.nome ?? session.user.name ?? session.user.email ?? '',
   })
 

@@ -15,6 +15,8 @@ interface Visita {
   compareceu: boolean
   operador_email: string
   created_at: string
+  quantidade_pessoas?: string | null
+  observacoes?: string | null
 }
 
 type Unidade = 'francisco_rocha' | 'nex_house'
@@ -42,6 +44,7 @@ const PRODUTOS = [
   'Nex House — Gallery',
   'Sala de Reunião',
   'Gravações e Fotografias',
+  'Evento',
   'Todos os produtos',
 ]
 
@@ -58,6 +61,8 @@ const EMPTY_FORM = {
   hora: '',
   produto_interesse: '',
   unidade: 'francisco_rocha' as Unidade,
+  quantidade_pessoas: '',
+  observacoes: '',
 }
 
 export default function RegistroVisitaPage() {
@@ -190,6 +195,20 @@ export default function RegistroVisitaPage() {
               </select>
             </div>
 
+            <div>
+              <label className="block text-xs font-heading text-nex-gray-500 mb-1">Quantidade de Pessoas</label>
+              <input value={form.quantidade_pessoas} onChange={e => setForm(p => ({ ...p, quantidade_pessoas: e.target.value }))}
+                placeholder="Ex.: 3"
+                className="w-full rounded-lg border border-nex-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400 focus:border-nex-gray-400" />
+            </div>
+
+            <div>
+              <label className="block text-xs font-heading text-nex-gray-500 mb-1">Observações Adicionais</label>
+              <textarea value={form.observacoes} onChange={e => setForm(p => ({ ...p, observacoes: e.target.value }))}
+                rows={3} placeholder="Detalhes relevantes sobre a visita…"
+                className="w-full resize-y rounded-lg border border-nex-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nex-gray-400 focus:border-nex-gray-400" />
+            </div>
+
             {sucesso && (
               <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700">
                 Visita registrada e e-mail enviado!
@@ -232,6 +251,8 @@ export default function RegistroVisitaPage() {
                         ['Horário', form.hora || '—'],
                         ['Produto de Interesse', form.produto_interesse || '—'],
                         ['Unidade', UNIDADES.find(u => u.value === form.unidade)?.label ?? form.unidade],
+                        ...(form.quantidade_pessoas ? [['Quantidade de Pessoas', form.quantidade_pessoas]] : []),
+                        ...(form.observacoes ? [['Observações', form.observacoes]] : []),
                       ].map(([k, v], i) => (
                         <tr key={k} className={i % 2 === 0 ? 'bg-nex-gray-50' : ''}>
                           <td className="px-3 py-1.5 text-nex-gray-500 font-semibold w-36">{k}</td>
