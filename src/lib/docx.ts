@@ -35,8 +35,18 @@ const CAMPOS_EXTENSO: Record<string, string[]> = {
 // isso NÃO entram em maiúsculas — ficam como o texto definido nas opções do formulário.
 const CAMPOS_SEM_MAIUSCULA = new Set([
   'vigencia_label', 'modalidade_pagamento', 'unidade_selector', 'genero_coworker',
-  'vinculo_representante', 'modalidade_ev',
+  'vinculo_representante', 'modalidade_ev', 'email_cliente', 'unidade_email',
+  'forma_pagamento_evento',
 ])
+
+// Periodicidade (por extenso, minúsculo) exibida junto ao valor base do EV,
+// derivada da modalidade de pagamento já selecionada no formulário.
+const EV_PERIODICIDADE: Record<string, string> = {
+  'Mensal': 'mensal',
+  'Semestral': 'semestral',
+  'Anual à vista': 'anual',
+  'Anual parcelado': 'anual',
+}
 
 /**
  * Padroniza os dados do cliente (nome, endereço, e-mail, telefone, etc.) em
@@ -60,6 +70,12 @@ function paraMaiusculas(campos: Record<string, string>): Record<string, string> 
  * "Na qualidade de..." — só o restante da qualificação (nacionalidade, RG, CPF,
  * endereço etc.), evitando duplicar o texto ao ser inserido nos dois lugares.
  */
+function splitCidadeEstado(v: string): [string, string] {
+  const idx = v.indexOf('/')
+  if (idx === -1) return [v, '']
+  return [v.slice(0, idx).trim(), v.slice(idx + 1).trim()]
+}
+
 function composeQualificacaoPfParaPj(c: Record<string, string>): string {
   const isFem = c.genero_coworker !== 'Masculino'
   const nascidoA   = isFem ? 'nascida'             : 'nascido'
@@ -111,6 +127,26 @@ export function formatarCamposParaDocumento(
   }
   if (tipo === 'aditivo_ev_pf_para_pj') {
     out.qualificacao_coworker_pf = composeQualificacaoPfParaPj(camposMaiusculos)
+  }
+  // Nas tabelas de qualificação dos aditivos, Cidade e Estado ficam em células
+  // separadas; o formulário coleta um único campo combinado ("Cidade/UF").
+  if ('cidade_estado_coworker' in camposMaiusculos) {
+    const [cid, est] = splitCidadeEstado(camposMaiusculos.cidade_estado_coworker ?? '')
+    out.cidade_coworker = cid
+    out.estado_coworker = est
+  }
+  if (tipo === 'aditivo_ev_pf_para_pj' && 'cidade_interveniente' in camposMaiusculos) {
+    const [cid, est] = splitCidadeEstado(camposMaiusculos.cidade_interveniente ?? '')
+    out.cidade_interveniente = cid
+    out.estado_interveniente = est
+  }
+  if ('modalidade_pagamento' in camposMaiusculos) {
+    out.periodicidade = EV_PERIODICIDADE[campos.modalidade_pagamento] ?? ''
+  }
+  if (tipo === 'termo_eventos_residentes') {
+    const aVista = campos.forma_pagamento_evento === 'À vista'
+    out.pagamento_vista = aVista ? '1' : ''
+    out.pagamento_2x = aVista ? '' : '1'
   }
   return out
 }

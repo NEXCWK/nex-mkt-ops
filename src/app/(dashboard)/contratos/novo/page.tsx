@@ -258,6 +258,7 @@ const CAMPOS_TERMO_EVENTOS: Campo[] = [
   { nome: 'cpf_responsavel',      label: 'CPF do Responsável',            tipo: 'text',     obrigatorio: true },
   { nome: 'nome_cliente',         label: 'Razão Social da Empresa',       tipo: 'text',     obrigatorio: true },
   { nome: 'cnpj_cliente',         label: 'CNPJ da Empresa',               tipo: 'text',     obrigatorio: true },
+  { nome: 'rg_responsavel',       label: 'RG do Responsável',             tipo: 'text',     obrigatorio: true },
   { nome: 'data_evento',          label: 'Data do Evento (preâmbulo)',     tipo: 'date',     obrigatorio: true,
     ajuda: 'Usado no texto corrido. Ex: "durante o dia 17 de junho de 2026"' },
   { nome: 'data_evento_exibicao', label: 'Data do Evento (exibição)',      tipo: 'text',     obrigatorio: true,
@@ -269,8 +270,7 @@ const CAMPOS_TERMO_EVENTOS: Campo[] = [
   { nome: 'ambientes_adicionais', label: 'Ambientes Adicionais',          tipo: 'text',     obrigatorio: false },
   { nome: 'obs_evento',           label: 'Observações',                   tipo: 'textarea', obrigatorio: false },
   { nome: 'descricao_pagamento',  label: 'Condição de Pagamento',         tipo: 'textarea', obrigatorio: true,
-    placeholder: 'Ex: R$ 2.000,00 à vista, pagos em D+1 via PIX.' },
-  { nome: 'valor_hora_adicional', label: 'Valor por Hora Adicional (R$)', tipo: 'text',     obrigatorio: true },
+    placeholder: 'Especifique valor, forma de pagamento e vencimento. Ex: R$ 2.000,00 à vista, pagos em D+1 via PIX.' },
   { nome: 'data_assinatura',      label: 'Data de Assinatura',            tipo: 'date',     obrigatorio: true },
 ]
 
@@ -290,13 +290,16 @@ const CAMPOS_TERMO_EVENTOS_RESIDENTES: Campo[] = [
   { nome: 'formato_evento',          label: 'Formato',                       tipo: 'text',     obrigatorio: true, placeholder: 'ex: Plenária, U-shape' },
   { nome: 'ambientes_adicionais',    label: 'Ambientes Adicionais',          tipo: 'text',     obrigatorio: false },
   { nome: 'obs_evento',              label: 'Observações',                   tipo: 'textarea', obrigatorio: false },
+  { nome: 'forma_pagamento_evento',  label: 'Forma de Pagamento',            tipo: 'select',   obrigatorio: true,
+    opcoes: ['À vista', 'Parcelado em 2x'],
+    ajuda: 'Residentes têm 30% de desconto — já aplique o desconto no valor informado abaixo.' },
   { nome: 'descricao_pagamento',     label: 'Condição de Pagamento',         tipo: 'textarea', obrigatorio: true,
-    placeholder: 'Ex: Parcelado em 2x conforme abaixo.' },
-  { nome: 'valor_parcela_1',         label: 'Valor da 1ª Parcela (R$)',      tipo: 'text',     obrigatorio: false },
+    placeholder: 'Ex: R$ 1.400,00 à vista, com 30% de desconto residente já aplicado.' },
+  { nome: 'valor_parcela_1',         label: 'Valor da 1ª Parcela (R$)',      tipo: 'text',     obrigatorio: false,
+    ajuda: 'Preencher apenas se a forma de pagamento for "Parcelado em 2x"' },
   { nome: 'vencimento_parcela_1',    label: 'Vencimento da 1ª Parcela',      tipo: 'date',     obrigatorio: false },
   { nome: 'valor_parcela_2',         label: 'Valor da 2ª Parcela (R$)',      tipo: 'text',     obrigatorio: false },
   { nome: 'vencimento_parcela_2',    label: 'Vencimento da 2ª Parcela',      tipo: 'date',     obrigatorio: false },
-  { nome: 'valor_hora_adicional',    label: 'Valor por Hora Adicional (R$)', tipo: 'text',     obrigatorio: true },
   { nome: 'data_assinatura',         label: 'Data de Assinatura',            tipo: 'date',     obrigatorio: true },
 ]
 
@@ -388,6 +391,9 @@ const _ADITIVO_PF_PARA_PJ: Campo[] = [
 
   // ── Interveniente-Anuente — Pessoa Jurídica ──
   // (nome_cliente e cpf_cnpj são os dados da PJ, adicionados via CAMPOS_POR_TIPO)
+  { nome: 'porte_empresa',               label: 'Porte da Empresa',                      tipo: 'select', obrigatorio: true,
+    opcoes: ['ME', 'EPP', 'Demais'] },
+  { nome: 'fantasia_interveniente',      label: 'Nome Fantasia da Empresa',              tipo: 'text',   obrigatorio: false },
   { nome: 'vinculo_representante',       label: 'Vínculo do(a) representante na PJ',     tipo: 'select', obrigatorio: true,
     opcoes: ['sua sócia', 'seu sócio', 'sua diretora', 'seu diretor', 'sua administradora', 'seu administrador'] },
   { nome: 'endereco_interveniente',      label: 'Endereço da empresa (rua + número)',     tipo: 'text',   obrigatorio: true,
@@ -409,20 +415,22 @@ const _ADITIVO_PF_PARA_PJ: Campo[] = [
 
 const _ADITIVO_PJ_PARA_PJ: Campo[] = [
   { nome: 'data_contrato_originario',    label: 'Data do Contrato Original',           tipo: 'date',   obrigatorio: true },
+  { nome: 'fantasia_coworker',           label: 'Nome Fantasia da PJ Cedente',         tipo: 'text',   obrigatorio: false },
   { nome: 'endereco_coworker',           label: 'Endereço da PJ Cedente',              tipo: 'text',   obrigatorio: true },
   { nome: 'complemento_coworker',        label: 'Complemento',                         tipo: 'text',   obrigatorio: false },
+  { nome: 'cidade_estado_coworker',      label: 'Cidade / Estado da PJ Cedente',       tipo: 'text',   obrigatorio: true, placeholder: 'Ex: Curitiba/PR' },
   { nome: 'cep_coworker',                label: 'CEP da PJ Cedente',                   tipo: 'text',   obrigatorio: true },
   { nome: 'nome_responsavel',            label: 'Nome do Sócio / Representante Legal', tipo: 'text',   obrigatorio: true },
   { nome: 'data_nascimento_responsavel', label: 'Data de Nascimento do Responsável',   tipo: 'date',   obrigatorio: true },
   { nome: 'rg_responsavel',              label: 'RG do Responsável',                   tipo: 'text',   obrigatorio: true },
   { nome: 'cpf_responsavel',             label: 'CPF do Responsável',                  tipo: 'text',   obrigatorio: true },
+  { nome: 'profissao_responsavel',       label: 'Profissão do Responsável',            tipo: 'text',   obrigatorio: true },
   { nome: 'email_cliente',               label: 'E-mail do Responsável',               tipo: 'text',   obrigatorio: true },
   { nome: 'cel_coworker',                label: 'Celular da PJ Cedente',               tipo: 'text',   obrigatorio: true },
   { nome: 'nome_interveniente',          label: 'Razão Social da Nova PJ',             tipo: 'text',   obrigatorio: true },
   { nome: 'fantasia_interveniente',      label: 'Nome Fantasia da Nova PJ',            tipo: 'text',   obrigatorio: false },
   { nome: 'endereco_interveniente',      label: 'Endereço da Nova PJ',                tipo: 'text',   obrigatorio: true },
   { nome: 'complemento_interveniente',   label: 'Complemento da Nova PJ',             tipo: 'text',   obrigatorio: false },
-  { nome: 'cep_interveniente',           label: 'CEP da Nova PJ',                     tipo: 'text',   obrigatorio: true },
   { nome: 'cel_interveniente',           label: 'Celular da Nova PJ',                 tipo: 'text',   obrigatorio: true },
   { nome: 'data_assinatura',             label: 'Data de Assinatura do Aditivo',       tipo: 'date',   obrigatorio: true },
 ]
