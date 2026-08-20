@@ -69,6 +69,7 @@ export default function RegistroVisitaPage() {
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [avisoAgenda, setAvisoAgenda] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState(false)
   const [visitas, setVisitas] = useState<Visita[]>([])
   const [carregando, setCarregando] = useState(false)
@@ -114,6 +115,7 @@ export default function RegistroVisitaPage() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`)
       setSucesso(true)
+      setAvisoAgenda(json.conviteAgendaErro ?? null)
       setForm({ ...EMPTY_FORM })
       carregar()
       setTimeout(() => setSucesso(false), 4000)
@@ -211,7 +213,12 @@ export default function RegistroVisitaPage() {
 
             {sucesso && (
               <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700">
-                Visita registrada e e-mail enviado!
+                Visita registrada, e-mail e convite de agenda enviados!
+              </div>
+            )}
+            {sucesso && avisoAgenda && (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-700">
+                Visita e e-mail OK, mas o convite de agenda não pôde ser criado ({avisoAgenda}). Se você acabou de ganhar essa permissão, faça logout e login novamente.
               </div>
             )}
             {erro && (

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
 import { sendEmailViaGmail } from '@/lib/gmail'
+import { createCalendarInvite } from '@/lib/google-calendar'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +16,11 @@ const DESTINATARIOS: Record<string, string[]> = {
 const UNIDADE_LABEL: Record<string, string> = {
   francisco_rocha: 'Francisco Rocha (FCO)',
   nex_house:       'Nex House (NH)',
+}
+
+const UNIDADE_ENDERECO: Record<string, string> = {
+  francisco_rocha: 'Rua Francisco Rocha, 198 – Batel, Curitiba/PR',
+  nex_house:       'Alameda Presidente Taunay, 130 – Batel, Curitiba/PR',
 }
 
 function buildEmailHtml(dados: {
@@ -145,7 +151,31 @@ export async function POST(req: NextRequest) {
     senderName: `Nex Marketing Operações <${fromEmail}>`,
   })
 
-  return NextResponse.json({ success: true, registro })
+  // Convite no Google Agenda para os mesmos destinatários do e-mail. Não bloqueia
+  // o registro da visita se falhar (ex.: token sem o novo escopo de Calendar —
+  // usuário precisa relogar uma vez para conceder).
+  let conviteAgendaErro: string | null = null
+  try {
+    await createCalendarInvite({
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
+      summary: `Visita — ${nome_lead} (${produto_interesse})`,
+      description: [
+        `Lead: ${nome_lead}`,
+        `Produto de interesse: ${produto_interesse}`,
+        quantidade_pessoas ? `Quantidade de pessoas: ${quantidade_pessoas}` : null,
+        observacoes ? `Observações: ${observacoes}` : null,
+        `Registrado por ${session.user.nome ?? session.user.name ?? session.user.email} via Nex Marketing Operações.`,
+      ].filter(Boolean).join('\n'),
+      location: UNIDADE_ENDERECO[unidade],
+      start: new Date(`${data}T${hora}:00-03:00`),
+      attendeeEmails: destinatarios,
+    })
+  } catch (e: any) {
+    conviteAgendaErro = e?.message ?? 'Erro ao criar convite no Google Agenda'
+  }
+
+  return NextResponse.json({ success: true, registro, conviteAgendaErro })
 }
 
 export async function GET(req: NextRequest) {
