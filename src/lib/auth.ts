@@ -46,6 +46,18 @@ export const authOptions: NextAuthOptions = {
         token.accessToken = account.access_token
         token.refreshToken = account.refresh_token
         token.expiresAt = account.expires_at // Unix timestamp (seconds)
+
+        // Persiste o refresh_token no banco (fora da sessão/cookie) para que jobs
+        // automáticos (ex.: relatório semanal) possam agir como este usuário sem
+        // uma sessão de navegador ativa. prompt=consent garante que o Google
+        // reenvie o refresh_token a cada login, então isso fica sempre atualizado.
+        if (account.refresh_token && token.email) {
+          const supabase = createServerClient()
+          await supabase
+            .from('usuarios')
+            .update({ google_refresh_token: account.refresh_token })
+            .eq('email', token.email)
+        }
       }
       if (user) {
         const supabase = createServerClient()

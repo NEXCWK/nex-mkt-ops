@@ -364,3 +364,8 @@ begin
     alter publication supabase_realtime add table registro_visitas;
   end if;
 end $$;
+
+-- Refresh token do Google salvo no login, para permitir que jobs automáticos
+-- (ex.: relatório semanal por e-mail) ajam como o usuário fora de uma sessão
+-- de navegador ativa. Nunca exposto ao cliente — só lido em rotas server-side.
+alter table usuarios add column if not exists google_refresh_token text;

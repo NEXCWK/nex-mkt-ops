@@ -71,6 +71,83 @@ export async function sendEmailViaGmail({
   return { messageId: response.data.id ?? '' }
 }
 
+// ── Envio de e-mail com anexo ─────────────────────────────────────────────────
+
+interface Anexo {
+  filename: string
+  mimeType: string
+  /** Conteúdo já em base64 (não codificado para URL — isso é feito no envelope final). */
+  contentBase64: string
+}
+
+interface SendEmailWithAttachmentParams extends GmailCredentials {
+  to: string
+  cc: string[]
+  subject: string
+  /** Corpo em HTML exibido no corpo do e-mail (curto — o relatório completo vai no anexo). */
+  body: string
+  anexo: Anexo
+  senderName?: string
+}
+
+function base64UrlEncode(buf: Buffer | string): string {
+  return Buffer.from(buf)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+}
+
+export async function sendEmailComAnexoViaGmail({
+  accessToken,
+  refreshToken,
+  to,
+  cc,
+  subject,
+  body,
+  anexo,
+  senderName,
+}: SendEmailWithAttachmentParams): Promise<{ messageId: string }> {
+  const gmail = makeGmailClient({ accessToken, refreshToken })
+
+  const boundary = `nex_${Date.now()}_${Math.random().toString(36).slice(2)}`
+  const ccHeader = cc.length > 0 ? `Cc: ${cc.join(', ')}\r\n` : ''
+  const fromHeader = senderName ? `From: ${senderName}\r\n` : ''
+
+  // Quebra o base64 do anexo em linhas de 76 caracteres (convenção MIME).
+  const anexoBase64Formatado = (anexo.contentBase64.match(/.{1,76}/g) ?? []).join('\r\n')
+
+  const rawMessage = [
+    fromHeader,
+    `To: ${to}\r\n`,
+    ccHeader,
+    `Subject: =?utf-8?B?${Buffer.from(subject).toString('base64')}?=\r\n`,
+    'MIME-Version: 1.0\r\n',
+    `Content-Type: multipart/mixed; boundary="${boundary}"\r\n`,
+    '\r\n',
+    `--${boundary}\r\n`,
+    'Content-Type: text/html; charset=utf-8\r\n',
+    '\r\n',
+    body,
+    '\r\n\r\n',
+    `--${boundary}\r\n`,
+    `Content-Type: ${anexo.mimeType}; name="${anexo.filename}"\r\n`,
+    'Content-Transfer-Encoding: base64\r\n',
+    `Content-Disposition: attachment; filename="${anexo.filename}"\r\n`,
+    '\r\n',
+    anexoBase64Formatado,
+    '\r\n\r\n',
+    `--${boundary}--`,
+  ].join('')
+
+  const response = await gmail.users.messages.send({
+    userId: 'me',
+    requestBody: { raw: base64UrlEncode(rawMessage) },
+  })
+
+  return { messageId: response.data.id ?? '' }
+}
+
 // ── Busca de threads ───────────────────────────────────────────────────────────
 
 export interface ThreadResult {
