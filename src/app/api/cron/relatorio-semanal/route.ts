@@ -6,6 +6,11 @@ import { calcularPeriodos, coletarMetricasDosPeriodos, gerarHtmlRelatorio } from
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
+// Conta usada para autenticação/login no sistema (exige domínio @nexcoworking.com.br —
+// ver src/lib/auth.ts). É essa conta que tem o refresh_token salvo.
+const CONTA_LOGIN = 'felipe@nexcoworking.com.br'
+// Endereço de envio/recebimento do relatório — alias configurado no Gmail da conta acima
+// (mesmo padrão usado em Registro de Visitas/Reservas, ver src/lib/remetentes.ts).
 const DESTINATARIO = 'felipe@nex.work'
 
 /**
@@ -26,10 +31,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  const credenciais = await getAccessTokenForUser(DESTINATARIO)
+  const credenciais = await getAccessTokenForUser(CONTA_LOGIN)
   if (!credenciais) {
     return NextResponse.json(
-      { error: `Sem refresh_token salvo para ${DESTINATARIO}. É necessário fazer login uma vez no sistema.` },
+      { error: `Sem refresh_token salvo para ${CONTA_LOGIN}. É necessário fazer login uma vez no sistema.` },
       { status: 500 }
     )
   }
