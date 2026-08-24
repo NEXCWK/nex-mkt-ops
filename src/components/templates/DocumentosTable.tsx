@@ -65,6 +65,20 @@ export function DocumentosTable({ docs, isAdmin }: { docs: Doc[]; isAdmin: boole
       const res = await fetch(`/api/admin/seed-templates?tipos=${encodeURIComponent(tipos.join(','))}`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Erro ao reimportar')
+
+      // A requisição pode retornar 200 mesmo com falhas individuais por template
+      // (ex.: arquivo não encontrado, erro de upload) — sem checar isso aqui, um
+      // erro por template ficava escondido e a tela mostrava "sucesso" mesmo sem
+      // nada ter sido de fato atualizado.
+      const falhas = (data.results ?? []).filter(
+        (r: { status: string }) => r.status !== 'ok' && r.status !== 'skipped'
+      )
+      if (falhas.length > 0) {
+        throw new Error(
+          falhas.map((f: { tipo: string; status: string; detail?: string }) => `${f.tipo}: ${f.detail ?? f.status}`).join(' · ')
+        )
+      }
+
       setSelecionados(new Set())
       router.refresh()
     } catch (e) {
