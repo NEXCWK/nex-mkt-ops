@@ -240,6 +240,82 @@ function tile(label: string, valor: string | number): string {
     </div>`
 }
 
+// Paleta monocromática da marca (preto/amarelo + cinzas) — usada nos gráficos
+// para manter a identidade visual do sistema mesmo com múltiplas categorias.
+const PALETA_GRAFICOS = ['#0A0A0A', '#FFD400', '#9A9A9A', '#4A4A4A', '#C8C8C8', '#6B6B6B']
+
+/** Gráfico de rosca (donut) em SVG — sem dependências externas, funciona no anexo HTML. */
+function donutChart(titulo: string, data: { label: string; value: number }[]): string {
+  const total = data.reduce((s, d) => s + d.value, 0)
+  const size = 130
+  const thickness = 20
+  const r = (size - thickness) / 2
+  const c = size / 2
+  const circunferencia = 2 * Math.PI * r
+
+  let acumulado = 0
+  const segmentos = total === 0 ? '' : data
+    .filter(d => d.value > 0)
+    .map((d, i) => {
+      const fracao = d.value / total
+      const comprimento = fracao * circunferencia
+      const offset = -acumulado * circunferencia
+      acumulado += fracao
+      const cor = PALETA_GRAFICOS[i % PALETA_GRAFICOS.length]
+      return `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${cor}" stroke-width="${thickness}" stroke-dasharray="${comprimento} ${circunferencia - comprimento}" stroke-dashoffset="${offset}" transform="rotate(-90 ${c} ${c})" />`
+    })
+    .join('')
+
+  const svg = total === 0
+    ? `<div style="width:${size}px;height:${size}px;border-radius:999px;border:${thickness}px solid #f0f0f0;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:11px;">sem dados</div>`
+    : `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${segmentos}<circle cx="${c}" cy="${c}" r="${r - thickness / 2 - 3}" fill="#fff" /><text x="${c}" y="${c}" text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="700" fill="#0a0a0a">${total}</text></svg>`
+
+  const legenda = data.map((d, i) => {
+    const pct = total > 0 ? Math.round((d.value / total) * 100) : 0
+    const cor = PALETA_GRAFICOS[i % PALETA_GRAFICOS.length]
+    return `
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin-bottom:4px;">
+        <span style="width:9px;height:9px;border-radius:2px;background:${cor};flex-shrink:0;"></span>
+        <span style="flex:1;">${d.label}</span>
+        <span style="font-weight:700;color:#0a0a0a;">${d.value}${total > 0 ? ` (${pct}%)` : ''}</span>
+      </div>`
+  }).join('')
+
+  return `
+    <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;min-width:220px;">
+      <div style="flex-shrink:0;">${svg}</div>
+      <div style="min-width:150px;flex:1;">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#0a0a0a;">${titulo}</p>
+        ${legenda}
+      </div>
+    </div>`
+}
+
+/** Gráfico de barras horizontais — usado para listas de tamanho variável (ex.: funis do CRM). */
+function barChart(titulo: string, data: { label: string; value: number }[]): string {
+  const max = Math.max(1, ...data.map(d => d.value))
+  const linhas = data.map((d, i) => {
+    const pct = Math.round((d.value / max) * 100)
+    const cor = PALETA_GRAFICOS[i % PALETA_GRAFICOS.length]
+    return `
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px;">
+          <span>${d.label}</span>
+          <span style="font-weight:700;color:#0a0a0a;">${d.value}</span>
+        </div>
+        <div style="background:#f0f0f0;border-radius:6px;height:10px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:${cor};border-radius:6px;"></div>
+        </div>
+      </div>`
+  }).join('')
+
+  return `
+    <div>
+      <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:#0a0a0a;">${titulo}</p>
+      ${data.length === 0 ? '<p style="font-size:12px;color:#999;">Sem dados.</p>' : linhas}
+    </div>`
+}
+
 function linhaComparativo(label: string, a: number, b: number, labelA: string, labelB: string): string {
   const v = variacao(a, b)
   return `
@@ -288,14 +364,31 @@ export function gerarHtmlRelatorio(
   const m = metricas
 
   const kpisSemana = `
-    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;">
       ${tile('Visitas', m.semanaPassada.visitas.total)}
-      ${tile('Taxa de Show', `${m.semanaPassada.visitas.taxaShow}%`)}
       ${tile('1º Uso (total)', m.semanaPassada.reservas.porTipo.primeiro_uso_diaria + m.semanaPassada.reservas.porTipo.primeiro_uso_access_pass)}
       ${tile('Uso 4h+', m.semanaPassada.reservas.porTipo.quatro_horas)}
       ${tile('Oportunidades CRM', m.semanaPassada.oportunidades.totalGeral)}
-      ${tile('Closer | Deal (EP)', m.semanaPassada.oportunidades.totalCloser)}
     </div>`
+
+  const graficosSemana = `
+    <div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:20px;padding:16px 0;border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;">
+      ${donutChart('Visitas — Comparecimento', [
+        { label: 'Compareceram', value: m.semanaPassada.visitas.shows },
+        { label: 'Não compareceram', value: m.semanaPassada.visitas.noShows },
+      ])}
+      ${donutChart('Reservas por Tipo', [
+        { label: 'Reunião — 1ª vez', value: m.semanaPassada.reservas.porTipo.primeira_vez },
+        { label: 'Reunião — 4h+', value: m.semanaPassada.reservas.porTipo.quatro_horas },
+        { label: '1º Uso — Diária', value: m.semanaPassada.reservas.porTipo.primeiro_uso_diaria },
+        { label: '1º Uso — Access Pass', value: m.semanaPassada.reservas.porTipo.primeiro_uso_access_pass },
+      ])}
+      ${donutChart('Reservas por Unidade', [
+        { label: 'Francisco Rocha', value: m.semanaPassada.reservas.porUnidade.francisco_rocha },
+        { label: 'Nex House', value: m.semanaPassada.reservas.porUnidade.nex_house },
+      ])}
+    </div>
+    ${barChart('Oportunidades por Funil (RD CRM) — semana passada', m.semanaPassada.oportunidades.funis.map(f => ({ label: f.nome, value: f.total })))}`
 
   const detalheSemana = `
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee;border-radius:10px;overflow:hidden;border-collapse:separate;">
@@ -312,23 +405,14 @@ export function gerarHtmlRelatorio(
       </tbody>
     </table>`
 
-  const funisHtml = m.semanaPassada.oportunidades.funis.length > 0
-    ? `<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee;border-radius:10px;overflow:hidden;border-collapse:separate;margin-top:14px;">
-        <thead><tr style="background:#fafafa;"><th style="padding:8px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#999;text-align:left;">Funil (RD CRM)</th><th style="padding:8px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#999;text-align:right;">Oportunidades — semana passada</th></tr></thead>
-        <tbody>${m.semanaPassada.oportunidades.funis.map((f, i) => `<tr style="${i % 2 ? 'background:#fafafa;' : ''}"><td style="padding:8px 14px;font-size:12px;color:#333;border-top:1px solid #f0f0f0;">${f.nome}</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid #f0f0f0;">${f.total}</td></tr>`).join('')}</tbody>
-      </table>`
-    : '<p style="font-size:12px;color:#999;">Nenhum funil retornado pelo RD CRM neste período.</p>'
-
   const comparativoSemanas = tabelaComparativo(
     `Semana retrasada (${formatarDataBR(semanaRetrasada.de)}–${formatarDataBR(semanaRetrasada.ate)}) → Semana passada (${formatarDataBR(semanaPassada.de)}–${formatarDataBR(semanaPassada.ate)})`,
     'Semana passada', 'Semana retrasada',
     [
       linhaComparativo('Visitas (total)', m.semanaPassada.visitas.total, m.semanaRetrasada.visitas.total, semanaPassada.label, semanaRetrasada.label),
-      linhaComparativo('Taxa de Show', m.semanaPassada.visitas.taxaShow, m.semanaRetrasada.visitas.taxaShow, semanaPassada.label, semanaRetrasada.label),
       linhaComparativo('1º Uso (Diária + Access Pass)', m.semanaPassada.reservas.porTipo.primeiro_uso_diaria + m.semanaPassada.reservas.porTipo.primeiro_uso_access_pass, m.semanaRetrasada.reservas.porTipo.primeiro_uso_diaria + m.semanaRetrasada.reservas.porTipo.primeiro_uso_access_pass, semanaPassada.label, semanaRetrasada.label),
       linhaComparativo('Uso 4h ou mais', m.semanaPassada.reservas.porTipo.quatro_horas, m.semanaRetrasada.reservas.porTipo.quatro_horas, semanaPassada.label, semanaRetrasada.label),
       linhaComparativo('Oportunidades CRM (total)', m.semanaPassada.oportunidades.totalGeral, m.semanaRetrasada.oportunidades.totalGeral, semanaPassada.label, semanaRetrasada.label),
-      linhaComparativo('Closer | Deal (EP)', m.semanaPassada.oportunidades.totalCloser, m.semanaRetrasada.oportunidades.totalCloser, semanaPassada.label, semanaRetrasada.label),
     ].join('')
   )
 
@@ -337,11 +421,9 @@ export function gerarHtmlRelatorio(
     'Semana passada', 'Mesma semana, mês anterior',
     [
       linhaComparativo('Visitas (total)', m.semanaPassada.visitas.total, m.semanaCorrespondenteMesAnterior.visitas.total, semanaPassada.label, semanaCorrespondenteMesAnterior.label),
-      linhaComparativo('Taxa de Show', m.semanaPassada.visitas.taxaShow, m.semanaCorrespondenteMesAnterior.visitas.taxaShow, semanaPassada.label, semanaCorrespondenteMesAnterior.label),
       linhaComparativo('1º Uso (Diária + Access Pass)', m.semanaPassada.reservas.porTipo.primeiro_uso_diaria + m.semanaPassada.reservas.porTipo.primeiro_uso_access_pass, m.semanaCorrespondenteMesAnterior.reservas.porTipo.primeiro_uso_diaria + m.semanaCorrespondenteMesAnterior.reservas.porTipo.primeiro_uso_access_pass, semanaPassada.label, semanaCorrespondenteMesAnterior.label),
       linhaComparativo('Uso 4h ou mais', m.semanaPassada.reservas.porTipo.quatro_horas, m.semanaCorrespondenteMesAnterior.reservas.porTipo.quatro_horas, semanaPassada.label, semanaCorrespondenteMesAnterior.label),
       linhaComparativo('Oportunidades CRM (total)', m.semanaPassada.oportunidades.totalGeral, m.semanaCorrespondenteMesAnterior.oportunidades.totalGeral, semanaPassada.label, semanaCorrespondenteMesAnterior.label),
-      linhaComparativo('Closer | Deal (EP)', m.semanaPassada.oportunidades.totalCloser, m.semanaCorrespondenteMesAnterior.oportunidades.totalCloser, semanaPassada.label, semanaCorrespondenteMesAnterior.label),
     ].join('')
   )
 
@@ -351,7 +433,6 @@ export function gerarHtmlRelatorio(
       ${tile('1º Uso no mês', m.mesAtual.reservas.porTipo.primeiro_uso_diaria + m.mesAtual.reservas.porTipo.primeiro_uso_access_pass)}
       ${tile('Uso 4h+ no mês', m.mesAtual.reservas.porTipo.quatro_horas)}
       ${tile('Oportunidades CRM no mês', m.mesAtual.oportunidades.totalGeral)}
-      ${tile('Closer | Deal (EP) no mês', m.mesAtual.oportunidades.totalCloser)}
     </div>`
 
   const comparativoMeses = tabelaComparativo(
@@ -359,11 +440,9 @@ export function gerarHtmlRelatorio(
     'Mês atual', 'Mês anterior',
     [
       linhaComparativo('Visitas (total)', m.mesAtual.visitas.total, m.mesAnterior.visitas.total, mesAtual.label, mesAnterior.label),
-      linhaComparativo('Taxa de Show', m.mesAtual.visitas.taxaShow, m.mesAnterior.visitas.taxaShow, mesAtual.label, mesAnterior.label),
       linhaComparativo('1º Uso (Diária + Access Pass)', m.mesAtual.reservas.porTipo.primeiro_uso_diaria + m.mesAtual.reservas.porTipo.primeiro_uso_access_pass, m.mesAnterior.reservas.porTipo.primeiro_uso_diaria + m.mesAnterior.reservas.porTipo.primeiro_uso_access_pass, mesAtual.label, mesAnterior.label),
       linhaComparativo('Uso 4h ou mais', m.mesAtual.reservas.porTipo.quatro_horas, m.mesAnterior.reservas.porTipo.quatro_horas, mesAtual.label, mesAnterior.label),
       linhaComparativo('Oportunidades CRM (total)', m.mesAtual.oportunidades.totalGeral, m.mesAnterior.oportunidades.totalGeral, mesAtual.label, mesAnterior.label),
-      linhaComparativo('Closer | Deal (EP)', m.mesAtual.oportunidades.totalCloser, m.mesAnterior.oportunidades.totalCloser, mesAtual.label, mesAnterior.label),
     ].join('')
   )
 
@@ -388,7 +467,7 @@ export function gerarHtmlRelatorio(
         <tr>
           <td style="padding:24px 0 0;">
 
-            ${secaoCard('Resumo da Semana Passada', `${formatarDataBR(semanaPassada.de)} – ${formatarDataBR(semanaPassada.ate)}`, kpisSemana + detalheSemana + funisHtml)}
+            ${secaoCard('Resumo da Semana Passada', `${formatarDataBR(semanaPassada.de)} – ${formatarDataBR(semanaPassada.ate)}`, kpisSemana + graficosSemana + detalheSemana)}
 
             ${secaoCard('Comparativos Semanais', 'Semana a semana e contra o mesmo período do mês anterior', comparativoSemanas + comparativoMesAnteriorSemana)}
 
