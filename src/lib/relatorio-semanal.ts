@@ -373,10 +373,6 @@ export function gerarHtmlRelatorio(
 
   const graficosSemana = `
     <div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:20px;padding:16px 0;border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;">
-      ${donutChart('Visitas — Comparecimento', [
-        { label: 'Compareceram', value: m.semanaPassada.visitas.shows },
-        { label: 'Não compareceram', value: m.semanaPassada.visitas.noShows },
-      ])}
       ${donutChart('Reservas por Tipo', [
         { label: 'Reunião — 1ª vez', value: m.semanaPassada.reservas.porTipo.primeira_vez },
         { label: 'Reunião — 4h+', value: m.semanaPassada.reservas.porTipo.quatro_horas },
@@ -394,8 +390,6 @@ export function gerarHtmlRelatorio(
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee;border-radius:10px;overflow:hidden;border-collapse:separate;">
       <tbody>
         <tr style="background:#fafafa;"><td style="padding:8px 14px;font-size:12px;color:#666;">Primeira Visita (Registro de Visita) — total</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;">${m.semanaPassada.visitas.total}</td></tr>
-        <tr><td style="padding:8px 14px;font-size:12px;color:#666;border-top:1px solid #f0f0f0;">— Compareceram (shows)</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid #f0f0f0;">${m.semanaPassada.visitas.shows}</td></tr>
-        <tr style="background:#fafafa;"><td style="padding:8px 14px;font-size:12px;color:#666;border-top:1px solid #f0f0f0;">— No-shows</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid #f0f0f0;">${m.semanaPassada.visitas.noShows}</td></tr>
         <tr><td style="padding:8px 14px;font-size:12px;color:#666;border-top:1px solid #f0f0f0;">Reunião — Primeira vez</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid #f0f0f0;">${m.semanaPassada.reservas.porTipo.primeira_vez}</td></tr>
         <tr style="background:#fafafa;"><td style="padding:8px 14px;font-size:12px;color:#666;border-top:1px solid #f0f0f0;">Reunião — 4h ou mais</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid #f0f0f0;">${m.semanaPassada.reservas.porTipo.quatro_horas}</td></tr>
         <tr><td style="padding:8px 14px;font-size:12px;color:#666;border-top:1px solid #f0f0f0;">1º Uso — Diária</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid #f0f0f0;">${m.semanaPassada.reservas.porTipo.primeiro_uso_diaria}</td></tr>
