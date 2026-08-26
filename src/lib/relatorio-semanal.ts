@@ -212,6 +212,27 @@ async function coletarDealsPorFunil(de: string) {
 }
 
 // ── HTML do relatório ────────────────────────────────────────────────────────
+// Identidade visual dos decks Nex House: monocromática (preto + ivory quente),
+// sem paleta de acento colorida — hierarquia por brilho, não por matiz.
+
+const COR = {
+  void: '#000000',
+  panel: '#0B0A08',
+  panel2: '#131210',
+  panel3: '#1B1917',
+  ivory: '#FFFAF0',
+  ivory88: 'rgba(255,250,240,.88)',
+  ivory70: 'rgba(255,250,240,.70)',
+  ivory52: 'rgba(255,250,240,.52)',
+  ivory36: 'rgba(255,250,240,.36)',
+  ivory20: 'rgba(255,250,240,.20)',
+  line: 'rgba(255,250,240,.13)',
+  line2: 'rgba(255,250,240,.24)',
+  cold: 'rgba(255,255,255,.34)',
+  coldLine: 'rgba(255,255,255,.20)',
+}
+
+const FONTE = `'Proxima Nova','Inter',Arial,sans-serif`
 
 function formatarDataBR(iso: string): string {
   const [y, m, d] = iso.split('-')
@@ -219,30 +240,34 @@ function formatarDataBR(iso: string): string {
 }
 
 function variacao(atual: number, anterior: number): { texto: string; tom: 'up' | 'down' | 'flat' } {
-  if (anterior === 0 && atual === 0) return { texto: '—', tom: 'flat' }
+  if (anterior === 0 && atual === 0) return { texto: '·', tom: 'flat' }
   if (anterior === 0) return { texto: 'novo', tom: 'up' }
   const pct = Math.round(((atual - anterior) / anterior) * 100)
   if (pct === 0) return { texto: '0%', tom: 'flat' }
   return { texto: `${pct > 0 ? '+' : ''}${pct}%`, tom: pct > 0 ? 'up' : 'down' }
 }
 
+// Chip semântico do sistema Nex House: a diferença é feita por brilho e traço,
+// nunca por cor (o deck é monocromático por decisão, não por falta de paleta).
 function badge(v: { texto: string; tom: 'up' | 'down' | 'flat' }): string {
-  const cor = v.tom === 'up' ? '#059669' : v.tom === 'down' ? '#dc2626' : '#888'
-  const bg = v.tom === 'up' ? '#ecfdf5' : v.tom === 'down' ? '#fef2f2' : '#f5f5f5'
-  return `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;color:${cor};background:${bg};">${v.texto}</span>`
+  const estilo = v.tom === 'up'
+    ? `color:${COR.ivory};border:1px solid ${COR.line2};background:transparent;`
+    : v.tom === 'down'
+    ? `color:${COR.ivory52};border:1px dashed ${COR.coldLine};background:transparent;`
+    : `color:${COR.ivory36};border:1px solid ${COR.line};background:transparent;`
+  return `<span style="display:inline-block;padding:2px 9px;border-radius:3px;font-size:11px;font-weight:700;letter-spacing:.03em;font-family:${FONTE};${estilo}">${v.texto}</span>`
 }
 
 function tile(label: string, valor: string | number): string {
   return `
-    <div style="background:#fafafa;border:1px solid #eee;border-radius:10px;padding:14px 16px;min-width:130px;">
-      <p style="margin:0 0 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#999;">${label}</p>
-      <p style="margin:0;font-size:22px;font-weight:700;color:#0a0a0a;">${valor}</p>
+    <div style="border:1px solid ${COR.line};background:${COR.panel};border-radius:3px;padding:14px 15px;min-width:130px;">
+      <p style="margin:0 0 6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:${COR.ivory52};font-family:${FONTE};">${label}</p>
+      <p style="margin:0;font-size:24px;font-weight:700;color:${COR.ivory};font-variant-numeric:tabular-nums;font-family:${FONTE};">${valor}</p>
     </div>`
 }
 
-// Paleta monocromática da marca (preto/amarelo + cinzas) — usada nos gráficos
-// para manter a identidade visual do sistema mesmo com múltiplas categorias.
-const PALETA_GRAFICOS = ['#0A0A0A', '#FFD400', '#9A9A9A', '#4A4A4A', '#C8C8C8', '#6B6B6B']
+// Rampa de opacidade do ivory — distingue categorias por brilho, não por matiz.
+const PALETA_GRAFICOS = [COR.ivory, COR.ivory70, COR.ivory52, COR.ivory36, COR.ivory20]
 
 /** Gráfico de rosca (donut) em SVG — sem dependências externas, funciona no anexo HTML. */
 function donutChart(titulo: string, data: { label: string; value: number }[]): string {
@@ -267,17 +292,17 @@ function donutChart(titulo: string, data: { label: string; value: number }[]): s
     .join('')
 
   const svg = total === 0
-    ? `<div style="width:${size}px;height:${size}px;border-radius:999px;border:${thickness}px solid #f0f0f0;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:11px;">sem dados</div>`
-    : `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${segmentos}<circle cx="${c}" cy="${c}" r="${r - thickness / 2 - 3}" fill="#fff" /><text x="${c}" y="${c}" text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="700" fill="#0a0a0a">${total}</text></svg>`
+    ? `<div style="width:${size}px;height:${size}px;border-radius:999px;border:${thickness}px solid ${COR.line};display:flex;align-items:center;justify-content:center;color:${COR.ivory36};font-size:11px;font-family:${FONTE};">sem dados</div>`
+    : `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${segmentos}<circle cx="${c}" cy="${c}" r="${r - thickness / 2 - 3}" fill="${COR.panel}" /><text x="${c}" y="${c}" text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="700" fill="${COR.ivory}" font-family="${FONTE}">${total}</text></svg>`
 
   const legenda = data.map((d, i) => {
     const pct = total > 0 ? Math.round((d.value / total) * 100) : 0
     const cor = PALETA_GRAFICOS[i % PALETA_GRAFICOS.length]
     return `
-      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin-bottom:4px;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:${COR.ivory70};margin-bottom:4px;font-family:${FONTE};">
         <span style="width:9px;height:9px;border-radius:2px;background:${cor};flex-shrink:0;"></span>
         <span style="flex:1;">${d.label}</span>
-        <span style="font-weight:700;color:#0a0a0a;">${d.value}${total > 0 ? ` (${pct}%)` : ''}</span>
+        <span style="font-weight:700;color:${COR.ivory};font-variant-numeric:tabular-nums;">${d.value}${total > 0 ? ` (${pct}%)` : ''}</span>
       </div>`
   }).join('')
 
@@ -285,7 +310,7 @@ function donutChart(titulo: string, data: { label: string; value: number }[]): s
     <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;min-width:220px;">
       <div style="flex-shrink:0;">${svg}</div>
       <div style="min-width:150px;flex:1;">
-        <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#0a0a0a;">${titulo}</p>
+        <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:${COR.ivory};font-family:${FONTE};">${titulo}</p>
         ${legenda}
       </div>
     </div>`
@@ -299,20 +324,20 @@ function barChart(titulo: string, data: { label: string; value: number }[]): str
     const cor = PALETA_GRAFICOS[i % PALETA_GRAFICOS.length]
     return `
       <div style="margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:${COR.ivory70};margin-bottom:3px;font-family:${FONTE};">
           <span>${d.label}</span>
-          <span style="font-weight:700;color:#0a0a0a;">${d.value}</span>
+          <span style="font-weight:700;color:${COR.ivory};font-variant-numeric:tabular-nums;">${d.value}</span>
         </div>
-        <div style="background:#f0f0f0;border-radius:6px;height:10px;overflow:hidden;">
-          <div style="width:${pct}%;height:100%;background:${cor};border-radius:6px;"></div>
+        <div style="background:${COR.panel3};border-radius:3px;height:9px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:${cor};border-radius:3px;"></div>
         </div>
       </div>`
   }).join('')
 
   return `
     <div>
-      <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:#0a0a0a;">${titulo}</p>
-      ${data.length === 0 ? '<p style="font-size:12px;color:#999;">Sem dados.</p>' : linhas}
+      <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:${COR.ivory};font-family:${FONTE};">${titulo}</p>
+      ${data.length === 0 ? `<p style="font-size:12px;color:${COR.ivory36};font-family:${FONTE};">Sem dados.</p>` : linhas}
     </div>`
 }
 
@@ -320,24 +345,24 @@ function linhaComparativo(label: string, a: number, b: number, labelA: string, l
   const v = variacao(a, b)
   return `
     <tr>
-      <td style="padding:10px 14px;font-size:13px;color:#333;border-top:1px solid #f0f0f0;">${label}</td>
-      <td style="padding:10px 14px;font-size:13px;color:#0a0a0a;font-weight:600;text-align:center;border-top:1px solid #f0f0f0;" title="${labelB}">${b}</td>
-      <td style="padding:10px 14px;font-size:13px;color:#0a0a0a;font-weight:600;text-align:center;border-top:1px solid #f0f0f0;" title="${labelA}">${a}</td>
-      <td style="padding:10px 14px;text-align:center;border-top:1px solid #f0f0f0;">${badge(v)}</td>
+      <td style="padding:10px 14px;font-size:13px;color:${COR.ivory88};border-top:1px solid ${COR.line};font-family:${FONTE};">${label}</td>
+      <td style="padding:10px 14px;font-size:13px;color:${COR.ivory};font-weight:700;text-align:center;border-top:1px solid ${COR.line};font-variant-numeric:tabular-nums;font-family:${FONTE};" title="${labelB}">${b}</td>
+      <td style="padding:10px 14px;font-size:13px;color:${COR.ivory};font-weight:700;text-align:center;border-top:1px solid ${COR.line};font-variant-numeric:tabular-nums;font-family:${FONTE};" title="${labelA}">${a}</td>
+      <td style="padding:10px 14px;text-align:center;border-top:1px solid ${COR.line};">${badge(v)}</td>
     </tr>`
 }
 
 function tabelaComparativo(titulo: string, labelA: string, labelB: string, linhas: string): string {
   return `
     <div style="margin-bottom:20px;">
-      <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#0a0a0a;">${titulo}</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee;border-radius:10px;overflow:hidden;border-collapse:separate;">
+      <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${COR.ivory};font-family:${FONTE};">${titulo}</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${COR.line};border-radius:3px;overflow:hidden;border-collapse:separate;">
         <thead>
-          <tr style="background:#fafafa;">
-            <th style="padding:8px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#999;text-align:left;">Métrica</th>
-            <th style="padding:8px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#999;text-align:center;">${labelB}</th>
-            <th style="padding:8px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#999;text-align:center;">${labelA}</th>
-            <th style="padding:8px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#999;text-align:center;">Variação</th>
+          <tr style="background:${COR.panel2};">
+            <th style="padding:8px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:${COR.ivory52};text-align:left;font-family:${FONTE};">Métrica</th>
+            <th style="padding:8px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:${COR.ivory52};text-align:center;font-family:${FONTE};">${labelB}</th>
+            <th style="padding:8px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:${COR.ivory52};text-align:center;font-family:${FONTE};">${labelA}</th>
+            <th style="padding:8px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:${COR.ivory52};text-align:center;font-family:${FONTE};">Variação</th>
           </tr>
         </thead>
         <tbody>${linhas}</tbody>
@@ -347,10 +372,10 @@ function tabelaComparativo(titulo: string, labelA: string, labelB: string, linha
 
 function secaoCard(titulo: string, subtitulo: string, conteudoHtml: string): string {
   return `
-    <div style="background:#fff;border:1px solid #e5e5e5;border-radius:14px;overflow:hidden;margin-bottom:20px;">
-      <div style="padding:16px 24px;border-bottom:1px solid #f0f0f0;">
-        <p style="margin:0;font-size:15px;font-weight:700;color:#0a0a0a;">${titulo}</p>
-        <p style="margin:2px 0 0;font-size:12px;color:#999;">${subtitulo}</p>
+    <div style="background:${COR.panel};border:1px solid ${COR.line};border-radius:3px;overflow:hidden;margin-bottom:20px;">
+      <div style="padding:18px 24px;border-bottom:1px solid ${COR.line};">
+        <p style="margin:0;font-size:16px;font-weight:700;color:${COR.ivory};font-family:${FONTE};">${titulo}</p>
+        <p style="margin:3px 0 0;font-size:12px;color:${COR.ivory52};font-family:${FONTE};">${subtitulo}</p>
       </div>
       <div style="padding:20px 24px;">${conteudoHtml}</div>
     </div>`
@@ -372,30 +397,30 @@ export function gerarHtmlRelatorio(
     </div>`
 
   const graficosSemana = `
-    <div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:20px;padding:16px 0;border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;">
+    <div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:20px;padding:16px 0;border-top:1px solid ${COR.line};border-bottom:1px solid ${COR.line};">
       ${donutChart('Reservas por Tipo', [
-        { label: 'Reunião — 1ª vez', value: m.semanaPassada.reservas.porTipo.primeira_vez },
-        { label: 'Reunião — 4h+', value: m.semanaPassada.reservas.porTipo.quatro_horas },
-        { label: '1º Uso — Diária', value: m.semanaPassada.reservas.porTipo.primeiro_uso_diaria },
-        { label: '1º Uso — Access Pass', value: m.semanaPassada.reservas.porTipo.primeiro_uso_access_pass },
+        { label: 'Reunião · 1ª vez', value: m.semanaPassada.reservas.porTipo.primeira_vez },
+        { label: 'Reunião · 4h+', value: m.semanaPassada.reservas.porTipo.quatro_horas },
+        { label: '1º Uso · Diária', value: m.semanaPassada.reservas.porTipo.primeiro_uso_diaria },
+        { label: '1º Uso · Access Pass', value: m.semanaPassada.reservas.porTipo.primeiro_uso_access_pass },
       ])}
       ${donutChart('Reservas por Unidade', [
         { label: 'Francisco Rocha', value: m.semanaPassada.reservas.porUnidade.francisco_rocha },
         { label: 'Nex House', value: m.semanaPassada.reservas.porUnidade.nex_house },
       ])}
     </div>
-    ${barChart('Oportunidades por Funil (RD CRM) — semana passada', m.semanaPassada.oportunidades.funis.map(f => ({ label: f.nome, value: f.total })))}`
+    ${barChart('Oportunidades por Funil (RD CRM) · semana passada', m.semanaPassada.oportunidades.funis.map(f => ({ label: f.nome, value: f.total })))}`
 
   const detalheSemana = `
-    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee;border-radius:10px;overflow:hidden;border-collapse:separate;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${COR.line};border-radius:3px;overflow:hidden;border-collapse:separate;">
       <tbody>
-        <tr style="background:#fafafa;"><td style="padding:8px 14px;font-size:12px;color:#666;">Primeira Visita (Registro de Visita) — total</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;">${m.semanaPassada.visitas.total}</td></tr>
-        <tr><td style="padding:8px 14px;font-size:12px;color:#666;border-top:1px solid #f0f0f0;">Reunião — Primeira vez</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid #f0f0f0;">${m.semanaPassada.reservas.porTipo.primeira_vez}</td></tr>
-        <tr style="background:#fafafa;"><td style="padding:8px 14px;font-size:12px;color:#666;border-top:1px solid #f0f0f0;">Reunião — 4h ou mais</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid #f0f0f0;">${m.semanaPassada.reservas.porTipo.quatro_horas}</td></tr>
-        <tr><td style="padding:8px 14px;font-size:12px;color:#666;border-top:1px solid #f0f0f0;">1º Uso — Diária</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid #f0f0f0;">${m.semanaPassada.reservas.porTipo.primeiro_uso_diaria}</td></tr>
-        <tr style="background:#fafafa;"><td style="padding:8px 14px;font-size:12px;color:#666;border-top:1px solid #f0f0f0;">1º Uso — Access Pass</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid #f0f0f0;">${m.semanaPassada.reservas.porTipo.primeiro_uso_access_pass}</td></tr>
-        <tr><td style="padding:8px 14px;font-size:12px;color:#666;border-top:1px solid #f0f0f0;">Reservas — Francisco Rocha</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid #f0f0f0;">${m.semanaPassada.reservas.porUnidade.francisco_rocha}</td></tr>
-        <tr style="background:#fafafa;"><td style="padding:8px 14px;font-size:12px;color:#666;border-top:1px solid #f0f0f0;">Reservas — Nex House</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid #f0f0f0;">${m.semanaPassada.reservas.porUnidade.nex_house}</td></tr>
+        <tr style="background:${COR.panel2};"><td style="padding:8px 14px;font-size:12px;color:${COR.ivory70};font-family:${FONTE};">Primeira Visita (Registro de Visita) · total</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;color:${COR.ivory};font-variant-numeric:tabular-nums;font-family:${FONTE};">${m.semanaPassada.visitas.total}</td></tr>
+        <tr><td style="padding:8px 14px;font-size:12px;color:${COR.ivory70};border-top:1px solid ${COR.line};font-family:${FONTE};">Reunião · Primeira vez</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid ${COR.line};color:${COR.ivory};font-variant-numeric:tabular-nums;font-family:${FONTE};">${m.semanaPassada.reservas.porTipo.primeira_vez}</td></tr>
+        <tr style="background:${COR.panel2};"><td style="padding:8px 14px;font-size:12px;color:${COR.ivory70};border-top:1px solid ${COR.line};font-family:${FONTE};">Reunião · 4h ou mais</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid ${COR.line};color:${COR.ivory};font-variant-numeric:tabular-nums;font-family:${FONTE};">${m.semanaPassada.reservas.porTipo.quatro_horas}</td></tr>
+        <tr><td style="padding:8px 14px;font-size:12px;color:${COR.ivory70};border-top:1px solid ${COR.line};font-family:${FONTE};">1º Uso · Diária</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid ${COR.line};color:${COR.ivory};font-variant-numeric:tabular-nums;font-family:${FONTE};">${m.semanaPassada.reservas.porTipo.primeiro_uso_diaria}</td></tr>
+        <tr style="background:${COR.panel2};"><td style="padding:8px 14px;font-size:12px;color:${COR.ivory70};border-top:1px solid ${COR.line};font-family:${FONTE};">1º Uso · Access Pass</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid ${COR.line};color:${COR.ivory};font-variant-numeric:tabular-nums;font-family:${FONTE};">${m.semanaPassada.reservas.porTipo.primeiro_uso_access_pass}</td></tr>
+        <tr><td style="padding:8px 14px;font-size:12px;color:${COR.ivory70};border-top:1px solid ${COR.line};font-family:${FONTE};">Reservas · Francisco Rocha</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid ${COR.line};color:${COR.ivory};font-variant-numeric:tabular-nums;font-family:${FONTE};">${m.semanaPassada.reservas.porUnidade.francisco_rocha}</td></tr>
+        <tr style="background:${COR.panel2};"><td style="padding:8px 14px;font-size:12px;color:${COR.ivory70};border-top:1px solid ${COR.line};font-family:${FONTE};">Reservas · Nex House</td><td style="padding:8px 14px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid ${COR.line};color:${COR.ivory};font-variant-numeric:tabular-nums;font-family:${FONTE};">${m.semanaPassada.reservas.porUnidade.nex_house}</td></tr>
       </tbody>
     </table>`
 
@@ -445,41 +470,29 @@ export function gerarHtmlRelatorio(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Relatório Semanal — Nex</title>
+<title>Relatório Semanal · Nex House</title>
 </head>
-<body style="margin:0;padding:0;background:#f5f5f5;font-family:'Helvetica Neue',Arial,sans-serif;color:#0a0a0a;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 16px;">
-    <tr><td align="center">
-      <table width="720" cellpadding="0" cellspacing="0" style="max-width:100%;">
-        <tr>
-          <td style="background:#0a0a0a;padding:28px 32px;border-radius:14px 14px 0 0;">
-            <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.5px;">Nex.</span>
-            <span style="color:#888;font-size:13px;margin-left:12px;">Relatório Semanal</span>
-            <p style="margin:10px 0 0;color:#ccc;font-size:13px;">Semana de ${formatarDataBR(semanaPassada.de)} a ${formatarDataBR(semanaPassada.ate)}</p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:24px 0 0;">
+<body style="margin:0;padding:0;background:${COR.void};font-family:${FONTE};color:${COR.ivory88};">
+  <div style="max-width:760px;margin:0 auto;padding:40px 20px 32px;">
 
-            ${secaoCard('Resumo da Semana Passada', `${formatarDataBR(semanaPassada.de)} – ${formatarDataBR(semanaPassada.ate)}`, kpisSemana + graficosSemana + detalheSemana)}
+    <div style="margin-bottom:28px;">
+      <p style="margin:0 0 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.16em;color:${COR.ivory36};">Relatório Semanal</p>
+      <p style="margin:0;font-size:38px;font-weight:700;letter-spacing:-0.025em;color:${COR.ivory};">Nex.</p>
+      <p style="margin:8px 0 0;font-size:14px;color:${COR.ivory70};">Semana de ${formatarDataBR(semanaPassada.de)} a ${formatarDataBR(semanaPassada.ate)}</p>
+    </div>
 
-            ${secaoCard('Comparativos Semanais', 'Semana a semana e contra o mesmo período do mês anterior', comparativoSemanas + comparativoMesAnteriorSemana)}
+    ${secaoCard('Resumo da Semana Passada', `${formatarDataBR(semanaPassada.de)} · ${formatarDataBR(semanaPassada.ate)}`, kpisSemana + graficosSemana + detalheSemana)}
 
-            ${secaoCard('Totais do Mês', `Acumulado de ${formatarDataBR(mesAtual.de)} até ${formatarDataBR(mesAtual.ate)}`, kpisMes + comparativoMeses)}
+    ${secaoCard('Comparativos Semanais', 'Semana a semana e contra o mesmo período do mês anterior', comparativoSemanas + comparativoMesAnteriorSemana)}
 
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:8px 8px 24px;">
-            <p style="margin:0;font-size:11px;color:#aaa;">
-              Gerado automaticamente toda segunda-feira às 10h30 pelo Nex Marketing Operações.
-              Não inclui a métrica de contratos gerados. "Semana correspondente do mês anterior" = mesma semana, 4 semanas (28 dias) antes.
-            </p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
+    ${secaoCard('Totais do Mês', `Acumulado de ${formatarDataBR(mesAtual.de)} até ${formatarDataBR(mesAtual.ate)}`, kpisMes + comparativoMeses)}
+
+    <p style="margin:12px 4px 0;font-size:11px;line-height:1.55;color:${COR.ivory36};">
+      Gerado automaticamente toda segunda-feira às 10h30 pelo Nex Marketing Operações.
+      Não inclui a métrica de contratos gerados. "Semana correspondente do mês anterior" = mesma semana, 4 semanas (28 dias) antes.
+    </p>
+
+  </div>
 </body>
 </html>`
 }
