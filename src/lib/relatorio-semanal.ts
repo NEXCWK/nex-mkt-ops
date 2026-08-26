@@ -234,6 +234,12 @@ const COR = {
 
 const FONTE = `'Proxima Nova','Inter',Arial,sans-serif`
 
+// Logo Nex House (wordmark oficial, fill branco — legível sobre o fundo escuro do relatório).
+const LOGO_SVG = `<svg width="150" height="41" viewBox="0 0 944.53 255.72" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Nex House">
+  <path fill="#FFFAF0" d="M322.5,141.92l18.4-106.22h-48.81l-11.45,91.04-11.45-91.04h-48.81l1.32,7.6c-10.51-8.21-24.74-11.4-41.5-11.4-30.18,0-52,9.94-59.31,39.84-4.17-28.89-19.67-39.84-41.68-39.84-12.76,0-24.03,6.45-30.41,24.66v-20.86H0v216.23h48.8V96.02c0-12.9,4.51-17.07,11.64-17.07s11.64,4.17,11.64,17.07v155.91h49.93v-31.97c8.25,26.74,29.42,35.76,58.19,35.76,14.66,0,27.4-2.45,37.39-8.56l-.96,4.77h48.81l15.2-93.32,15.21,93.32h48.8l-22.15-110.01ZM168.48,94.54c0-12.98,4.54-17.18,11.72-17.18s11.72,4.2,11.72,17.18v22.16h-23.44v-22.16ZM191.92,172.08v21.01c0,12.98-4.54,17.18-11.72,17.18s-11.72-4.2-11.72-17.18v-45.84h69.23l-5,24.83h-40.79Z"/>
+  <path fill="#FFFAF0" d="M944.53,147.25v-50.41c0-49.66-24.57-64.94-61.23-64.94-27.93,0-48.7,8.51-57.44,33.47-8.67-24.96-29.15-33.47-55.95-33.47-23.69,0-42.33,6.38-52.55,23.06v-19.26h-48.81v156.29c0,12.9-4.5,17.07-11.64,17.07s-11.63-4.17-11.63-17.07V35.7h-49.94v27.5c-8.98-23.3-29.27-31.3-56.69-31.3-29.31,0-50.47,9.15-58.38,36.35-4.88-26.28-20.01-36.35-41.1-36.35-12.76,0-24.03,6.45-30.41,24.66V0h-48.81v251.93h48.81V96.02c0-12.9,4.51-17.07,11.64-17.07s11.64,4.17,11.64,17.07v155.91h49.93v-27.51c8.97,23.3,29.27,31.3,56.68,31.3,29.25,0,50.4-9.1,58.34-36.18,4.32,25.4,17.13,35.76,37.81,35.76,13.14,0,26.99-7.92,33.75-27.65v24.28h48.81v-22.54c9.89,19.47,28.87,26.33,52.93,26.33,26.93,0,47.34-8.86,56.28-31.57,9.11,23.5,29.52,31.57,56.73,31.57,36.66,0,61.23-15.27,61.23-64.93v-18.71h-49.52v21.01c0,12.98-4.53,17.18-11.71,17.18s-11.72-4.2-11.72-17.18v-45.84h72.95ZM871.58,94.54c0-12.98,4.54-17.18,11.72-17.18s11.71,4.2,11.71,17.18v22.16h-23.43v-22.16ZM550.03,192.38c0,12.61-4.4,16.68-11.38,16.68s-11.37-4.07-11.37-16.68v-99.02c0-12.61,4.4-16.69,11.37-16.69s11.38,4.08,11.38,16.69v99.02ZM770.29,210.27c-7.18,0-11.72-4.2-11.72-17.18v-21.39h-41.21v-46.32c6.64,10.56,16.24,17.73,25.72,24.55l20.41,14.89c13.98,9.93,18.52,13.37,18.52,28.27,0,12.98-4.54,17.18-11.72,17.18ZM821.31,159.03c-7.22-10.76-17.22-18.52-26.45-25.15l-16.25-11.84c-10.96-8.02-20.41-16.8-20.41-27.5,0-12.98,4.53-17.18,11.71-17.18s11.72,4.2,11.72,17.18v15.66h39.68v48.83Z"/>
+</svg>`
+
 function formatarDataBR(iso: string): string {
   const [y, m, d] = iso.split('-')
   return `${d}/${m}/${y}`
@@ -247,13 +253,11 @@ function variacao(atual: number, anterior: number): { texto: string; tom: 'up' |
   return { texto: `${pct > 0 ? '+' : ''}${pct}%`, tom: pct > 0 ? 'up' : 'down' }
 }
 
-// Chip semântico do sistema Nex House: a diferença é feita por brilho e traço,
-// nunca por cor (o deck é monocromático por decisão, não por falta de paleta).
 function badge(v: { texto: string; tom: 'up' | 'down' | 'flat' }): string {
   const estilo = v.tom === 'up'
-    ? `color:${COR.ivory};border:1px solid ${COR.line2};background:transparent;`
+    ? `color:#4ADE80;border:1px solid rgba(74,222,128,.35);background:rgba(74,222,128,.1);`
     : v.tom === 'down'
-    ? `color:${COR.ivory52};border:1px dashed ${COR.coldLine};background:transparent;`
+    ? `color:#F87171;border:1px solid rgba(248,113,113,.35);background:rgba(248,113,113,.1);`
     : `color:${COR.ivory36};border:1px solid ${COR.line};background:transparent;`
   return `<span style="display:inline-block;padding:2px 9px;border-radius:3px;font-size:11px;font-weight:700;letter-spacing:.03em;font-family:${FONTE};${estilo}">${v.texto}</span>`
 }
@@ -266,8 +270,8 @@ function tile(label: string, valor: string | number): string {
     </div>`
 }
 
-// Rampa de opacidade do ivory — distingue categorias por brilho, não por matiz.
-const PALETA_GRAFICOS = [COR.ivory, COR.ivory70, COR.ivory52, COR.ivory36, COR.ivory20]
+// Paleta categórica para os gráficos — cores distintas sobre o fundo escuro do card.
+const PALETA_GRAFICOS = ['#FFD400', '#5EEAD4', '#F97316', '#818CF8', '#F472B6', '#4ADE80']
 
 /** Gráfico de rosca (donut) em SVG — sem dependências externas, funciona no anexo HTML. */
 function donutChart(titulo: string, data: { label: string; value: number }[]): string {
@@ -470,14 +474,14 @@ export function gerarHtmlRelatorio(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Relatório Semanal · Nex House</title>
+<title>Dashboard de Marketing &amp; Vendas · Nex House</title>
 </head>
 <body style="margin:0;padding:0;background:${COR.void};font-family:${FONTE};color:${COR.ivory88};">
   <div style="max-width:760px;margin:0 auto;padding:40px 20px 32px;">
 
     <div style="margin-bottom:28px;">
-      <p style="margin:0 0 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.16em;color:${COR.ivory36};">Relatório Semanal</p>
-      <p style="margin:0;font-size:38px;font-weight:700;letter-spacing:-0.025em;color:${COR.ivory};">Nex.</p>
+      ${LOGO_SVG}
+      <p style="margin:16px 0 0;font-size:26px;font-weight:500;letter-spacing:-0.01em;color:${COR.ivory};">Dashboard de Marketing &amp; Vendas</p>
       <p style="margin:8px 0 0;font-size:14px;color:${COR.ivory70};">Semana de ${formatarDataBR(semanaPassada.de)} a ${formatarDataBR(semanaPassada.ate)}</p>
     </div>
 
