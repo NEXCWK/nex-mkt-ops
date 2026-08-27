@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
 import { sendEmailViaGmail } from '@/lib/gmail'
+import { enviarNotificacaoSlack, formatarMensagemSlack } from '@/lib/slack'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,6 +43,13 @@ const INTRO: Record<string, string> = {
   quatro_horas: 'Uma nova reserva de sala foi registrada para uma sessão de <strong>4 horas ou mais</strong>. Atenção especial ao acolhimento!',
   primeiro_uso_diaria: 'Um novo registro de <strong>Primeiro Uso — Diária</strong> foi realizado. Fique de olho para garantir uma ótima experiência!',
   primeiro_uso_access_pass: 'Um novo registro de <strong>Primeiro Uso — Access Pass</strong> foi realizado. Fique de olho para garantir uma ótima experiência!',
+}
+
+const SLACK_TITULO: Record<string, string> = {
+  primeira_vez: '🆕 Um cliente utilizará o espaço de Sala de Reunião pela primeira vez na sua unidade. Confira os detalhes:',
+  quatro_horas: '⏱️ Uma nova reunião de 4 horas ou mais foi agendada para sua unidade! Confira os detalhes:',
+  primeiro_uso_diaria: '🆕 Um cliente utilizará o espaço de Diária pela primeira vez na sua unidade. Confira os detalhes:',
+  primeiro_uso_access_pass: '🆕 Um cliente utilizará o espaço de Access Pass pela primeira vez na sua unidade. Confira os detalhes:',
 }
 
 function buildEmailHtml(dados: {
@@ -194,6 +202,22 @@ export async function POST(req: NextRequest) {
       body: corpo,
       senderName: `Nex Marketing Operações <${fromEmail}>`,
     })
+  }
+
+  // Notificação no Slack — melhor esforço, não bloqueia o registro se falhar
+  // (ex.: SLACK_WEBHOOK_URL não configurado ainda).
+  try {
+    await enviarNotificacaoSlack(formatarMensagemSlack(SLACK_TITULO[tipo] ?? `🆕 Uma nova reserva foi registrada! Confira os detalhes:`, [
+      { label: 'Cliente', valor: nome_cliente },
+      { label: 'Data', valor: `${data} às ${horario}` },
+      { label: 'Duração', valor: precisaDuracao ? duracao : null },
+      { label: 'Sala', valor: semSala ? null : nome_sala },
+      { label: 'Quantidade de pessoas', valor: quantidade_pessoas },
+      { label: 'Unidade', valor: UNIDADE_LABEL[unidade] ?? unidade },
+      { label: 'Observações', valor: observacoes },
+    ]))
+  } catch (e) {
+    console.error('Falha ao notificar Slack (registro-reservas):', e)
   }
 
   return NextResponse.json({ success: true, registro })

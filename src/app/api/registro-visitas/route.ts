@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
 import { sendEmailViaGmail } from '@/lib/gmail'
 import { createCalendarInvite } from '@/lib/google-calendar'
+import { enviarNotificacaoSlack, formatarMensagemSlack } from '@/lib/slack'
 
 export const dynamic = 'force-dynamic'
 
@@ -173,6 +174,21 @@ export async function POST(req: NextRequest) {
     })
   } catch (e: any) {
     conviteAgendaErro = e?.message ?? 'Erro ao criar convite no Google Agenda'
+  }
+
+  // Notificação no Slack — melhor esforço, não bloqueia o registro se falhar
+  // (ex.: SLACK_WEBHOOK_URL não configurado ainda).
+  try {
+    await enviarNotificacaoSlack(formatarMensagemSlack('📍 Uma nova visita foi registrada! Confira os detalhes:', [
+      { label: 'Lead', valor: nome_lead },
+      { label: 'Data', valor: `${data} às ${hora}` },
+      { label: 'Produto de interesse', valor: produto_interesse },
+      { label: 'Unidade', valor: UNIDADE_LABEL[unidade] ?? unidade },
+      { label: 'Quantidade de pessoas', valor: quantidade_pessoas },
+      { label: 'Observações', valor: observacoes },
+    ]))
+  } catch (e) {
+    console.error('Falha ao notificar Slack (registro-visitas):', e)
   }
 
   return NextResponse.json({ success: true, registro, conviteAgendaErro })
