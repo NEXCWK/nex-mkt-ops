@@ -141,10 +141,10 @@ function metricasReservas(rows: ReservaRow[]): MetricasPeriodo['reservas'] {
  * relevante), com o corte por período feito em memória — evita repetir a mesma
  * consulta/chamada externa 5 vezes.
  */
-export async function coletarMetricasDosPeriodos(
-  periodos: ReturnType<typeof calcularPeriodos>
-): Promise<Record<keyof ReturnType<typeof calcularPeriodos>, MetricasPeriodo>> {
-  const todasAsDatas = Object.values(periodos).flatMap(p => [p.de, p.ate])
+export async function coletarMetricasDosPeriodos<T extends string>(
+  periodos: Record<T, Periodo>
+): Promise<Record<T, MetricasPeriodo>> {
+  const todasAsDatas = (Object.values(periodos) as Periodo[]).flatMap(p => [p.de, p.ate])
   const deGeral = todasAsDatas.reduce((a, b) => (a < b ? a : b))
   const ateGeral = todasAsDatas.reduce((a, b) => (a > b ? a : b))
 
@@ -190,11 +190,37 @@ export async function coletarMetricasDosPeriodos(
     }
   }
 
-  const resultado = {} as Record<keyof ReturnType<typeof calcularPeriodos>, MetricasPeriodo>
-  for (const [chave, periodo] of Object.entries(periodos)) {
-    resultado[chave as keyof typeof periodos] = paraPeriodo(periodo)
+  const resultado = {} as Record<T, MetricasPeriodo>
+  for (const [chave, periodo] of Object.entries(periodos) as [T, Periodo][]) {
+    resultado[chave] = paraPeriodo(periodo)
   }
   return resultado
+}
+
+/**
+ * Períodos do relatório mensal: o mês anterior completo (o "mês reportado") e
+ * o mês completo anterior a ele, para comparação. Ex.: gerado em 01/09 →
+ * mesAtual = 01/08–31/08, mesAnterior = 01/07–31/07.
+ */
+export function calcularPeriodoMensal(hojeIso: string): { mesAtual: Periodo; mesAnterior: Periodo } {
+  const [ano, mes] = hojeIso.split('-').map(Number)
+  const mesReportado = mes === 1 ? 12 : mes - 1
+  const anoReportado = mes === 1 ? ano - 1 : ano
+  const mesAtual: Periodo = {
+    de: `${anoReportado}-${String(mesReportado).padStart(2, '0')}-01`,
+    ate: `${anoReportado}-${String(mesReportado).padStart(2, '0')}-${String(diasNoMes(anoReportado, mesReportado)).padStart(2, '0')}`,
+    label: 'Mês reportado',
+  }
+
+  const mesAnteriorNum = mesReportado === 1 ? 12 : mesReportado - 1
+  const anoDoMesAnterior = mesReportado === 1 ? anoReportado - 1 : anoReportado
+  const mesAnterior: Periodo = {
+    de: `${anoDoMesAnterior}-${String(mesAnteriorNum).padStart(2, '0')}-01`,
+    ate: `${anoDoMesAnterior}-${String(mesAnteriorNum).padStart(2, '0')}-${String(diasNoMes(anoDoMesAnterior, mesAnteriorNum)).padStart(2, '0')}`,
+    label: 'Mês anterior',
+  }
+
+  return { mesAtual, mesAnterior }
 }
 
 async function coletarDealsPorFunil(de: string) {
@@ -494,6 +520,77 @@ export function gerarHtmlRelatorio(
     <p style="margin:12px 4px 0;font-size:11px;line-height:1.55;color:${COR.ivory36};">
       Gerado automaticamente toda segunda-feira às 10h30 pelo Nex Marketing Operações.
       Não inclui a métrica de contratos gerados. "Semana correspondente do mês anterior" = mesma semana, 4 semanas (28 dias) antes.
+    </p>
+
+  </div>
+</body>
+</html>`
+}
+
+export function gerarHtmlRelatorioMensal(
+  periodos: { mesAtual: Periodo; mesAnterior: Periodo },
+  metricas: Record<'mesAtual' | 'mesAnterior', MetricasPeriodo>
+): string {
+  const { mesAtual, mesAnterior } = periodos
+  const m = metricas
+
+  const kpisMes = `
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;">
+      ${tile('Visitas', m.mesAtual.visitas.total)}
+      ${tile('1º Uso (total)', m.mesAtual.reservas.porTipo.primeiro_uso_diaria + m.mesAtual.reservas.porTipo.primeiro_uso_access_pass)}
+      ${tile('Uso 4h+', m.mesAtual.reservas.porTipo.quatro_horas)}
+      ${tile('Oportunidades CRM', m.mesAtual.oportunidades.totalGeral)}
+    </div>`
+
+  const graficosMes = `
+    <div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:20px;padding:16px 0;border-top:1px solid ${COR.line};border-bottom:1px solid ${COR.line};">
+      ${donutChart('Reservas por Tipo', [
+        { label: 'Reunião · 1ª vez', value: m.mesAtual.reservas.porTipo.primeira_vez },
+        { label: 'Reunião · 4h+', value: m.mesAtual.reservas.porTipo.quatro_horas },
+        { label: '1º Uso · Diária', value: m.mesAtual.reservas.porTipo.primeiro_uso_diaria },
+        { label: '1º Uso · Access Pass', value: m.mesAtual.reservas.porTipo.primeiro_uso_access_pass },
+      ])}
+      ${donutChart('Reservas por Unidade', [
+        { label: 'Francisco Rocha', value: m.mesAtual.reservas.porUnidade.francisco_rocha },
+        { label: 'Nex House', value: m.mesAtual.reservas.porUnidade.nex_house },
+      ])}
+    </div>
+    ${barChart('Oportunidades por Funil (RD CRM)', m.mesAtual.oportunidades.funis.map(f => ({ label: f.nome, value: f.total })))}`
+
+  const comparativoMeses = tabelaComparativo(
+    `Mês anterior (${formatarDataBR(mesAnterior.de)}–${formatarDataBR(mesAnterior.ate)}) → Mês atual (${formatarDataBR(mesAtual.de)}–${formatarDataBR(mesAtual.ate)})`,
+    'Mês atual', 'Mês anterior',
+    [
+      linhaComparativo('Visitas (total)', m.mesAtual.visitas.total, m.mesAnterior.visitas.total, mesAtual.label, mesAnterior.label),
+      linhaComparativo('1º Uso (Diária + Access Pass)', m.mesAtual.reservas.porTipo.primeiro_uso_diaria + m.mesAtual.reservas.porTipo.primeiro_uso_access_pass, m.mesAnterior.reservas.porTipo.primeiro_uso_diaria + m.mesAnterior.reservas.porTipo.primeiro_uso_access_pass, mesAtual.label, mesAnterior.label),
+      linhaComparativo('Uso 4h ou mais', m.mesAtual.reservas.porTipo.quatro_horas, m.mesAnterior.reservas.porTipo.quatro_horas, mesAtual.label, mesAnterior.label),
+      linhaComparativo('Oportunidades CRM (total)', m.mesAtual.oportunidades.totalGeral, m.mesAnterior.oportunidades.totalGeral, mesAtual.label, mesAnterior.label),
+    ].join('')
+  )
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Marketing &amp; Vendas · Nex House</title>
+</head>
+<body style="margin:0;padding:0;background:${COR.void};font-family:${FONTE};color:${COR.ivory88};">
+  <div style="max-width:760px;margin:0 auto;padding:40px 20px 32px;">
+
+    <div style="margin-bottom:28px;">
+      ${LOGO_SVG}
+      <p style="margin:16px 0 0;font-size:26px;font-weight:500;letter-spacing:-0.01em;color:${COR.ivory};">Dashboard de Marketing &amp; Vendas</p>
+      <p style="margin:8px 0 0;font-size:14px;color:${COR.ivory70};">Mês de ${formatarDataBR(mesAtual.de)} a ${formatarDataBR(mesAtual.ate)}</p>
+    </div>
+
+    ${secaoCard('Resumo do Mês', `${formatarDataBR(mesAtual.de)} · ${formatarDataBR(mesAtual.ate)}`, kpisMes + graficosMes)}
+
+    ${secaoCard('Comparativo Mensal', 'Mês reportado contra o mês anterior', comparativoMeses)}
+
+    <p style="margin:12px 4px 0;font-size:11px;line-height:1.55;color:${COR.ivory36};">
+      Gerado automaticamente no dia 1º de cada mês pelo Nex Marketing Operações.
+      Não inclui a métrica de contratos gerados.
     </p>
 
   </div>

@@ -1,0 +1,26 @@
+name: Relatório Mensal do Dashboard
+
+# Dispara todo dia 1º do mês às 13:30 UTC = 10:30 BRT (Brasil não usa horário de verão desde 2019).
+on:
+  schedule:
+    - cron: '30 13 1 * *'
+  workflow_dispatch: {} # permite disparar manualmente pela aba Actions
+
+jobs:
+  enviar-relatorio:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar endpoint do relatório mensal
+        run: |
+          echo "Disparando geração e envio do relatório mensal..."
+          code=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
+            --max-time 290 \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_BASE_URL }}/api/cron/relatorio-mensal")
+          echo "HTTP $code"
+          cat /tmp/resp.json
+          echo ""
+          if [ "$code" != "200" ]; then
+            echo "Falha na execução (HTTP $code)"
+            exit 1
+          fi
