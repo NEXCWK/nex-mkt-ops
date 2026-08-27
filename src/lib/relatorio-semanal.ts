@@ -371,6 +371,65 @@ function barChart(titulo: string, data: { label: string; value: number }[]): str
     </div>`
 }
 
+/**
+ * Funil visual (formato afunilado) para as oportunidades por funil do RD CRM —
+ * cada funil vira uma faixa trapezoidal, da maior para a menor, com o total
+ * geral em destaque acima. Todos os funis aparecem, sem corte.
+ */
+function funilVisual(titulo: string, totalGeral: number, data: { label: string; value: number }[]): string {
+  const cabecalho = `
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:6px;">
+      <p style="margin:0;font-size:12px;font-weight:700;color:${COR.ivory};font-family:${FONTE};">${titulo}</p>
+      <p style="margin:0;font-size:13px;color:${COR.ivory70};font-family:${FONTE};">Total geral: <span style="font-weight:700;color:${COR.ivory};font-variant-numeric:tabular-nums;">${totalGeral}</span></p>
+    </div>`
+
+  if (data.length === 0 || totalGeral === 0) {
+    return `${cabecalho}<p style="font-size:12px;color:${COR.ivory36};font-family:${FONTE};">Sem dados.</p>`
+  }
+
+  const ordenado = [...data].sort((a, b) => b.value - a.value)
+  const larguraMax = 340
+  const larguraMin = 70
+  const alturaBanda = 46
+  const gap = 3
+  const maxValor = Math.max(1, ...ordenado.map(d => d.value))
+  const cx = larguraMax / 2
+  const larguraDe = (v: number) => larguraMin + (larguraMax - larguraMin) * (v / maxValor)
+
+  let y = 0
+  const bandas = ordenado.map((d, i) => {
+    const wTop = larguraDe(d.value)
+    const wBottom = i < ordenado.length - 1 ? larguraDe(ordenado[i + 1].value) : Math.max(larguraMin * 0.72, wTop * 0.86)
+    const xTopL = cx - wTop / 2, xTopR = cx + wTop / 2
+    const xBotL = cx - wBottom / 2, xBotR = cx + wBottom / 2
+    const yTop = y, yBot = y + alturaBanda
+    const cor = PALETA_GRAFICOS[i % PALETA_GRAFICOS.length]
+    const pct = Math.round((d.value / totalGeral) * 100)
+    const banda = `
+      <polygon points="${xTopL},${yTop} ${xTopR},${yTop} ${xBotR},${yBot} ${xBotL},${yBot}" fill="${cor}" />
+      <text x="${cx}" y="${yTop + alturaBanda / 2}" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="700" fill="${COR.panel}" font-family="${FONTE}">${d.value}</text>`
+    y += alturaBanda + gap
+    return { banda, nome: d.label, valor: d.value, pct, cor }
+  })
+
+  const alturaTotal = y - gap
+  const svg = `<svg width="100%" viewBox="0 0 ${larguraMax} ${alturaTotal}" style="max-width:${larguraMax}px;display:block;margin:0 auto;">${bandas.map(b => b.banda).join('')}</svg>`
+
+  const legenda = bandas.map(b => `
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid ${COR.line};">
+      <span style="width:10px;height:10px;border-radius:2px;background:${b.cor};flex-shrink:0;"></span>
+      <span style="flex:1;font-size:13px;color:${COR.ivory88};font-family:${FONTE};">${b.nome}</span>
+      <span style="font-size:13px;font-weight:700;color:${COR.ivory};font-variant-numeric:tabular-nums;font-family:${FONTE};">${b.valor} <span style="font-weight:400;color:${COR.ivory52};">(${b.pct}%)</span></span>
+    </div>`).join('')
+
+  return `
+    ${cabecalho}
+    <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;">
+      <div style="flex:1;min-width:240px;">${svg}</div>
+      <div style="flex:1;min-width:220px;">${legenda}</div>
+    </div>`
+}
+
 function linhaComparativo(label: string, a: number, b: number, labelA: string, labelB: string): string {
   const v = variacao(a, b)
   return `
@@ -555,7 +614,7 @@ export function gerarHtmlRelatorioMensal(
         { label: 'Nex House', value: m.mesAtual.reservas.porUnidade.nex_house },
       ])}
     </div>
-    ${barChart('Oportunidades por Funil (RD CRM)', m.mesAtual.oportunidades.funis.map(f => ({ label: f.nome, value: f.total })))}`
+    ${funilVisual('Oportunidades por Funil (RD CRM)', m.mesAtual.oportunidades.totalGeral, m.mesAtual.oportunidades.funis.map(f => ({ label: f.nome, value: f.total })))}`
 
   const comparativoMeses = tabelaComparativo(
     `Mês anterior (${formatarDataBR(mesAnterior.de)}–${formatarDataBR(mesAnterior.ate)}) → Mês atual (${formatarDataBR(mesAtual.de)}–${formatarDataBR(mesAtual.ate)})`,
